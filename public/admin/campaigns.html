@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Admin • Campaigns</title>
+	<link rel="stylesheet" href="../assets/frappe.css" />
+</head>
+<body>
+	<div class="admin-shell">
+		<aside class="admin-sidebar">
+			<div class="brand"><h1>TeleCRM Admin</h1></div>
+			<nav>
+				<a href="/admin/overview.html">Overview</a>
+				<a href="/admin/users.html">Users</a>
+				<a href="/admin/leads.html">Leads</a>
+				<a href="/admin/campaigns.html" class="active">Campaigns</a>
+				<a href="/admin/pipelines.html">Pipelines</a>
+				<a href="/admin/sims.html">SIMs</a>
+				<a href="/admin/call-records.html">Call Records</a>
+				<a href="/admin/analytics.html">Analytics</a>
+				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+			</nav>
+		</aside>
+		<main class="admin-main">
+			<div class="admin-topbar">
+				<h2 class="page-title">Campaigns</h2>
+				<div class="toolbar">
+					<button class="btn" id="refresh">Refresh</button>
+					<a class="btn" id="downloadCampaignTemplate" href="#">Template</a>
+					<a class="btn" id="exportCampaigns" href="#">Export</a>
+					<label class="btn" for="campaignCsv">Import CSV</label>
+					<input type="file" id="campaignCsv" accept=".csv" style="display:none" />
+				</div>
+			</div>
+			<div class="card">
+				<table class="table" id="tbl">
+					<thead><tr>
+						<th>Name</th><th>Status</th><th>Type</th><th>Budget</th><th>CTR</th><th>Conv. Rate</th><th>ROI</th><th>Created</th>
+					</tr></thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</main>
+	</div>
+	<script src="../assets/admin.js"></script>
+	<script>
+		Admin.navActivate('/admin/campaigns.html');
+		function badge(s){ if(s==='Active') return 'green'; if(s==='Paused') return 'orange'; if(s==='Completed') return 'blue'; return 'red'; }
+		function row(c){
+			const m=c.metrics||{}; return `<tr>
+				<td><strong>${c.name}</strong></td>
+				<td><span class="badge ${badge(c.status)}">${c.status}</span></td>
+				<td>${c.campaignType||'-'}</td>
+				<td>${(c.budget||0).toLocaleString()}</td>
+				<td>${m.ctr??0}%</td>
+				<td>${m.conversionRate??0}%</td>
+				<td>${m.roi??0}%</td>
+				<td>${Admin.fmtDate(c.createdAt)}</td>
+			</tr>`
+		}
+		async function load(){
+			const res = await fetch('/api/admin/campaigns',{ headers: Admin.authHeaders() });
+			if(!res.ok) return; const data = await res.json();
+			document.querySelector('#tbl tbody').innerHTML = data.map(row).join('');
+		}
+		document.getElementById('refresh').addEventListener('click', load);
+		document.getElementById('downloadCampaignTemplate').addEventListener('click', (e)=>{
+			e.preventDefault();
+			window.location = '/api/import-export/templates/campaigns';
+		});
+		document.getElementById('exportCampaigns').addEventListener('click', (e)=>{
+			e.preventDefault();
+			window.location = '/api/import-export/campaigns/export';
+		});
+		document.getElementById('campaignCsv').addEventListener('change', async (e)=>{
+			const f = e.target.files[0]; if(!f) return;
+			const fd = new FormData(); fd.append('file', f);
+			const res = await fetch('/api/import-export/campaigns/import', { method:'POST', headers: Admin.authHeaders(), body: fd });
+			if(res.ok){ alert('Campaigns imported'); load(); } else { const j = await res.json().catch(()=>({})); alert('Import failed: '+(j.error||res.status)); }
+			e.target.value = '';
+		});
+		if(Admin.getToken()) load();
+	</script>
+</body>
+</html>
+
+

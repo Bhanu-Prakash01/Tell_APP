@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Admin • Users</title>
+	<link rel="stylesheet" href="../assets/frappe.css" />
+</head>
+<body>
+	<div class="admin-shell">
+		<aside class="admin-sidebar">
+			<div class="brand"><h1>TeleCRM Admin</h1></div>
+			<nav>
+				<a href="/admin/overview.html">Overview</a>
+				<a href="/admin/users.html" class="active">Users</a>
+				<a href="/admin/leads.html">Leads</a>
+				<a href="/admin/campaigns.html">Campaigns</a>
+				<a href="/admin/pipelines.html">Pipelines</a>
+				<a href="/admin/sims.html">SIMs</a>
+				<a href="/admin/analytics.html">Analytics</a>
+				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+			</nav>
+		</aside>
+		<main class="admin-main">
+			<div class="admin-topbar">
+				<h2 class="page-title">Users</h2>
+				<div class="toolbar">
+					<button class="btn" id="refresh">Refresh</button>
+				</div>
+			</div>
+			<div class="grid cols-2">
+				<div class="card">
+					<h3>Managers</h3>
+					<table class="table" id="managersTbl">
+						<thead><tr><th>Name</th><th>Email</th><th>Created</th></tr></thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<div class="card">
+					<h3>Employees</h3>
+					<table class="table" id="employeesTbl">
+						<thead><tr><th>Name</th><th>Email</th><th>Manager</th><th>Created</th></tr></thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+			<div class="card">
+				<h3 style="margin-top:0">Create Employee</h3>
+				<form id="createEmployeeForm">
+					<div class="grid cols-3">
+						<div>
+							<label>Name</label>
+							<input class="input" id="ce_name" required />
+						</div>
+						<div>
+							<label>Email</label>
+							<input class="input" id="ce_email" type="email" required />
+						</div>
+						<div>
+							<label>Password</label>
+							<input class="input" id="ce_password" type="password" required />
+						</div>
+						<div>
+							<label>Manager</label>
+							<select class="input" id="ce_manager"></select>
+						</div>
+					</div>
+					<div class="toolbar" style="margin-top:12px">
+						<button class="btn" type="submit">Create</button>
+					</div>
+				</form>
+			</div>
+		</main>
+	</div>
+	<script src="../assets/admin.js"></script>
+	<script>
+		Admin.navActivate('/admin/users.html');
+		function rowUser(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
+		function rowEmp(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${u.manager?u.manager.name:'-'}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
+		async function load(){
+			const [m,e] = await Promise.all([
+				fetch('/api/admin/managers',{ headers: Admin.authHeaders() }),
+				fetch('/api/admin/employees',{ headers: Admin.authHeaders() })
+			]);
+			if(m.ok){ const data = await m.json(); document.querySelector('#managersTbl tbody').innerHTML = data.map(rowUser).join(''); }
+			if(e.ok){ const data = await e.json(); document.querySelector('#employeesTbl tbody').innerHTML = data.map(rowEmp).join(''); }
+		}
+		document.getElementById('refresh').addEventListener('click', load);
+		document.getElementById('createEmployeeForm').addEventListener('submit', async (e)=>{
+			e.preventDefault();
+			const payload = {
+				name: document.getElementById('ce_name').value.trim(),
+				email: document.getElementById('ce_email').value.trim(),
+				password: document.getElementById('ce_password').value,
+				managerId: document.getElementById('ce_manager').value || undefined
+			};
+			const res = await fetch('/api/admin/employees', { method:'POST', headers: { 'Content-Type':'application/json', ...Admin.authHeaders() }, body: JSON.stringify(payload) });
+			if(res.ok){ alert('Employee created'); document.getElementById('createEmployeeForm').reset(); load(); } else { const j = await res.json().catch(()=>({})); alert('Create failed: '+(j.error||res.status)); }
+		});
+		async function populateManagers(){
+			const res = await fetch('/api/admin/managers',{ headers: Admin.authHeaders() });
+			if(!res.ok) return; const data = await res.json();
+			document.getElementById('ce_manager').innerHTML = '<option value="">-- None --</option>' + data.map(m=>`<option value="${m._id}">${m.name}</option>`).join('');
+		}
+		if(Admin.getToken()){ load(); populateManagers(); }
+	</script>
+</body>
+</html>
+
+

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Admin • Pipelines</title>
+	<link rel="stylesheet" href="../assets/frappe.css" />
+</head>
+<body>
+	<div class="admin-shell">
+		<aside class="admin-sidebar">
+			<div class="brand"><h1>TeleCRM Admin</h1></div>
+			<nav>
+				<a href="/admin/overview.html">Overview</a>
+				<a href="/admin/users.html">Users</a>
+				<a href="/admin/leads.html">Leads</a>
+				<a href="/admin/campaigns.html">Campaigns</a>
+				<a href="/admin/pipelines.html" class="active">Pipelines</a>
+				<a href="/admin/sims.html">SIMs</a>
+				<a href="/admin/call-records.html">Call Records</a>
+				<a href="/admin/analytics.html">Analytics</a>
+				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+			</nav>
+		</aside>
+		<main class="admin-main">
+			<div class="admin-topbar">
+				<h2 class="page-title">Pipelines</h2>
+				<div class="toolbar">
+					<button class="btn" id="refresh">Refresh</button>
+				</div>
+			</div>
+			<div class="card">
+				<table class="table" id="tbl">
+					<thead><tr>
+						<th>Name</th><th>Status</th><th>Stages</th><th>Total Leads</th><th>Conv. Rate</th><th>Avg Days</th><th>Total Value</th>
+					</tr></thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</main>
+	</div>
+	<script src="../assets/admin.js"></script>
+	<script>
+		Admin.navActivate('/admin/pipelines.html');
+		function badge(s){ if(s==='Active') return 'green'; if(s==='Archived') return 'red'; return 'orange'; }
+		function row(p){
+			const m=p.metrics||{}; return `<tr>
+				<td><strong>${p.name}</strong></td>
+				<td><span class="badge ${badge(p.status)}">${p.status}</span></td>
+				<td>${(p.stages||[]).length}</td>
+				<td>${m.totalLeads??0}</td>
+				<td>${m.conversionRate??0}%</td>
+				<td>${m.averageTimeInPipeline??0}</td>
+				<td>${(m.totalValue??0).toLocaleString()}</td>
+			</tr>`
+		}
+		async function load(){
+			const res = await fetch('/api/admin/pipelines',{ headers: Admin.authHeaders() });
+			if(!res.ok) return; const data = await res.json();
+			document.querySelector('#tbl tbody').innerHTML = data.map(row).join('');
+		}
+		document.getElementById('refresh').addEventListener('click', load);
+		if(Admin.getToken()) load();
+	</script>
+</body>
+</html>
+
+

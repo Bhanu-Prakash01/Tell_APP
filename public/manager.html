@@ -1,0 +1,3595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeleCRM Manager Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --secondary: #64748b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-sidebar: #1e293b;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-accent: #6366f1;
+  
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --border-accent: #6366f1;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  
+  --radius: 12px;
+  --radius-lg: 16px;
+  
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Tab Styles */
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: var(--bg-secondary);
+}
+
+/* Enhanced Assignments Section Styles */
+.assignments-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.assignments-stats .stat-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.assignments-stats .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-accent);
+}
+
+.assignments-stats .stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--info));
+}
+
+.stat-primary::before { background: linear-gradient(90deg, var(--primary), #8b5cf6); }
+.stat-success::before { background: linear-gradient(90deg, var(--success), #22c55e); }
+.stat-warning::before { background: linear-gradient(90deg, var(--warning), #f97316); }
+.stat-info::before { background: linear-gradient(90deg, var(--info), #0ea5e9); }
+
+.assignments-stats .stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 20px;
+  color: white;
+}
+
+.stat-primary .stat-icon { background: linear-gradient(135deg, var(--primary), #8b5cf6); }
+.stat-success .stat-icon { background: linear-gradient(135deg, var(--success), #22c55e); }
+.stat-warning .stat-icon { background: linear-gradient(135deg, var(--warning), #f97316); }
+.stat-info .stat-icon { background: linear-gradient(135deg, var(--info), #0ea5e9); }
+
+.assignments-stats .stat-content {
+  text-align: left;
+}
+
+.assignments-stats .stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.assignments-stats .stat-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assignments-filters {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.assignments-filters .filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  align-items: end;
+}
+
+.assignments-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assignments-filters .filter-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assignments-filters .filter-group select,
+.assignments-filters .filter-group input {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.assignments-filters .filter-group select:focus,
+.assignments-filters .filter-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-group {
+  position: relative;
+}
+
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.search-input-wrapper input {
+  padding-left: 44px;
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .assignments-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  
+  .assignments-filters .filter-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .assignments-stats .stat-card {
+    padding: 20px;
+  }
+  
+  .assignments-stats .stat-number {
+    font-size: 28px;
+  }
+}
+
+/* Enhanced Table Styling */
+.assignments-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.assignments-table .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.assignments-table .table-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.assignments-table .table-title i {
+  color: var(--primary);
+}
+
+.assignments-table .table-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.assignments-table .selected-count {
+  background: var(--primary);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assignments-table .table-wrapper {
+  overflow-x: auto;
+}
+
+.assignments-table .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+}
+
+.assignments-table .data-table th {
+  background: var(--bg-tertiary);
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assignments-table .data-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.assignments-table .data-table tbody tr:hover {
+  background: var(--bg-secondary);
+  transition: background 0.2s ease;
+}
+
+.assignments-table .checkbox-cell {
+  width: 50px;
+  text-align: center;
+}
+
+.assignments-table .data-table th input[type="checkbox"],
+.assignments-table .data-table td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.assignments-table .data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Status badge styling */
+.assignments-table .status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.assignments-table .status-new { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+.assignments-table .status-interested { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.assignments-table .status-hot { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+.assignments-table .status-follow-up { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.assignments-table .status-won { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.assignments-table .status-lost { background: rgba(100, 116, 139, 0.1); color: var(--secondary); }
+
+/* Empty state styling */
+.assignments-table .empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.assignments-table .empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.assignments-table .empty-state h4 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+  .assignments-table .empty-state p {
+    font-size: 14px;
+    margin: 0;
+  }
+  
+  /* Call Records Styles */
+  .call-records-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .call-records-filters {
+    margin-bottom: 24px;
+  }
+  
+  .call-records-table {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .call-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 70px;
+    text-align: center;
+  }
+  
+  .call-status-completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  .call-status-missed { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+  .call-status-declined { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .call-status-not_lifted { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+  .call-status-wrong_number { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+  .call-status-busy { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+  .call-status-unreachable { background: rgba(251, 113, 133, 0.1); color: #fb7185; }
+  .call-status-voicemail { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+  
+  .quality-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+  }
+  
+  .quality-indicator .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  .quality-excellent .dot { background: #10b981; }
+  .quality-good .dot { background: #3b82f6; }
+  .quality-fair .dot { background: #f59e0b; }
+  .quality-poor .dot { background: #ef4444; }
+  
+  .call-duration {
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  
+  .employee-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .employee-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  
+  /* Action buttons styling */
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+  
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+  }
+  
+  .action-btn.assign {
+    background: var(--success);
+    color: white;
+  }
+  
+  .action-btn.assign:hover {
+    background: #059669;
+    transform: scale(1.05);
+  }
+  
+  .action-btn.reassign {
+    background: var(--warning);
+    color: white;
+  }
+  
+  .action-btn.reassign:hover {
+    background: #d97706;
+    transform: scale(1.05);
+  }
+  
+  /* Loading state for assignments */
+  .assignments-loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+  }
+  
+  .assignments-loading i {
+    font-size: 24px;
+    margin-bottom: 12px;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-sidebar: #020617;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  
+  /* VS Code-like syntax highlighting colors */
+  --syntax-keyword: #569cd6;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-comment: #6a9955;
+  --syntax-function: #dcdcaa;
+  --syntax-variable: #9cdcfe;
+  --syntax-operator: #d4d4d4;
+  --syntax-punctuation: #d4d4d4;
+  --syntax-class: #4ec9b0;
+  --syntax-property: #9cdcfe;
+  --syntax-tag: #569cd6;
+  --syntax-attribute: #9cdcfe;
+  --syntax-value: #ce9178;
+  
+  --border: #334155;
+  --border-hover: #475569;
+}
+
+[data-theme="semi-dark"] {
+  --bg-primary: #1e293b;
+  --bg-secondary: #334155;
+  --bg-tertiary: #475569;
+  --bg-card: #334155;
+  --bg-sidebar: #0f172a;
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  
+  --border: #475569;
+  --border-hover: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: all 0.3s ease;
+}
+
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--syntax-keyword), var(--syntax-function));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.logo-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.nav-menu {
+  padding: 24px 0;
+}
+
+.nav-item {
+  margin-bottom: 4px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary);
+  border-left-color: var(--primary);
+}
+
+.nav-link i {
+  width: 20px;
+  text-align: center;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 24px;
+  background: var(--bg-secondary);
+  min-height: 100vh;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--syntax-keyword), var(--syntax-class));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.theme-btn:hover,
+.theme-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-bottom: 24px;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-tertiary);
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-content {
+  padding: 24px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--info));
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.metric-icon.primary { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
+.metric-icon.success { background: linear-gradient(135deg, var(--success), #059669); }
+.metric-icon.warning { background: linear-gradient(135deg, var(--warning), #d97706); }
+.metric-icon.danger { background: linear-gradient(135deg, var(--danger), #dc2626); }
+.metric-icon.info { background: linear-gradient(135deg, var(--info), #0891b2); }
+
+.metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.metric-change {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.metric-change.positive {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.metric-change.negative {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.chart-grid.small {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+.chart-grid.large {
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+}
+
+.chart-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.chart-wrapper {
+  height: 300px;
+  position: relative;
+}
+
+.table-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: var(--bg-tertiary);
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+tr:hover {
+  background: var(--bg-tertiary);
+}
+
+tr:hover td {
+  color: var(--text-primary);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-outline:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.status-inactive { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+.status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 16px;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .top-bar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">TeleCRM</div>
+      <div class="logo-subtitle">Manager Panel</div>
+    </div>
+    
+    <nav class="nav-menu">
+      <div class="nav-item">
+        <a href="#" class="nav-link active" onclick="showSection('overview')">
+          <i class="fas fa-chart-line"></i>
+          Overview
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('team')">
+          <i class="fas fa-users"></i>
+          Team Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('leads')">
+          <i class="fas fa-bullseye"></i>
+          Lead Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('assignments')">
+          <i class="fas fa-user-plus"></i>
+          Assignments
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('call-records')">
+          <i class="fas fa-phone"></i>
+          Call Records
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('employee-records')">
+          <i class="fas fa-user-clock"></i>
+          Employee Records
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('calls')">
+          <i class="fas fa-phone"></i>
+          Call Analytics
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('sims')">
+          <i class="fas fa-sim-card"></i>
+          SIM Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('campaigns')">
+          <i class="fas fa-rocket"></i>
+          Campaigns
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('reports')">
+          <i class="fas fa-chart-bar"></i>
+          Reports
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('analytics')">
+          <i class="fas fa-chart-pie"></i>
+          Analytics
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <h1 class="page-title">Manager Dashboard</h1>
+      <div class="theme-toggle">
+        <button class="theme-btn" onclick="setTheme('light')">Light</button>
+        <button class="theme-btn" onclick="setTheme('semi-dark')">Semi-Dark</button>
+        <button class="theme-btn" onclick="setTheme('dark')">Dark</button>
+        <button class="btn btn-outline" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <section id="overview" class="section active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon primary">
+              <i class="fas fa-users"></i>
+            </div>
+          </div>
+          <div class="metric-value" id="teamMembers">-</div>
+          <div class="metric-label">Team Members</div>
+          <div class="metric-change positive">+5% from last month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon success">
+              <i class="fas fa-bullseye"></i>
+            </div>
+          </div>
+          <div class="metric-value" id="totalLeads">-</div>
+          <div class="metric-label">Total Leads</div>
+          <div class="metric-change positive">+12% from last month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon warning">
+              <i class="fas fa-phone"></i>
+            </div>
+          </div>
+          <div class="metric-value" id="totalCalls">-</div>
+          <div class="metric-label">Total Calls</div>
+          <div class="metric-change positive">+18% from last month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon info">
+              <i class="fas fa-chart-line"></i>
+            </div>
+          </div>
+          <div class="metric-value" id="conversionRate">-</div>
+          <div class="metric-label">Conversion Rate</div>
+          <div class="metric-change positive">+3% from last month</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-container">
+          <h3 class="chart-title">Team Performance</h3>
+          <div class="chart-wrapper">
+            <canvas id="teamPerformanceChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <h3 class="chart-title">Lead Status Distribution</h3>
+          <div class="chart-wrapper">
+            <canvas id="leadStatusChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <div class="chart-grid">
+        <div class="chart-container">
+          <h3 class="chart-title">Call Analytics by Hour</h3>
+          <div class="chart-wrapper">
+            <canvas id="callHourChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <h3 class="chart-title">Sales Trend</h3>
+          <div class="chart-wrapper">
+            <canvas id="salesTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="team" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-users"></i>
+            Team Management
+          </h2>
+        </div>
+        <div class="card-content">
+          <div class="table-container">
+            <table id="teamTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Leads Assigned</th>
+                  <th>Call Success Rate</th>
+                  <th>Performance Score</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="7" class="loading">Loading team data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="leads" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-bullseye"></i>
+            Lead Management
+          </h2>
+        </div>
+        <div class="card-content">
+          <!-- Lead Type Tabs -->
+          <div class="tabs" style="margin-bottom: 20px;">
+            <button class="tab-btn active" data-tab="all">All Leads</button>
+            <button class="tab-btn" data-tab="unfinished">Unfinished (New)</button>
+            <button class="tab-btn" data-tab="finished">Finished</button>
+            <button class="tab-btn" data-tab="dead">Dead Leads</button>
+          </div>
+          <div class="table-container">
+            <table id="leadsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Sector</th>
+                  <th>Region</th>
+                  <th>Assigned To</th>
+                  <th>Follow-up Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="7" class="loading">Loading leads...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="calls" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-phone"></i>
+            Call Analytics
+          </h2>
+        </div>
+        <div class="card-content">
+          <div class="chart-grid">
+            <div class="chart-container">
+              <h3 class="chart-title">Call Success Rate</h3>
+              <div class="chart-wrapper">
+                <canvas id="callSuccessChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Call Duration Distribution</h3>
+              <div class="chart-wrapper">
+                <canvas id="callDurationChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table id="callLogsTable">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Employee</th>
+                  <th>Status</th>
+                  <th>Duration</th>
+                  <th>Outcome</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" class="loading">Loading call logs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sims" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-sim-card"></i>
+            SIM Management
+          </h2>
+        </div>
+        <div class="card-content">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon info">
+                  <i class="fas fa-sim-card"></i>
+                </div>
+              </div>
+              <div class="metric-value" id="totalSims">-</div>
+              <div class="metric-label">Total SIMs</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon success">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+              </div>
+              <div class="metric-value" id="activeSims">-</div>
+              <div class="metric-label">Active SIMs</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+              </div>
+              <div class="metric-value" id="lowBalanceSims">-</div>
+              <div class="metric-label">Low Balance</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon danger">
+                  <i class="fas fa-clock"></i>
+                </div>
+              </div>
+              <div class="metric-value" id="expiringSims">-</div>
+              <div class="metric-label">Expiring Soon</div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table id="simsTable">
+              <thead>
+                <tr>
+                  <th>SIM Number</th>
+                  <th>Carrier</th>
+                  <th>Status</th>
+                  <th>Balance</th>
+                  <th>Assigned To</th>
+                  <th>Validity</th>
+                  <th>Health</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="8" class="loading">Loading SIM cards...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="campaigns" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-rocket"></i>
+            Campaign Management
+          </h2>
+        </div>
+        <div class="card-content">
+          <div class="table-container">
+            <table id="campaignsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Performance</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="7" class="loading">Loading campaigns...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reports" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-chart-bar"></i>
+            Performance Reports
+          </h2>
+        </div>
+        <div class="card-content">
+          <div class="chart-container">
+            <h3 class="chart-title">Monthly Performance Overview</h3>
+            <div class="chart-wrapper">
+              <canvas id="monthlyPerformanceChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="assignments" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-user-plus"></i>
+            Employee Assignment Management
+          </h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="showBulkAssignmentModal()">
+              <i class="fas fa-users"></i>
+              Bulk Assignment
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          <!-- Assignment Statistics -->
+          <div class="stats-grid assignments-stats">
+            <div class="stat-card stat-primary">
+              <div class="stat-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalLeadsForAssignment">0</div>
+                <div class="stat-label">Total Leads</div>
+              </div>
+            </div>
+            <div class="stat-card stat-success">
+              <div class="stat-icon">
+                <i class="fas fa-user-check"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="assignedLeads">0</div>
+                <div class="stat-label">Assigned Leads</div>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon">
+                <i class="fas fa-user-clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="unassignedLeads">0</div>
+                <div class="stat-label">Unassigned Leads</div>
+              </div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon">
+                <i class="fas fa-user-tie"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalEmployees">0</div>
+                <div class="stat-label">Available Employees</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filters-section assignments-filters">
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="assignmentStatusFilter">Status:</label>
+                <select id="assignmentStatusFilter" onchange="filterAssignments()">
+                  <option value="">All Status</option>
+                  <option value="New">New</option>
+                  <option value="Interested">Interested</option>
+                  <option value="Hot">Hot</option>
+                  <option value="Follow-up">Follow-up</option>
+                  <option value="Won">Won</option>
+                  <option value="Lost">Lost</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="assignmentFilter">Assignment:</label>
+                <select id="assignmentFilter" onchange="filterAssignments()">
+                  <option value="">All</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="unassigned">Unassigned</option>
+                </select>
+              </div>
+              <div class="filter-group search-group">
+                <label for="assignmentSearchFilter">Search:</label>
+                <div class="search-input-wrapper">
+                  <i class="fas fa-search search-icon"></i>
+                  <input type="text" id="assignmentSearchFilter" placeholder="Search leads..." onkeyup="filterAssignments()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignments Table -->
+          <div class="table-container assignments-table">
+            <div class="table-header">
+              <h3 class="table-title">
+                <i class="fas fa-list"></i>
+                Lead Assignments
+              </h3>
+              <div class="table-actions">
+                <span class="selected-count" id="selectedCount">0 leads selected</span>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="checkbox-cell">
+                      <input type="checkbox" id="assignSelectAll" />
+                    </th>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>State</th>
+                    <th>Assigned To</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="assignmentsTableBody">
+                  <!-- Assignments will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Employee Records Section -->
+    <section id="employee-records" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-user-clock"></i>
+            Employee Records with Leads
+          </h2>
+          <div class="header-actions">
+            <button class="btn btn-outline" id="autoRefreshBtn" onclick="toggleEmployeeRecordsAutoRefresh()">
+              <i class="fas fa-play"></i> Start Auto-refresh
+            </button>
+            <button class="btn btn-primary" onclick="refreshEmployeeRecords()">
+              <i class="fas fa-sync-alt"></i>
+              Refresh
+            </button>
+            <div class="last-update" id="lastUpdateInfo">
+              <small>Last updated: Never</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-content">
+          <!-- Employee Records Summary -->
+          <div class="stats-grid employee-records-stats">
+            <div class="stat-card stat-primary">
+              <div class="stat-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalTeamMembers">0</div>
+                <div class="stat-label">Team Members</div>
+              </div>
+            </div>
+            <div class="stat-card stat-success">
+              <div class="stat-icon">
+                <i class="fas fa-phone"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalEmployeeCalls">0</div>
+                <div class="stat-label">Total Calls</div>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="avgCallsPerEmployee">0</div>
+                <div class="stat-label">Avg Calls/Employee</div>
+              </div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalCallTime">0h</div>
+                <div class="stat-label">Total Call Time</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Records Filters -->
+          <div class="filters-section employee-records-filters">
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="employeeFilter">Employee:</label>
+                <select id="employeeFilter" onchange="filterEmployeeRecords()">
+                  <option value="">All Employees</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="leadStatusFilter">Lead Status:</label>
+                <select id="leadStatusFilter" onchange="filterEmployeeRecords()">
+                  <option value="">All Statuses</option>
+                  <option value="New">New</option>
+                  <option value="Interested">Interested</option>
+                  <option value="Follow-up Required">Follow-up Required</option>
+                  <option value="Hot Lead">Hot Lead</option>
+                  <option value="Converted">Converted</option>
+                  <option value="Not Interested">Not Interested</option>
+                  <option value="Dead">Dead</option>
+                </select>
+              </div>
+              <div class="filter-group search-group">
+                <label for="employeeSearchFilter">Search:</label>
+                <div class="search-input-wrapper">
+                  <i class="fas fa-search search-icon"></i>
+                  <input type="text" id="employeeSearchFilter" placeholder="Search employees, leads..." onkeyup="filterEmployeeRecords()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Records Table -->
+          <div class="table-container employee-records-table">
+            <div class="table-header">
+              <h3 class="table-title">
+                <i class="fas fa-list"></i>
+                Employee Records
+              </h3>
+              <div class="table-actions">
+                <span class="selected-count" id="employeeRecordsCount">0 records</span>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Lead</th>
+                    <th>Lead Status</th>
+                    <th>Call Status</th>
+                    <th>Duration</th>
+                    <th>Outcome</th>
+                    <th>Follow-up</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="employeeRecordsTableBody">
+                  <!-- Employee records will be populated here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call Records Section -->
+    <section id="call-records" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-phone"></i>
+            Team Call Records
+          </h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="refreshCallRecords()">
+              <i class="fas fa-sync-alt"></i>
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          <!-- Call Records Summary -->
+          <div class="stats-grid call-records-stats">
+            <div class="stat-card stat-primary">
+              <div class="stat-icon">
+                <i class="fas fa-phone"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="totalTeamCalls">0</div>
+                <div class="stat-label">Total Calls</div>
+              </div>
+            </div>
+            <div class="stat-card stat-success">
+              <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="completedCalls">0</div>
+                <div class="stat-label">Completed</div>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="avgCallDuration">0s</div>
+                <div class="stat-label">Avg Duration</div>
+              </div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="successRate">0%</div>
+                <div class="stat-label">Success Rate</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Call Records Filters -->
+          <div class="filters-section call-records-filters">
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="callStatusFilter">Call Status:</label>
+                <select id="callStatusFilter" onchange="filterCallRecords()">
+                  <option value="">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="missed">Missed</option>
+                  <option value="declined">Declined</option>
+                  <option value="not_lifted">Not Lifted</option>
+                  <option value="wrong_number">Wrong Number</option>
+                  <option value="busy">Busy</option>
+                  <option value="unreachable">Unreachable</option>
+                  <option value="voicemail">Voicemail</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="callEmployeeFilter">Employee:</label>
+                <select id="callEmployeeFilter" onchange="filterCallRecords()">
+                  <option value="">All Employees</option>
+                </select>
+              </div>
+              <div class="filter-group search-group">
+                <label for="callSearchFilter">Search:</label>
+                <div class="search-input-wrapper">
+                  <i class="fas fa-search search-icon"></i>
+                  <input type="text" id="callSearchFilter" placeholder="Search calls..." onkeyup="filterCallRecords()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Call Records Table -->
+          <div class="table-container call-records-table">
+            <div class="table-header">
+              <h3 class="table-title">
+                <i class="fas fa-list"></i>
+                Call Records
+              </h3>
+              <div class="table-actions">
+                <span class="selected-count" id="callRecordsCount">0 records</span>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Lead</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Quality</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="callRecordsTableBody">
+                  <!-- Call records will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Assignment Modal -->
+    <div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:2000">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-xl);width:520px;max-width:92vw">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600">Assign Lead</div>
+          <button class="btn btn-outline" onclick="closeAssignModal()">Close</button>
+        </div>
+        <div style="padding:20px">
+          <div style="margin-bottom:12px">
+            <label>Employee</label>
+            <select id="assignEmployeeSelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px"></select>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-primary" onclick="confirmSingleAssign()">Assign</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Assignment Modal -->
+    <div id="bulkAssignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:2000">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-xl);width:560px;max-width:94vw">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600">Bulk Lead Assignment</div>
+          <button class="btn btn-outline" onclick="closeBulkAssignModal()">Close</button>
+        </div>
+        <div style="padding:20px;display:grid;gap:16px">
+          <div>
+            <div style="font-weight:600;margin-bottom:8px">Auto Distribute</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Round-robin assign selected leads across your team. If none selected, all unassigned leads will be distributed.</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input id="perEmployeeCount" type="number" min="0" placeholder="Per employee (0 = unlimited)" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px" />
+              <button id="autoDistributeBtn" type="button" class="btn btn-primary" onclick="autoDistributeSelected()">Auto Distribute</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:600;margin-bottom:8px">Manual Assign (Selected)</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <select id="bulkEmployeeSelect" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px"></select>
+              <button class="btn btn-outline" onclick="manualAssignSelected()">Assign Selected</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section id="analytics" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-chart-pie"></i>
+            Lead Analytics
+          </h2>
+          <button class="btn btn-primary" onclick="refreshAnalytics()">
+            <i class="fas fa-sync-alt"></i>
+            Refresh Analytics
+          </button>
+        </div>
+        <div class="card-content">
+          <div class="chart-grid">
+            <div class="chart-container">
+              <h3 class="chart-title">Leads by Sector</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerLeadsBySectorChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Leads by Region</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerLeadsByRegionChart"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <div class="chart-grid small">
+            <div class="chart-container">
+              <h3 class="chart-title">Hot Leads by Sector</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerHotLeadsBySectorChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Interested Leads by Sector</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerInterestedLeadsBySectorChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Hot Leads by Region</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerHotLeadsByRegionChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Interested Leads by Region</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerInterestedLeadsByRegionChart"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <div class="chart-grid large">
+            <div class="chart-container">
+              <h3 class="chart-title">Monthly Lead Trend</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerMonthlyLeadTrendChart"></canvas>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <h3 class="chart-title">Team Performance by Lead Status</h3>
+              <div class="chart-wrapper">
+                <canvas id="managerTeamPerformanceChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Audio Player Modal -->
+<div id="audioPlayerModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3><i class="fas fa-play-circle"></i> Call Recording Player</h3>
+      <button class="modal-close" onclick="closeAudioPlayer()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="audio-info">
+        <div class="lead-info">
+          <strong id="audioLeadName">Loading...</strong>
+          <small id="audioCallDetails">Loading...</small>
+        </div>
+      </div>
+      
+      <div class="audio-player">
+        <audio id="audioPlayer" controls preload="metadata">
+          Your browser does not support the audio element.
+        </audio>
+        
+        <div class="audio-controls">
+          <button class="btn btn-primary" id="playPauseBtn" onclick="togglePlayPause()">
+            <i class="fas fa-play"></i> Play
+          </button>
+          <button class="btn btn-outline" onclick="downloadRecording()">
+            <i class="fas fa-download"></i> Download
+          </button>
+          <div class="audio-progress">
+            <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="audio-transcript" id="audioTranscript">
+        <h4>Call Notes</h4>
+        <p id="callNotes">No notes available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentTheme = 'light';
+let dashboardData = null;
+let charts = {};
+let callRecordsCache = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    await loadDashboardData();
+    await loadTeamData();
+    await loadLeadsData();
+    await loadCallAnalytics();
+    await loadSimData();
+    await loadCampaignsData();
+    await loadAnalyticsData();
+    // wire buttons created in HTML
+    const adb = document.getElementById('autoDistributeBtn');
+    if (adb) adb.addEventListener('click', (e)=>{ e.preventDefault(); autoDistributeSelected(); });
+    const bs = document.querySelector('.nav-link[onclick="showSection(\'assignments\')"]');
+    if (bs) bs.addEventListener('click', ()=> setTimeout(loadAssignmentsData, 0));
+    
+    initializeCharts();
+    // Initialize theme from localStorage or default to dark
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+});
+
+function setTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    localStorage.setItem('theme', theme);
+}
+
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    document.getElementById(sectionId).classList.add('active');
+    event.target.classList.add('active');
+    
+    const pageTitle = document.querySelector('.page-title');
+    const sectionNames = {
+        'overview': 'Manager Dashboard',
+        'team': 'Team Management',
+        'leads': 'Lead Management',
+        'assignments': 'Employee Assignments',
+        'call-records': 'Call Records',
+        'employee-records': 'Employee Records',
+        'calls': 'Call Analytics',
+        'sims': 'SIM Management',
+        'campaigns': 'Campaign Management',
+        'reports': 'Performance Reports',
+        'analytics': 'Lead Analytics'
+    };
+    pageTitle.textContent = sectionNames[sectionId] || 'Manager Dashboard';
+
+    // Lazy load data for assignments when section is opened
+    if (sectionId === 'assignments') {
+        loadAssignmentsData();
+    }
+    
+    // Lazy load data for call records when section is opened
+    if (sectionId === 'call-records') {
+        loadCallRecords();
+    }
+    
+    // Lazy load data for employee records when section is opened
+    if (sectionId === 'employee-records') {
+        loadEmployeeRecords();
+    }
+}
+
+async function loadDashboardData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/manager/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            dashboardData = await response.json();
+            updateDashboardMetrics();
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+function updateDashboardMetrics() {
+    if (!dashboardData) return;
+    
+    document.getElementById('teamMembers').textContent = dashboardData.employees || 0;
+    document.getElementById('totalLeads').textContent = dashboardData.stats?.total || 0;
+    document.getElementById('totalCalls').textContent = dashboardData.totalCalls || 0;
+    document.getElementById('conversionRate').textContent = `${dashboardData.conversionRate || 0}%`;
+}
+
+async function loadTeamData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/manager/team', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const teamData = await response.json();
+            renderTeamTable(teamData);
+        }
+    } catch (error) {
+        console.error('Error loading team data:', error);
+    }
+}
+
+function renderTeamTable(teamData) {
+    const tbody = document.querySelector('#teamTable tbody');
+    tbody.innerHTML = '';
+    
+    teamData.forEach(member => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${member.name}</td>
+            <td>${member.email}</td>
+            <td>${Math.floor(Math.random() * 50) + 10}</td>
+            <td>${Math.floor(Math.random() * 30) + 70}%</td>
+            <td>${Math.floor(Math.random() * 40) + 60}/100</td>
+            <td><span class="status-badge status-active">Active</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline">View</button>
+                <button class="btn btn-sm btn-outline">Edit</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Tab functionality for leads
+let currentLeadsTab = 'all';
+
+// Add tab event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            // Add active class to clicked tab
+            btn.classList.add('active');
+            currentLeadsTab = btn.getAttribute('data-tab');
+            loadLeadsData(); // Reload data based on tab
+        });
+    });
+});
+
+async function loadLeadsData() {
+    try {
+        const token = localStorage.getItem('token');
+        let url = '/api/manager/leads?assignedOnly=true';
+        
+        // Add tab-specific endpoint
+        if (currentLeadsTab === 'unfinished') {
+            url = '/api/manager/leads/unfinished?assigned=true';
+        } else if (currentLeadsTab === 'finished') {
+            url = '/api/manager/leads/finished?assigned=true';
+        } else if (currentLeadsTab === 'dead') {
+            url = '/api/manager/leads/dead';
+        }
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const leadsData = data.leads || data;
+            renderLeadsTable(leadsData);
+            
+            // Update tab count if available
+            if (data.count !== undefined) {
+                const tabBtn = document.querySelector(`[data-tab="${currentLeadsTab}"]`);
+                if (tabBtn) {
+                    const originalText = tabBtn.textContent.split(' (')[0];
+                    tabBtn.textContent = `${originalText} (${data.count})`;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading leads data:', error);
+    }
+}
+
+// Reactivate Lead Function for Manager
+async function reactivateLead(leadId) {
+    if (!confirm('Are you sure you want to reactivate this dead lead? It will be set back to "New" status.')) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/manager/leads/${leadId}/reactivate`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            alert('Lead reactivated successfully!');
+            loadLeadsData(); // Reload the leads
+        } else {
+            const error = await response.json().catch(() => ({}));
+            alert('Reactivate failed: ' + (error.error || response.status));
+        }
+    } catch (error) {
+        console.error('Error reactivating lead:', error);
+        alert('Error reactivating lead');
+    }
+}
+
+function renderLeadsTable(leadsData) {
+    const tbody = document.querySelector('#leadsTable tbody');
+    tbody.innerHTML = '';
+    
+    leadsData.forEach(lead => {
+        const isDead = lead.status === 'Dead';
+        const deadInfo = isDead ? `
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                <strong>Reason:</strong> ${lead.deadLeadReason || 'Unknown'}<br>
+                <strong>Date:</strong> ${lead.deadLeadDate ? new Date(lead.deadLeadDate).toLocaleDateString() : 'N/A'}<br>
+                <strong>Attempts:</strong> ${lead.callAttempts || 0}
+            </div>
+        ` : '';
+        
+        const actionButtons = isDead ? `
+            <button class="btn btn-sm btn-success" onclick="reactivateLead('${lead._id}')" title="Reactivate Lead">
+                <i class="fas fa-undo"></i> Reactivate
+            </button>
+        ` : '';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${lead.name}${deadInfo}</td>
+            <td>${lead.phone || lead.email || 'N/A'}</td>
+            <td><span class="status-badge status-${lead.status.toLowerCase()}">${lead.status}</span></td>
+            <td>${lead.sector || 'N/A'}</td>
+            <td>${lead.region || 'N/A'}</td>
+            <td>${lead.assignedTo?.name || 'Unassigned'}</td>
+            <td>${lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : 'N/A'}</td>
+            ${actionButtons ? `<td>${actionButtons}</td>` : ''}
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+async function loadCallAnalytics() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/manager/calls/analytics', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const callData = await response.json();
+            updateCallMetrics(callData);
+        }
+    } catch (error) {
+        console.error('Error loading call analytics:', error);
+    }
+}
+
+function updateCallMetrics(callData) {
+    document.getElementById('totalCalls').textContent = callData.totalTeamCalls || 0;
+}
+
+async function loadSimData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/admin/sims', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const simData = await response.json();
+            renderSimsTable(simData);
+            updateSimMetrics(simData);
+        }
+    } catch (error) {
+        console.error('Error loading SIM data:', error);
+    }
+}
+
+function renderSimsTable(simData) {
+    const tbody = document.querySelector('#simsTable tbody');
+    tbody.innerHTML = '';
+    
+    simData.forEach(sim => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sim.number}</td>
+            <td>${sim.carrier || 'N/A'}</td>
+            <td><span class="status-badge status-${sim.status.toLowerCase()}">${sim.status}</span></td>
+            <td>₹${sim.balance || 0}</td>
+            <td>${sim.employee || 'Unassigned'}</td>
+            <td>${sim.lastUsed ? new Date(sim.lastUsed).toLocaleDateString() : 'N/A'}</td>
+            <td><span class="status-badge status-active">Healthy</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline">Edit</button>
+                <button class="btn btn-sm btn-outline">Assign</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function updateSimMetrics(simData) {
+    document.getElementById('totalSims').textContent = simData.length || 0;
+    document.getElementById('activeSims').textContent = simData.filter(s => s.status === 'Active').length || 0;
+    document.getElementById('lowBalanceSims').textContent = simData.filter(s => s.balance < 50).length || 0;
+    document.getElementById('expiringSims').textContent = simData.filter(s => s.balance < 10).length || 0;
+}
+
+async function loadCampaignsData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/manager/campaigns', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const campaignsData = await response.json();
+            renderCampaignsTable(campaignsData);
+        }
+    } catch (error) {
+        console.error('Error loading campaigns data:', error);
+    }
+}
+
+function renderCampaignsTable(campaignsData) {
+    const tbody = document.querySelector('#campaignsTable tbody');
+    tbody.innerHTML = '';
+    
+    campaignsData.forEach(campaign => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${campaign.name}</td>
+            <td>${campaign.campaignType}</td>
+            <td><span class="status-badge status-${campaign.status.toLowerCase()}">${campaign.status}</span></td>
+            <td>${new Date(campaign.startDate).toLocaleDateString()}</td>
+            <td>${new Date(campaign.endDate).toLocaleDateString()}</td>
+            <td>${campaign.metrics?.conversionRate || 0}%</td>
+            <td>
+                <button class="btn btn-sm btn-outline">Edit</button>
+                <button class="btn btn-sm btn-outline">View</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function initializeCharts() {
+    const teamCtx = document.getElementById('teamPerformanceChart')?.getContext('2d');
+    if (teamCtx) {
+        charts.teamPerformance = new Chart(teamCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High Performers', 'Average', 'Needs Improvement'],
+                datasets: [{
+                    data: [30, 50, 20],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    const leadCtx = document.getElementById('leadStatusChart')?.getContext('2d');
+    if (leadCtx) {
+        charts.leadStatus = new Chart(leadCtx, {
+            type: 'bar',
+            data: {
+                labels: ['New', 'Interested', 'Hot', 'Follow-up', 'Won', 'Lost'],
+                datasets: [{
+                    label: 'Leads',
+                    data: [25, 30, 15, 20, 10, 5],
+                    backgroundColor: '#6366f1',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    const callCtx = document.getElementById('callHourChart')?.getContext('2d');
+    if (callCtx) {
+        charts.callHour = new Chart(callCtx, {
+            type: 'line',
+            data: {
+                labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
+                datasets: [{
+                    label: 'Calls',
+                    data: [25, 35, 45, 30, 25, 40, 50, 35, 25],
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    const salesCtx = document.getElementById('salesTrendChart')?.getContext('2d');
+    if (salesCtx) {
+        charts.salesTrend = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Sales (₹)',
+                    data: [50000, 65000, 45000, 80000, 70000, 90000],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Initialize manager analytics charts
+    initializeManagerAnalyticsCharts();
+}
+
+let analyticsData = null;
+
+async function loadAnalyticsData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/manager/leads/analytics', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            analyticsData = await response.json();
+        }
+    } catch (error) {
+        console.error('Error loading analytics data:', error);
+    }
+}
+
+function initializeManagerAnalyticsCharts() {
+    // Initialize leads by sector chart
+    const sectorCtx = document.getElementById('managerLeadsBySectorChart')?.getContext('2d');
+    if (sectorCtx && analyticsData) {
+        const data = analyticsData.sectorDistribution || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerLeadsBySector = new Chart(sectorCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Leads',
+                    data: values,
+                    backgroundColor: '#6366f1',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize leads by region chart
+    const regionCtx = document.getElementById('managerLeadsByRegionChart')?.getContext('2d');
+    if (regionCtx && analyticsData) {
+        const data = analyticsData.regionDistribution || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerLeadsByRegion = new Chart(regionCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Leads',
+                    data: values,
+                    backgroundColor: '#10b981',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize hot leads by sector chart
+    const hotSectorCtx = document.getElementById('managerHotLeadsBySectorChart')?.getContext('2d');
+    if (hotSectorCtx && analyticsData) {
+        const data = analyticsData.hotLeadsBySector || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerHotLeadsBySector = new Chart(hotSectorCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#6366f1'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Initialize interested leads by sector chart
+    const interestedSectorCtx = document.getElementById('managerInterestedLeadsBySectorChart')?.getContext('2d');
+    if (interestedSectorCtx && analyticsData) {
+        const data = analyticsData.interestedLeadsBySector || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerInterestedLeadsBySector = new Chart(interestedSectorCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#10b981', '#06b6d4', '#8b5cf6', '#6366f1', '#f59e0b', '#ef4444'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Initialize hot leads by region chart
+    const hotRegionCtx = document.getElementById('managerHotLeadsByRegionChart')?.getContext('2d');
+    if (hotRegionCtx && analyticsData) {
+        const data = analyticsData.hotLeadsByRegion || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerHotLeadsByRegion = new Chart(hotRegionCtx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#6366f1'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Initialize interested leads by region chart
+    const interestedRegionCtx = document.getElementById('managerInterestedLeadsByRegionChart')?.getContext('2d');
+    if (interestedRegionCtx && analyticsData) {
+        const data = analyticsData.interestedLeadsByRegion || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerInterestedLeadsByRegion = new Chart(interestedRegionCtx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#10b981', '#06b6d4', '#8b5cf6', '#6366f1', '#f59e0b', '#ef4444'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Initialize monthly lead trend chart
+    const trendCtx = document.getElementById('managerMonthlyLeadTrendChart')?.getContext('2d');
+    if (trendCtx && analyticsData) {
+        const data = analyticsData.monthlyLeadTrend || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerMonthlyLeadTrend = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Leads Created',
+                    data: values,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize team performance chart
+    const teamPerfCtx = document.getElementById('managerTeamPerformanceChart')?.getContext('2d');
+    if (teamPerfCtx && analyticsData) {
+        const data = analyticsData.teamPerformance || {};
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        
+        charts.managerTeamPerformance = new Chart(teamPerfCtx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Team Performance',
+                    data: values,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    pointBackgroundColor: '#6366f1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+}
+
+async function refreshAnalytics() {
+    try {
+        await loadAnalyticsData();
+        if (analyticsData) {
+            updateManagerChartsWithNewData();
+            console.log('Manager analytics refreshed successfully');
+        }
+    } catch (error) {
+        console.error('Error refreshing analytics:', error);
+    }
+}
+
+function updateManagerChartsWithNewData() {
+    // Update all manager charts with new data
+    if (charts.managerLeadsBySector && analyticsData?.sectorDistribution) {
+        const data = analyticsData.sectorDistribution;
+        charts.managerLeadsBySector.data.labels = Object.keys(data);
+        charts.managerLeadsBySector.data.datasets[0].data = Object.values(data);
+        charts.managerLeadsBySector.update();
+    }
+    
+    if (charts.managerLeadsByRegion && analyticsData?.regionDistribution) {
+        const data = analyticsData.regionDistribution;
+        charts.managerLeadsByRegion.data.labels = Object.keys(data);
+        charts.managerLeadsByRegion.data.datasets[0].data = Object.values(data);
+        charts.managerLeadsByRegion.update();
+    }
+    
+    // Update other charts similarly...
+    if (charts.managerHotLeadsBySector && analyticsData?.hotLeadsBySector) {
+        const data = analyticsData.hotLeadsBySector;
+        charts.managerHotLeadsBySector.data.labels = Object.keys(data);
+        charts.managerHotLeadsBySector.data.datasets[0].data = Object.values(data);
+        charts.managerHotLeadsBySector.update();
+    }
+    
+    if (charts.managerInterestedLeadsBySector && analyticsData?.interestedLeadsBySector) {
+        const data = analyticsData.interestedLeadsBySector;
+        charts.managerInterestedLeadsBySector.data.labels = Object.keys(data);
+        charts.managerInterestedLeadsBySector.data.datasets[0].data = Object.values(data);
+        charts.managerInterestedLeadsBySector.update();
+    }
+    
+    if (charts.managerHotLeadsByRegion && analyticsData?.hotLeadsByRegion) {
+        const data = analyticsData.hotLeadsByRegion;
+        charts.managerHotLeadsByRegion.data.labels = Object.keys(data);
+        charts.managerHotLeadsByRegion.data.datasets[0].data = Object.values(data);
+        charts.managerHotLeadsByRegion.update();
+    }
+    
+    if (charts.managerInterestedLeadsByRegion && analyticsData?.interestedLeadsByRegion) {
+        const data = analyticsData.interestedLeadsByRegion;
+        charts.managerInterestedLeadsByRegion.data.labels = Object.keys(data);
+        charts.managerInterestedLeadsByRegion.data.datasets[0].data = Object.values(data);
+        charts.managerInterestedLeadsByRegion.update();
+    }
+    
+    if (charts.managerMonthlyLeadTrend && analyticsData?.monthlyLeadTrend) {
+        const data = analyticsData.monthlyLeadTrend;
+        charts.managerMonthlyLeadTrend.data.labels = Object.keys(data);
+        charts.managerMonthlyLeadTrend.data.datasets[0].data = Object.values(data);
+        charts.managerMonthlyLeadTrend.update();
+    }
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/login.html';
+}
+
+async function refreshData() {
+    await loadDashboardData();
+    await loadTeamData();
+    await loadLeadsData();
+    await loadCallAnalytics();
+    await loadSimData();
+    await loadCampaignsData();
+    await loadAnalyticsData();
+}
+
+// Assignment Management Functions
+let assignmentLeadsCache = [];
+async function loadAssignmentsData() {
+    try {
+        const token = localStorage.getItem('token');
+        const [leadsResponse, teamResponse] = await Promise.all([
+            fetch('/api/manager/leads/for-assignment', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/manager/team', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (!leadsResponse.ok) return;
+        const leads = await leadsResponse.json();
+        assignmentLeadsCache = leads;
+
+        const employees = teamResponse.ok ? await teamResponse.json() : [];
+        updateAssignmentStats(leads, employees);
+        // Render with current filters applied
+        applyAssignmentFilters();
+    } catch (error) {
+        console.error('Error loading assignments data:', error);
+    }
+}
+
+function updateAssignmentStats(leads, employees) {
+    const totalLeads = leads.length;
+    const assignedLeads = leads.filter(lead => lead.assignedTo).length;
+    const unassignedLeads = totalLeads - assignedLeads;
+    const totalEmployees = employees.length;
+    
+    document.getElementById('totalLeadsForAssignment').textContent = totalLeads;
+    document.getElementById('assignedLeads').textContent = assignedLeads;
+    document.getElementById('unassignedLeads').textContent = unassignedLeads;
+    document.getElementById('totalEmployees').textContent = totalEmployees;
+}
+
+function renderAssignmentsTable(leads) {
+    const tbody = document.getElementById('assignmentsTableBody');
+    
+    if (leads.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <div>No leads found</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = leads.map(lead => `
+        <tr>
+            <td><input type="checkbox" class="assignChk" value="${lead._id}"></td>
+            <td><strong>${lead.name}</strong></td>
+            <td>${lead.phone}</td>
+            <td><span class="status-badge status-${lead.status.toLowerCase().replace('-', '')}">${lead.status}</span></td>
+            <td>${lead.region}</td>
+            <td>${lead.assignedTo?.name || '<span style="color: var(--danger);">Unassigned</span>'}</td>
+            <td>
+                <div class="action-buttons">
+                    ${lead.assignedTo ? 
+                        `<button class="action-btn reassign" onclick="showAssignmentModal('${lead._id}')" title="Reassign">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>` :
+                        `<button class="action-btn assign" onclick="showAssignmentModal('${lead._id}')" title="Assign">
+                            <i class="fas fa-user-plus"></i>
+                        </button>`
+                    }
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    const selAll = document.getElementById('assignSelectAll');
+    if(selAll){
+      selAll.checked = false;
+      selAll.onclick = ()=>{
+        document.querySelectorAll('.assignChk').forEach(ch=> ch.checked = selAll.checked);
+        updateSelectedCount();
+      };
+    }
+    
+    // Add change listeners to individual checkboxes
+    document.querySelectorAll('.assignChk').forEach(chk => {
+      chk.addEventListener('change', updateSelectedCount);
+    });
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const selectedCount = document.querySelectorAll('.assignChk:checked').length;
+  const countElement = document.getElementById('selectedCount');
+  if (countElement) {
+    countElement.textContent = `${selectedCount} lead${selectedCount !== 1 ? 's' : ''} selected`;
+  }
+}
+
+function applyAssignmentFilters(){
+  let list = Array.isArray(assignmentLeadsCache) ? assignmentLeadsCache.slice() : [];
+  const statusFilter = (document.getElementById('assignmentStatusFilter')?.value||'');
+  const assignmentFilter = (document.getElementById('assignmentFilter')?.value||'');
+  const q = (document.getElementById('assignmentSearchFilter')?.value||'').toLowerCase();
+  if(statusFilter) list = list.filter(l=> l.status===statusFilter);
+  if(assignmentFilter==='assigned') list = list.filter(l=> !!l.assignedTo);
+  if(assignmentFilter==='unassigned') list = list.filter(l=> !l.assignedTo);
+  if(q) list = list.filter(l=> (l.name||'').toLowerCase().includes(q) || (l.phone||'').toLowerCase().includes(q) || (l.region||'').toLowerCase().includes(q));
+  renderAssignmentsTable(list);
+}
+let filterDebounce;
+function filterAssignments(){
+  clearTimeout(filterDebounce);
+  filterDebounce = setTimeout(applyAssignmentFilters, 200);
+}
+
+let currentAssignLeadId = null;
+async function showAssignmentModal(leadId) {
+    currentAssignLeadId = leadId;
+    await populateEmployeesSelect('assignEmployeeSelect');
+    const modal = document.getElementById('assignModal');
+    modal.style.display = 'flex';
+}
+function closeAssignModal(){ document.getElementById('assignModal').style.display='none'; currentAssignLeadId=null; }
+async function confirmSingleAssign(){
+  if(!currentAssignLeadId) return;
+  const empId = document.getElementById('assignEmployeeSelect').value;
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/manager/leads/assign', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` }, body: JSON.stringify({ leadIds:[currentAssignLeadId], employeeId: empId }) });
+  if(res.ok){ closeAssignModal(); loadAssignmentsData(); loadLeadsData(); } else { const j = await res.json().catch(()=>({})); alert('Assign failed: '+(j.error||res.status)); }
+}
+
+async function showBulkAssignmentModal() {
+    await populateEmployeesSelect('bulkEmployeeSelect');
+    document.getElementById('bulkAssignModal').style.display='flex';
+}
+function closeBulkAssignModal(){ document.getElementById('bulkAssignModal').style.display='none'; }
+function getSelectedLeadIds(){ return Array.from(document.querySelectorAll('.assignChk:checked')).map(ch=>ch.value); }
+async function autoDistributeSelected(){
+  let ids = getSelectedLeadIds();
+  // If none selected, use all unassigned leads
+  // If none selected, rely on backend fallback (unassigned → all)
+  let per = parseInt(document.getElementById('perEmployeeCount')?.value||'0',10);
+  if (isNaN(per) || per < 0) per = 0;
+  if (per === 0) {
+    const promptVal = window.prompt('How many leads per employee? Enter 0 for unlimited','0');
+    const n = parseInt((promptVal||'0'),10);
+    per = isNaN(n) ? 0 : Math.max(0,n);
+    const perInput = document.getElementById('perEmployeeCount'); if (perInput) perInput.value = String(per);
+  }
+  const token = localStorage.getItem('token');
+  const body = { perEmployee: isNaN(per)?0:per };
+  if (ids.length) body.leadIds = ids;
+  const res = await fetch('/api/manager/leads/assign/auto', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` }, body: JSON.stringify(body) });
+  if(res.ok){ closeBulkAssignModal(); loadAssignmentsData(); loadLeadsData(); } else { const j = await res.json().catch(()=>({})); alert('Auto distribute failed: '+(j.error||res.status)); }
+}
+async function manualAssignSelected(){
+  const ids = getSelectedLeadIds();
+  const empId = document.getElementById('bulkEmployeeSelect').value;
+  if(!empId){ alert('Select employee'); return; }
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/manager/leads/assign/manual-map', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` }, body: JSON.stringify({ assignments: [{ employeeId: empId, leadIds: ids }] }) });
+  if(res.ok){ closeBulkAssignModal(); loadAssignmentsData(); loadLeadsData(); } else { const j = await res.json().catch(()=>({})); alert('Manual assign failed: '+(j.error||res.status)); }
+}
+async function populateEmployeesSelect(selectId){
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/manager/team', { headers:{ 'Authorization':`Bearer ${token}` } });
+  if(!res.ok) return;
+  const team = await res.json();
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = team.map(t=>`<option value="${t._id}">${t.name}</option>`).join('');
+}
+
+// Call Records Functions
+async function loadCallRecords() {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/manager/call-records', { headers:{ 'Authorization':`Bearer ${token}` } });
+    if(!res.ok) return;
+    
+    callRecordsCache = await res.json();
+    renderCallRecordsTable(callRecordsCache);
+    document.getElementById('callRecordsCount').textContent = `${callRecordsCache.length} records`;
+    
+    // Populate employee filter
+    const employees = [...new Set(callRecordsCache.map(r => r.employee?._id).filter(Boolean))];
+    const employeeSelect = document.getElementById('callEmployeeFilter');
+    if (employeeSelect) {
+      employeeSelect.innerHTML = '<option value="">All Employees</option>' + 
+        employees.map(id => {
+          const emp = callRecordsCache.find(r => r.employee?._id === id)?.employee;
+          return `<option value="${id}">${emp?.name || 'Unknown'}</option>`;
+        }).join('');
+    }
+    
+    // Load analytics
+    await loadCallRecordsAnalytics();
+  } catch (error) {
+    console.error('Failed to load call records:', error);
+  }
+}
+
+async function loadCallRecordsAnalytics() {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/manager/call-records/analytics', { headers:{ 'Authorization':`Bearer ${token}` } });
+    if(!res.ok) return;
+    
+    const analytics = await res.json();
+    
+    // Update summary metrics
+    document.getElementById('totalTeamCalls').textContent = analytics.totalCalls || 0;
+    document.getElementById('completedCalls').textContent = analytics.statusDistribution?.completed || 0;
+    document.getElementById('successRate').textContent = 
+      analytics.totalCalls > 0 ? 
+      Math.round((analytics.statusDistribution?.completed || 0) / analytics.totalCalls * 100) + '%' : '0%';
+    document.getElementById('avgCallDuration').textContent = formatDuration(analytics.avgCallDuration || 0);
+  } catch (error) {
+    console.error('Failed to load call records analytics:', error);
+  }
+}
+
+function formatDuration(seconds) {
+  if (!seconds) return '0s';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function getCallStatusBadge(status) {
+  const statusMap = {
+    'completed': 'Completed',
+    'missed': 'Missed',
+    'declined': 'Declined',
+    'not_lifted': 'Not Lifted',
+    'wrong_number': 'Wrong Number',
+    'busy': 'Busy',
+    'unreachable': 'Unreachable',
+    'voicemail': 'Voicemail'
+  };
+  return `<span class="call-status-badge call-status-${status}">${statusMap[status] || status}</span>`;
+}
+
+function getQualityIndicator(quality) {
+  if (!quality) return '-';
+  const qualityMap = {
+    'Excellent': 'excellent',
+    'Good': 'good',
+    'Fair': 'fair',
+    'Poor': 'poor'
+  };
+  const cls = qualityMap[quality] || 'good';
+  return `<span class="quality-indicator quality-${cls}"><span class="dot"></span>${quality}</span>`;
+}
+
+function renderCallRecordsTable(records) {
+  const tbody = document.getElementById('callRecordsTableBody');
+  if (!tbody) return;
+  
+  if (records.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="empty-state">
+          <i class="fas fa-phone-slash"></i>
+          <h4>No call records found</h4>
+          <p>Call records will appear here once your team starts logging calls.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = records.map(record => `
+    <tr>
+      <td>
+        <div class="employee-info">
+          <div class="employee-avatar">${(record.employee?.name || 'U').charAt(0).toUpperCase()}</div>
+          <div>
+            <strong>${record.employee?.name || 'Unknown'}</strong><br>
+            <small>${record.employee?.email || 'No email'}</small>
+          </div>
+        </div>
+      </td>
+      <td>
+        <strong>${record.lead?.name || 'Unknown Lead'}</strong><br>
+        <small>${record.lead?.phone || 'No phone'} • ${record.lead?.sector || 'Unknown'}</small>
+      </td>
+      <td>${getCallStatusBadge(record.callStatus)}</td>
+      <td><span class="call-duration">${formatDuration(record.callDuration)}</span></td>
+      <td>
+        <div>Signal: ${getQualityIndicator(record.callQuality?.signalStrength)}</div>
+        <div>Audio: ${getQualityIndicator(record.callQuality?.audioQuality)}</div>
+      </td>
+      <td>${Admin.fmtDate ? Admin.fmtDate(record.createdAt) : new Date(record.createdAt).toLocaleDateString()}</td>
+      <td>
+        <button class="btn btn-outline" onclick="viewCallDetails('${record._id}')" title="View Details">
+          <i class="fas fa-eye"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterCallRecords() {
+  const statusFilter = document.getElementById('callStatusFilter')?.value;
+  const employeeFilter = document.getElementById('callEmployeeFilter')?.value;
+  const searchFilter = document.getElementById('callSearchFilter')?.value.toLowerCase();
+  
+  let filtered = callRecordsCache;
+  
+  if (statusFilter) {
+    filtered = filtered.filter(record => record.callStatus === statusFilter);
+  }
+  
+  if (employeeFilter) {
+    filtered = filtered.filter(record => record.employee?._id === employeeFilter);
+  }
+  
+  if (searchFilter) {
+    filtered = filtered.filter(record => 
+      record.lead?.name?.toLowerCase().includes(searchFilter) ||
+      record.lead?.phone?.includes(searchFilter) ||
+      record.employee?.name?.toLowerCase().includes(searchFilter)
+    );
+  }
+  
+  renderCallRecordsTable(filtered);
+  document.getElementById('callRecordsCount').textContent = `${filtered.length} records`;
+}
+
+function refreshCallRecords() {
+  loadCallRecords();
+}
+
+function viewCallDetails(recordId) {
+  const record = callRecordsCache.find(r => r._id === recordId);
+  if (!record) return;
+  
+  alert(`Call Details:\n\nEmployee: ${record.employee?.name || 'Unknown'}\nLead: ${record.lead?.name || 'Unknown'}\nStatus: ${record.callStatus}\nDuration: ${formatDuration(record.callDuration)}\nNotes: ${record.notes || 'No notes'}`);
+}
+
+// Employee Records Functions
+let employeeRecordsCache = [];
+let employeeRecordsInterval = null;
+let lastEmployeeRecordsUpdate = null;
+
+async function loadEmployeeRecords() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/manager/employee-records', { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            cache: 'no-cache'
+        });
+        if (!res.ok) return;
+        
+        const newData = await res.json();
+        const hasChanges = JSON.stringify(newData) !== JSON.stringify(employeeRecordsCache);
+        
+        if (hasChanges) {
+            employeeRecordsCache = newData;
+            lastEmployeeRecordsUpdate = new Date();
+            renderEmployeeRecordsTable(employeeRecordsCache);
+            document.getElementById('employeeRecordsCount').textContent = `${employeeRecordsCache.length} records`;
+            
+            // Populate employee filter
+            const employees = [...new Set(employeeRecordsCache.map(r => r.employee?._id).filter(Boolean))];
+            const employeeSelect = document.getElementById('employeeFilter');
+            if (employeeSelect) {
+                const currentValue = employeeSelect.value;
+                employeeSelect.innerHTML = '<option value="">All Employees</option>' + 
+                    employees.map(id => {
+                        const emp = employeeRecordsCache.find(r => r.employee?._id === id)?.employee;
+                        return `<option value="${id}">${emp?.name || 'Unknown'}</option>`;
+                    }).join('');
+                employeeSelect.value = currentValue; // Preserve current selection
+            }
+            
+            // Load analytics
+            await loadEmployeeRecordsAnalytics();
+            
+            // Show update notification
+            showUpdateNotification('Employee records updated');
+        }
+    } catch (error) {
+        console.error('Failed to load employee records:', error);
+        showErrorNotification('Failed to load employee records');
+    }
+}
+
+async function loadEmployeeRecordsAnalytics() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/manager/employee-records/analytics', { 
+            headers: { 'Authorization': `Bearer ${token}` },
+            cache: 'no-cache'
+        });
+        if (!res.ok) return;
+        
+        const analytics = await res.json();
+        
+        // Update summary metrics with animation
+        animateNumberChange('totalTeamMembers', analytics.totalEmployees || 0);
+        animateNumberChange('totalEmployeeCalls', analytics.totalCalls || 0);
+        animateNumberChange('avgCallsPerEmployee', 
+            analytics.totalEmployees > 0 ? 
+            Math.round((analytics.totalCalls || 0) / analytics.totalEmployees) : 0);
+        animateTextChange('totalCallTime', formatTotalTime(analytics.totalCallTime || 0));
+        
+        // Update last update info
+        if (lastEmployeeRecordsUpdate) {
+            document.getElementById('lastUpdateInfo').innerHTML = 
+                `<small>Last updated: ${lastEmployeeRecordsUpdate.toLocaleTimeString()}</small>`;
+        }
+    } catch (error) {
+        console.error('Failed to load employee records analytics:', error);
+        showErrorNotification('Failed to load analytics');
+    }
+}
+
+function formatTotalTime(seconds) {
+    if (!seconds) return '0h';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+function renderEmployeeRecordsTable(records) {
+    const tbody = document.getElementById('employeeRecordsTableBody');
+    if (!tbody) return;
+    
+    if (records.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="empty-state">
+                    <i class="fas fa-user-clock"></i>
+                    <h4>No employee records found</h4>
+                    <p>Employee records will appear here once your team starts logging calls and updating leads.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = records.map(record => `
+        <tr>
+            <td>
+                <div class="employee-info">
+                    <div class="employee-avatar">${(record.employee?.name || 'U').charAt(0).toUpperCase()}</div>
+                    <div>
+                        <strong>${record.employee?.name || 'Unknown'}</strong><br>
+                        <small>${record.employee?.name || 'No email'}</small>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <strong>${record.lead?.name || 'Unknown Lead'}</strong><br>
+                <small>${record.lead?.phone || 'No phone'} • ${record.lead?.sector || 'Unknown'}</small>
+            </td>
+            <td><span class="lead-status-badge lead-status-${record.lead?.status?.toLowerCase().replace(/\s+/g, '-')}">${record.lead?.status || 'Unknown'}</span></td>
+            <td>${getCallStatusBadge(record.callStatus)}</td>
+            <td><span class="call-duration">${formatDuration(record.callDuration)}</span></td>
+            <td><span class="outcome-badge outcome-${record.outcome?.toLowerCase().replace(/\s+/g, '-')}">${record.outcome || 'N/A'}</span></td>
+            <td>${record.followUpDate ? new Date(record.followUpDate).toLocaleDateString() : 'No follow-up'}</td>
+            <td>${new Date(record.createdAt).toLocaleDateString()}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-outline" onclick="viewEmployeeRecordDetails('${record._id}')" title="View Details">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline" onclick="viewLeadDetails('${record.lead?._id}')" title="View Lead">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    ${record.recordingUrl ? `
+                        <button class="btn btn-outline btn-audio" onclick="playCallRecording('${record._id}', '${record.recordingUrl}', '${record.lead?.name || 'Unknown'}')" title="Play Recording">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    ` : `
+                        <button class="btn btn-outline btn-audio disabled" title="No Recording Available" disabled>
+                            <i class="fas fa-volume-mute"></i>
+                        </button>
+                    `}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterEmployeeRecords() {
+    const employeeFilter = document.getElementById('employeeFilter')?.value;
+    const leadStatusFilter = document.getElementById('leadStatusFilter')?.value;
+    const searchFilter = document.getElementById('employeeSearchFilter')?.value.toLowerCase();
+    
+    let filtered = employeeRecordsCache;
+    
+    if (employeeFilter) {
+        filtered = filtered.filter(record => record.employee?.status === employeeFilter);
+    }
+    
+    if (leadStatusFilter) {
+        filtered = filtered.filter(record => record.lead?.status === leadStatusFilter);
+    }
+    
+    if (searchFilter) {
+        filtered = filtered.filter(record => 
+            record.lead?.name?.toLowerCase().includes(searchFilter) ||
+            record.lead?.phone?.includes(searchFilter) ||
+            record.employee?.name?.toLowerCase().includes(searchFilter)
+        );
+    }
+    
+    renderEmployeeRecordsTable(filtered);
+    document.getElementById('employeeRecordsCount').textContent = `${filtered.length} records`;
+}
+
+function refreshEmployeeRecords() {
+    loadEmployeeRecords();
+    showUpdateNotification('Refreshing employee records...');
+}
+
+// Start auto-refresh for employee records
+function startEmployeeRecordsAutoRefresh() {
+    if (employeeRecordsInterval) {
+        clearInterval(employeeRecordsInterval);
+    }
+    
+    employeeRecordsInterval = setInterval(() => {
+        if (document.getElementById('employee-records').classList.contains('active')) {
+            loadEmployeeRecords();
+        }
+    }, 30000); // Refresh every 30 seconds
+    
+    console.log('Employee records auto-refresh started');
+}
+
+// Stop auto-refresh
+function stopEmployeeRecordsAutoRefresh() {
+    if (employeeRecordsInterval) {
+        clearInterval(employeeRecordsInterval);
+        employeeRecordsInterval = null;
+        console.log('Employee records auto-refresh stopped');
+    }
+}
+
+// Toggle auto-refresh
+function toggleEmployeeRecordsAutoRefresh() {
+    if (employeeRecordsInterval) {
+        stopEmployeeRecordsAutoRefresh();
+        document.getElementById('autoRefreshBtn').innerHTML = '<i class="fas fa-play"></i> Start Auto-refresh';
+        showUpdateNotification('Auto-refresh stopped');
+    } else {
+        startEmployeeRecordsAutoRefresh();
+        document.getElementById('autoRefreshBtn').innerHTML = '<i class="fas fa-pause"></i> Stop Auto-refresh';
+        showUpdateNotification('Auto-refresh started');
+    }
+}
+
+function viewEmployeeRecordDetails(recordId) {
+    const record = employeeRecordsCache.find(r => r._id === recordId);
+    if (!record) return;
+    
+    alert(`Employee Record Details:\n\nEmployee: ${record.employee?.name || 'Unknown'}\nLead: ${record.lead?.name || 'Unknown'}\nLead Status: ${record.lead?.status || 'Unknown'}\nCall Status: ${record.callStatus}\nDuration: ${formatDuration(record.callDuration)}\nOutcome: ${record.outcome || 'N/A'}\nNotes: ${record.notes || 'No notes'}\nFollow-up: ${record.followUpDate ? new Date(record.followUpDate).toLocaleDateString() : 'No follow-up'}`);
+}
+
+function viewLeadDetails(leadId) {
+    if (!leadId) return;
+    // You can implement a modal or redirect to lead details
+    alert(`Viewing lead: ${leadId}\n\nThis would open a detailed lead view.`);
+}
+
+// Audio Player Functions
+let currentAudioRecord = null;
+
+function playCallRecording(recordId, recordingUrl, leadName) {
+    try {
+        const record = employeeRecordsCache.find(r => r._id === recordId);
+        if (!record) {
+            showErrorNotification('Record not found');
+            return;
+        }
+        
+        currentAudioRecord = record;
+        
+        // Update modal content
+        document.getElementById('audioLeadName').textContent = leadName;
+        document.getElementById('audioCallDetails').textContent = 
+            `Call with ${record.employee?.name || 'Unknown'} • ${formatDuration(record.callDuration)} • ${record.callStatus}`;
+        
+        // Update call notes
+        document.getElementById('callNotes').textContent = record.notes || 'No notes available';
+        
+        // Set audio source
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = recordingUrl;
+        
+        // Show modal
+        document.getElementById('audioPlayerModal').style.display = 'block';
+        
+        // Load audio metadata
+        audioPlayer.load();
+        
+        showUpdateNotification(`Loading recording for ${leadName}`);
+        
+    } catch (error) {
+        console.error('Error opening audio player:', error);
+        showErrorNotification('Failed to open audio player');
+    }
+}
+
+function closeAudioPlayer() {
+    const modal = document.getElementById('audioPlayerModal');
+    const audioPlayer = document.getElementById('audioPlayer');
+    
+    // Stop and reset audio
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    audioPlayer.src = '';
+    
+    // Hide modal
+    modal.style.display = 'none';
+    
+    // Reset current record
+    currentAudioRecord = null;
+}
+
+function togglePlayPause() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+    } else {
+        audioPlayer.pause();
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
+    }
+}
+
+function downloadRecording() {
+    if (!currentAudioRecord?.recordingUrl) {
+        showErrorNotification('No recording available for download');
+        return;
+    }
+    
+    try {
+        const link = document.createElement('a');
+        link.href = currentAudioRecord.recordingUrl;
+        link.download = `call_recording_${currentAudioRecord.lead?.name || 'unknown'}_${new Date(currentAudioRecord.createdAt).toISOString().split('T')[0]}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showUpdateNotification('Download started');
+    } catch (error) {
+        console.error('Download error:', error);
+        showErrorNotification('Download failed');
+    }
+}
+
+// Audio player event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    if (audioPlayer) {
+        audioPlayer.addEventListener('loadedmetadata', function() {
+            const totalTime = formatTime(audioPlayer.duration);
+            document.getElementById('totalTime').textContent = totalTime;
+        });
+        
+        audioPlayer.addEventListener('timeupdate', function() {
+            const currentTime = formatTime(audioPlayer.currentTime);
+            document.getElementById('currentTime').textContent = currentTime;
+        });
+        
+        audioPlayer.addEventListener('ended', function() {
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
+        });
+    }
+});
+
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Notification Functions
+function showUpdateNotification(message) {
+    showNotification(message, 'success');
+}
+
+function showErrorNotification(message) {
+    showNotification(message, 'error');
+}
+
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(n => n.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Animation Functions
+function animateNumberChange(elementId, newValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const oldValue = parseInt(element.textContent) || 0;
+    const difference = newValue - oldValue;
+    
+    if (difference !== 0) {
+        element.style.transition = 'all 0.3s ease';
+        element.style.transform = 'scale(1.1)';
+        element.style.color = difference > 0 ? '#10b981' : '#ef4444';
+        
+        setTimeout(() => {
+            element.textContent = newValue;
+            element.style.transform = 'scale(1)';
+            element.style.color = '';
+        }, 300);
+    } else {
+        element.textContent = newValue;
+    }
+}
+
+function animateTextChange(elementId, newValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.style.transition = 'all 0.3s ease';
+    element.style.transform = 'scale(1.05)';
+    
+    setTimeout(() => {
+        element.textContent = newValue;
+        element.style.transform = 'scale(1)';
+    }, 150);
+}
+</script>
+</body>
+</html>

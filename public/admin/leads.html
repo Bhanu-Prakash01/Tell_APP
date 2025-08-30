@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Admin • Leads</title>
+	<link rel="stylesheet" href="../assets/frappe.css" />
+	<style>
+		.action-buttons {
+			display: flex;
+			gap: 8px;
+			justify-content: center;
+		}
+		.btn-sm {
+			padding: 4px 8px;
+			font-size: 12px;
+			min-height: auto;
+		}
+		.btn-edit {
+			background: #007bff;
+			color: white;
+		}
+		.btn-delete {
+			background: #dc3545;
+			color: white;
+		}
+		.modal {
+			display: none;
+			position: fixed;
+			z-index: 1000;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0,0,0,0.5);
+		}
+		.modal-content {
+			background-color: #fefefe;
+			margin: 5% auto;
+			padding: 20px;
+			border: 1px solid #888;
+			width: 80%;
+			max-width: 600px;
+			border-radius: 8px;
+		}
+		.modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+			padding-bottom: 10px;
+			border-bottom: 1px solid #eee;
+		}
+		.close {
+			color: #aaa;
+			font-size: 28px;
+			font-weight: bold;
+			cursor: pointer;
+		}
+		.close:hover {
+			color: #000;
+		}
+		.confirm-dialog {
+			text-align: center;
+			padding: 20px;
+		}
+		.confirm-dialog .btn {
+			margin: 0 10px;
+		}
+		.tabs {
+			display: flex;
+			gap: 8px;
+			border-bottom: 1px solid #e0e0e0;
+			margin-bottom: 20px;
+		}
+		.tab-btn {
+			padding: 12px 24px;
+			border: none;
+			background: none;
+			cursor: pointer;
+			border-bottom: 3px solid transparent;
+			font-weight: 500;
+			color: #666;
+			transition: all 0.3s ease;
+		}
+		.tab-btn:hover {
+			color: #333;
+			background: #f5f5f5;
+		}
+		.tab-btn.active {
+			color: #007bff;
+			border-bottom-color: #007bff;
+			background: #f8f9ff;
+		}
+		.tab-content {
+			display: none;
+		}
+		.tab-content.active {
+			display: block;
+		}
+	</style>
+</head>
+<body>
+	<div class="admin-shell">
+		<aside class="admin-sidebar">
+			<div class="brand"><h1>TeleCRM Admin</h1></div>
+			<nav>
+				<a href="/admin/overview.html">Overview</a>
+				<a href="/admin/users.html">Users</a>
+				<a href="/admin/leads.html" class="active">Leads</a>
+				<a href="/admin/campaigns.html">Campaigns</a>
+				<a href="/admin/pipelines.html">Pipelines</a>
+				<a href="/admin/sims.html">SIMs</a>
+				<a href="/admin/call-records.html">Call Records</a>
+				<a href="/admin/analytics.html">Analytics</a>
+				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+			</nav>
+		</aside>
+		<main class="admin-main">
+			<div class="admin-topbar">
+				<h2 class="page-title">Leads Management</h2>
+				<div class="toolbar">
+					<input class="input" style="min-width:240px" id="q" placeholder="Search leads..." />
+					<select class="input" id="status">
+						<option value="">All Status</option>
+						<option>New</option><option>Interested</option><option>Hot</option>
+						<option>Follow-up</option><option>Won</option><option>Lost</option>
+					</select>
+					<select class="input" id="assignedFilter" title="Assigned filter">
+						<option value="">All Leads</option>
+						<option value="true">Assigned</option>
+						<option value="false">Unassigned</option>
+					</select>
+					<select class="input" id="filterManager" title="Filter by Manager" style="min-width:220px"></select>
+                    <button class="btn" id="refresh">Refresh</button>
+                    <select class="input" id="mgrSelect" title="Select Manager" style="min-width:220px"></select>
+                    <button class="btn" id="assignToManager">Assign to Manager</button>
+					<button class="btn" id="toggleCreateLead">Create Lead</button>
+					<a class="btn" id="downloadLeadTemplate" href="#">Template</a>
+					<a class="btn" id="exportLeads" href="#">Export</a>
+					<label class="btn" for="leadCsv">Import CSV</label>
+					<input type="file" id="leadCsv" accept=".csv" style="display:none" />
+				</div>
+			</div>
+			
+			<!-- Lead Type Tabs -->
+			<div class="tabs" style="margin-bottom: 20px;">
+				<button class="tab-btn active" data-tab="all">All Leads</button>
+				<button class="tab-btn" data-tab="unfinished">Unfinished (New)</button>
+				<button class="tab-btn" data-tab="finished">Finished</button>
+				<button class="tab-btn" data-tab="dead">Dead Leads</button>
+			</div>
+			
+			<!-- Create Lead Card -->
+			<div class="card" id="createLeadCard" style="display:none">
+				<h3 style="margin-top:0">Create New Lead</h3>
+				<form id="createLeadForm">
+					<div class="grid cols-3">
+						<div>
+							<label>Name *</label>
+							<input class="input" id="cl_name" required />
+						</div>
+						<div>
+							<label>Phone *</label>
+							<input class="input" id="cl_phone" required />
+						</div>
+						<div>
+							<label>Email</label>
+							<input class="input" id="cl_email" type="email" />
+						</div>
+						<div>
+							<label>Sector</label>
+							<select class="input" id="cl_sector">
+								<option>Technology</option><option>Healthcare</option><option>Finance</option><option>Education</option><option>Retail</option><option>Manufacturing</option><option>Real Estate</option><option>Other</option>
+							</select>
+						</div>
+						<div>
+							<label>State</label>
+							<select class="input" id="cl_region">
+								<option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option><option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option><option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option><option>Delhi</option><option>Jammu and Kashmir</option><option>Ladakh</option><option>Chandigarh</option><option>Dadra and Nagar Haveli and Daman and Diu</option><option>Lakshadweep</option><option>Puducherry</option><option>Andaman and Nicobar Islands</option>
+							</select>
+						</div>
+						<div>
+							<label>Status</label>
+							<select class="input" id="cl_status">
+								<option>New</option><option>Interested</option><option>Hot</option><option>Follow-up</option><option>Won</option><option>Lost</option>
+							</select>
+						</div>
+					</div>
+					<div style="margin-top:12px">
+						<label>Notes</label>
+						<textarea class="input" id="cl_notes" rows="3"></textarea>
+					</div>
+					<div class="toolbar" style="margin-top:12px">
+						<button class="btn" type="submit">Create Lead</button>
+						<button class="btn btn-outline" type="button" id="cl_cancel">Cancel</button>
+					</div>
+				</form>
+			</div>
+
+			<!-- Edit Lead Modal -->
+			<div id="editLeadModal" class="modal">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h3>Edit Lead</h3>
+						<span class="close" id="closeEditModal">&times;</span>
+					</div>
+					<form id="editLeadForm">
+						<input type="hidden" id="edit_lead_id" />
+						<div class="grid cols-3">
+							<div>
+								<label>Name *</label>
+								<input class="input" id="edit_name" required />
+							</div>
+							<div>
+								<label>Phone *</label>
+								<input class="input" id="edit_phone" required />
+							</div>
+							<div>
+								<label>Email</label>
+								<input class="input" id="edit_email" type="email" />
+							</div>
+							<div>
+								<label>Sector</label>
+								<select class="input" id="edit_sector">
+									<option>Technology</option><option>Healthcare</option><option>Finance</option><option>Education</option><option>Retail</option><option>Manufacturing</option><option>Real Estate</option><option>Other</option>
+								</select>
+							</div>
+							<div>
+								<label>State</label>
+								<select class="input" id="edit_region">
+									<option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option><option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option><option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option><option>Delhi</option><option>Jammu and Kashmir</option><option>Ladakh</option><option>Chandigarh</option><option>Dadra and Nagar Haveli and Daman and Diu</option><option>Lakshadweep</option><option>Puducherry</option><option>Andaman and Nicobar Islands</option>
+								</select>
+							</div>
+							<div>
+								<label>Status</label>
+								<select class="input" id="edit_status">
+									<option>New</option><option>Interested</option><option>Hot</option><option>Follow-up</option><option>Won</option><option>Lost</option>
+								</select>
+							</div>
+						</div>
+						<div style="margin-top:12px">
+							<label>Notes</label>
+							<textarea class="input" id="edit_notes" rows="3"></textarea>
+						</div>
+						<div class="toolbar" style="margin-top:12px">
+							<button class="btn" type="submit">Update Lead</button>
+							<button class="btn btn-outline" type="button" id="edit_cancel">Cancel</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<!-- Delete Confirmation Modal -->
+			<div id="deleteConfirmModal" class="modal">
+				<div class="modal-content">
+					<div class="confirm-dialog">
+						<h3>Confirm Delete</h3>
+						<p>Are you sure you want to delete this lead? This action cannot be undone.</p>
+						<div class="toolbar">
+							<button class="btn btn-delete" id="confirmDelete">Delete</button>
+							<button class="btn btn-outline" id="cancelDelete">Cancel</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="card">
+                <table class="table" id="leadsTable">
+					<thead>
+						<tr>
+                            <th><input type="checkbox" id="selAll" /></th>
+                            <th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Sector</th><th>State</th><th>Assigned</th><th>Created</th><th>Actions</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</main>
+	</div>
+	<script src="../assets/admin.js"></script>
+	<script>
+		Admin.navActivate('/admin/leads.html');
+		let leads=[]; let filtered=[];
+		let leadToDelete = null;
+
+        function row(l){
+            const isDead = l.status === 'Dead';
+            const deadInfo = isDead ? `
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    <strong>Reason:</strong> ${l.deadLeadReason || 'Unknown'}<br>
+                    <strong>Date:</strong> ${l.deadLeadDate ? Admin.fmtDate(l.deadLeadDate) : 'N/A'}<br>
+                    <strong>Attempts:</strong> ${l.callAttempts || 0}
+                </div>
+            ` : '';
+            
+            const actionButtons = isDead ? `
+                <button class="btn btn-sm btn-success" onclick="reactivateLead('${l._id}')" title="Reactivate Lead">
+                    <i class="fas fa-undo"></i> Reactivate
+                </button>
+                <button class="btn btn-sm btn-delete" onclick="deleteLead('${l._id}')" title="Delete Lead">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            ` : `
+                <button class="btn btn-sm btn-edit" onclick="editLead('${l._id}')" title="Edit Lead">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-delete" onclick="deleteLead('${l._id}')" title="Delete Lead">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            `;
+            
+            return `<tr>
+                <td><input type="checkbox" class="selLead" data-id="${l._id}" /></td>
+                <td><strong>${l.name}</strong>${deadInfo}</td>
+				<td>${l.phone}</td>
+				<td>${l.email||'-'}</td>
+				<td><span class="badge ${badge(l.status)}">${l.status}</span></td>
+				<td>${l.sector||'-'}</td>
+				<td>${l.region||'-'}</td>
+				<td>${l.assignedTo?.name||'Unassigned'}</td>
+				<td>${Admin.fmtDate(l.createdAt)}</td>
+				<td class="action-buttons">
+					${actionButtons}
+				</td>
+			</tr>`;
+		}
+		
+		function badge(s){
+			if(s==='Hot') return 'red'; 
+			if(s==='Interested') return 'blue'; 
+			if(s==='Follow-up') return 'orange'; 
+			if(s==='Won') return 'green'; 
+			if(s==='Lost') return 'gray';
+			if(s==='Dead') return 'black';
+			return 'blue';
+		}
+
+		// Edit Lead Function
+		async function editLead(leadId) {
+			try {
+				const response = await fetch(`/api/admin/leads/${leadId}`, {
+					headers: Admin.authHeaders()
+				});
+				
+				if (response.ok) {
+					const lead = await response.json();
+					
+					// Populate the edit form
+					document.getElementById('edit_lead_id').value = lead._id;
+					document.getElementById('edit_name').value = lead.name;
+					document.getElementById('edit_phone').value = lead.phone;
+					document.getElementById('edit_email').value = lead.email || '';
+					document.getElementById('edit_sector').value = lead.sector || 'Technology';
+					document.getElementById('edit_region').value = lead.region || 'Maharashtra';
+					document.getElementById('edit_status').value = lead.status || 'New';
+					document.getElementById('edit_notes').value = lead.notes || '';
+					
+					// Show the modal
+					document.getElementById('editLeadModal').style.display = 'block';
+				} else {
+					alert('Failed to fetch lead details');
+				}
+			} catch (error) {
+				console.error('Error fetching lead:', error);
+				alert('Error fetching lead details');
+			}
+		}
+
+		// Delete Lead Function
+		function deleteLead(leadId) {
+			leadToDelete = leadId;
+			document.getElementById('deleteConfirmModal').style.display = 'block';
+		}
+
+		// Reactivate Lead Function
+		async function reactivateLead(leadId) {
+			if (!confirm('Are you sure you want to reactivate this dead lead? It will be set back to "New" status.')) {
+				return;
+			}
+			
+			try {
+				const response = await fetch(`/api/admin/leads/${leadId}/reactivate`, {
+					method: 'PUT',
+					headers: Admin.authHeaders()
+				});
+				
+				if (response.ok) {
+					alert('Lead reactivated successfully!');
+					load(); // Reload the leads
+				} else {
+					const error = await response.json().catch(() => ({}));
+					alert('Reactivate failed: ' + (error.error || response.status));
+				}
+			} catch (error) {
+				console.error('Error reactivating lead:', error);
+				alert('Error reactivating lead');
+			}
+		}
+
+		// Confirm Delete Function
+		async function confirmDelete() {
+			if (!leadToDelete) return;
+			
+			try {
+				const response = await fetch(`/api/admin/leads/${leadToDelete}`, {
+					method: 'DELETE',
+					headers: Admin.authHeaders()
+				});
+				
+				if (response.ok) {
+					alert('Lead deleted successfully');
+					load(); // Reload the leads
+				} else {
+					const error = await response.json().catch(() => ({}));
+					alert('Failed to delete lead: ' + (error.error || response.status));
+				}
+			} catch (error) {
+				console.error('Error deleting lead:', error);
+				alert('Error deleting lead');
+			} finally {
+				// Hide modal and reset
+				document.getElementById('deleteConfirmModal').style.display = 'none';
+				leadToDelete = null;
+			}
+		}
+
+        async function load(){
+            try {
+                let url = '/api/admin/leads';
+                const params = new URLSearchParams();
+                
+                // Add existing filters
+                const status = document.getElementById('status').value;
+                const assigned = document.getElementById('assignedFilter').value;
+                const managerId = document.getElementById('filterManager').value;
+                
+                if (status) params.append('status', status);
+                if (assigned) params.append('assigned', assigned);
+                if (managerId) params.append('managerId', managerId);
+                
+                // Add tab-specific endpoint
+                if (currentTab === 'unfinished') {
+                    url = '/api/admin/leads/unfinished';
+                } else if (currentTab === 'finished') {
+                    url = '/api/admin/leads/finished';
+                } else if (currentTab === 'dead') {
+                    url = '/api/admin/leads/dead';
+                }
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const [res, mgrRes] = await Promise.all([
+                    fetch(url, { headers: Admin.authHeaders() }),
+                    fetch('/api/admin/managers', { headers: Admin.authHeaders() })
+                ]);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    leads = data.leads || data; // Handle both new format (with count) and old format
+                    filtered = [...leads];
+                    applyFilter();
+                    
+                    // Update tab count if available
+                    if (data.count !== undefined) {
+                        const tabBtn = document.querySelector(`[data-tab="${currentTab}"]`);
+                        if (tabBtn) {
+                            const originalText = tabBtn.textContent.split(' (')[0];
+                            tabBtn.textContent = `${originalText} (${data.count})`;
+                        }
+                    }
+                } else {
+                    console.error('Failed to load leads:', res.status);
+                }
+                
+                if (mgrRes.ok) {
+                    const mgrs = await mgrRes.json();
+                    document.getElementById('mgrSelect').innerHTML = '<option value="">Select Manager</option>' + mgrs.map(m=>`<option value="${m._id}">${m.name}</option>`).join('');
+                    document.getElementById('filterManager').innerHTML = '<option value="">All Managers</option>' + mgrs.map(m=>`<option value="${m._id}">${m.name}</option>`).join('');
+                }
+            } catch (err) {
+                console.error('Error loading leads:', err);
+            }
+        }
+		
+		function applyFilter(){
+			const q = document.getElementById('q').value.toLowerCase();
+			const st = document.getElementById('status').value;
+			filtered = leads.filter(l=>{
+				const okS = !st || l.status===st;
+				const okQ = !q || l.name.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q);
+				return okS && okQ;
+			});
+			document.querySelector('#leadsTable tbody').innerHTML = filtered.map(row).join('');
+		}
+
+        // Event Listeners
+        document.getElementById('q').addEventListener('input',()=>{ setTimeout(applyFilter,200) });
+        document.getElementById('status').addEventListener('change',load);
+        document.getElementById('assignedFilter').addEventListener('change',load);
+        document.getElementById('filterManager').addEventListener('change',load);
+        document.getElementById('refresh').addEventListener('click',load);
+        document.getElementById('selAll').addEventListener('change', (e)=>{
+            document.querySelectorAll('.selLead').forEach(cb=> cb.checked = e.target.checked);
+        });
+        document.getElementById('assignToManager').addEventListener('click', async ()=>{
+            const managerId = document.getElementById('mgrSelect').value;
+            const ids = Array.from(document.querySelectorAll('.selLead:checked')).map(cb=>cb.getAttribute('data-id'));
+            if(!managerId){ alert('Select a manager'); return; }
+            if(ids.length===0){ alert('Select at least one lead'); return; }
+            const res = await fetch('/api/admin/leads/assign-manager',{
+                method:'POST',
+                headers:{ 'Content-Type':'application/json', ...Admin.authHeaders() },
+                body: JSON.stringify({ managerId, leadIds: ids, clearAssignments: false })
+            });
+            if(res.ok){ alert('Assigned to manager'); load(); } else {
+                const j = await res.json().catch(()=>({})); alert('Failed: '+(j.error||res.status));
+            }
+        });
+		
+		// Create Lead
+		document.getElementById('toggleCreateLead').addEventListener('click',()=>{
+			const c = document.getElementById('createLeadCard');
+			c.style.display = c.style.display==='none' ? 'block' : 'none';
+		});
+		document.getElementById('cl_cancel').addEventListener('click',()=>{
+			document.getElementById('createLeadCard').style.display='none';
+		});
+		document.getElementById('createLeadForm').addEventListener('submit', async (e)=>{
+			e.preventDefault();
+			const payload = {
+				name: document.getElementById('cl_name').value.trim(),
+				phone: document.getElementById('cl_phone').value.trim(),
+				email: document.getElementById('cl_email').value.trim(),
+				sector: document.getElementById('cl_sector').value,
+				region: document.getElementById('cl_region').value,
+				status: document.getElementById('cl_status').value,
+				notes: document.getElementById('cl_notes').value
+			};
+			const res = await fetch('/api/admin/leads',{ method:'POST', headers: { 'Content-Type':'application/json', ...Admin.authHeaders() }, body: JSON.stringify(payload) });
+			if(res.ok){ 
+				document.getElementById('createLeadForm').reset(); 
+				document.getElementById('createLeadCard').style.display='none'; 
+				load(); 
+				alert('Lead created successfully!');
+			} else { 
+				const j = await res.json().catch(()=>({})); 
+				alert('Create failed: '+(j.error||res.status)); 
+			}
+		});
+
+		// Edit Lead Form Submit
+		document.getElementById('editLeadForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			
+			const leadId = document.getElementById('edit_lead_id').value;
+			const payload = {
+				name: document.getElementById('edit_name').value.trim(),
+				phone: document.getElementById('edit_phone').value.trim(),
+				email: document.getElementById('edit_email').value.trim(),
+				sector: document.getElementById('edit_sector').value,
+				region: document.getElementById('edit_region').value,
+				status: document.getElementById('edit_status').value,
+				notes: document.getElementById('edit_notes').value
+			};
+			
+			try {
+				const res = await fetch(`/api/admin/leads/${leadId}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json', ...Admin.authHeaders() },
+					body: JSON.stringify(payload)
+				});
+				
+				if (res.ok) {
+					alert('Lead updated successfully!');
+					document.getElementById('editLeadModal').style.display = 'none';
+					load(); // Reload the leads
+				} else {
+					const j = await res.json().catch(() => ({}));
+					alert('Update failed: ' + (j.error || res.status));
+				}
+			} catch (error) {
+				console.error('Error updating lead:', error);
+				alert('Error updating lead');
+			}
+		});
+
+		// Modal Close Events
+		document.getElementById('closeEditModal').addEventListener('click', () => {
+			document.getElementById('editLeadModal').style.display = 'none';
+		});
+		document.getElementById('edit_cancel').addEventListener('click', () => {
+			document.getElementById('editLeadModal').style.display = 'none';
+		});
+		document.getElementById('confirmDelete').addEventListener('click', confirmDelete);
+		document.getElementById('cancelDelete').addEventListener('click', () => {
+			document.getElementById('deleteConfirmModal').style.display = 'none';
+			leadToDelete = null;
+		});
+
+		// Close modals when clicking outside
+		window.addEventListener('click', (event) => {
+			if (event.target.className === 'modal') {
+				event.target.style.display = 'none';
+			}
+		});
+
+		document.getElementById('downloadLeadTemplate').addEventListener('click', (e)=>{
+			e.preventDefault();
+			window.location = '/api/import-export/templates/leads';
+		});
+		document.getElementById('exportLeads').addEventListener('click', (e)=>{
+			e.preventDefault();
+			window.location = '/api/import-export/leads/export';
+		});
+		document.getElementById('leadCsv').addEventListener('change', async (e)=>{
+			const f = e.target.files[0]; if(!f) return;
+			const fd = new FormData(); fd.append('file', f);
+			const res = await fetch('/api/import-export/leads/import', { method:'POST', headers: Admin.authHeaders(), body: fd });
+			if(res.ok){ alert('Leads imported'); load(); } else { const j = await res.json().catch(()=>({})); alert('Import failed: '+(j.error||res.status)); }
+			e.target.value = '';
+		});
+
+		// Tab functionality
+		let currentTab = 'all';
+		document.querySelectorAll('.tab-btn').forEach(btn => {
+			btn.addEventListener('click', () => {
+				// Remove active class from all tabs
+				document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+				// Add active class to clicked tab
+				btn.classList.add('active');
+				currentTab = btn.getAttribute('data-tab');
+				load(); // Reload data based on tab
+			});
+		});
+		
+		if(Admin.getToken()) load();
+	</script>
+</body>
+</html>

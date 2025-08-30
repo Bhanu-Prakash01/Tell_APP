@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Dashboard</title>
+    <style>
+        :root {
+            /* VS Code-like syntax highlighting colors */
+            --syntax-keyword: #569cd6;
+            --syntax-string: #ce9178;
+            --syntax-number: #b5cea8;
+            --syntax-comment: #6a9955;
+            --syntax-function: #dcdcaa;
+            --syntax-variable: #9cdcfe;
+            --syntax-operator: #d4d4d4;
+            --syntax-punctuation: #d4d4d4;
+            --syntax-class: #4ec9b0;
+            --syntax-property: #9cdcfe;
+            --syntax-tag: #569cd6;
+            --syntax-attribute: #9cdcfe;
+            --syntax-value: #ce9178;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e1e1e, #2d2d30);
+            margin: 0;
+            padding: 0;
+            color: var(--syntax-variable);
+        }
+        header {
+            background: linear-gradient(135deg, var(--syntax-keyword), var(--syntax-class));
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        header h1 {
+            background: linear-gradient(135deg, var(--syntax-function), var(--syntax-number));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px auto;
+            background: #2d2d30;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        button {
+            padding: 6px 12px;
+            margin: 2px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-edit { background: #28a745; color: white; }
+        .btn-status { background: #ffc107; color: black; }
+        .btn-calls { background: #17a2b8; color: white; }
+        .btn-upload { background: #6f42c1; color: white; }
+        .follow-up-soon { background-color: #fff3cd; } /* Yellow background for leads with follow-up soon */
+        .follow-up-overdue { background-color: #f8d7da; } /* Red background for overdue follow-ups */
+        .follow-up-date {
+            font-weight: bold;
+            color: #495057;
+        }
+        .follow-up-date.overdue {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .follow-up-date.soon {
+            color: #856404;
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+        textarea, select, input {
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px;
+        }
+        #followUpDateDiv {
+            margin: 10px 0;
+        }
+        #followUpDateDiv label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #followUpDateDiv input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #followUpDateModal label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #followUpDateModal input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        #callLogsList {
+            list-style: none;
+            padding: 0;
+        }
+        #callLogsList li {
+            background: white;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Employee Dashboard</h1>
+</header>
+
+<div id="followUpSummary" style="margin: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; text-align: center;">
+    <h3>Follow-up Summary</h3>
+    <div id="summaryContent"></div>
+</div>
+
+<h2 style="text-align:center;">Assigned Leads</h2>
+<table id="leadsTable">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Status</th>
+            <th>Follow-up Date</th>
+            <th>Notes</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<h2 style="text-align:center;">My Call Logs</h2>
+<div style="text-align:center; margin-bottom:20px;">
+    <input type="text" id="callDetails" placeholder="Call details">
+    <button onclick="addCallLog()">Add Call Log</button>
+</div>
+<ul id="callLogsList"></ul>
+
+<!-- Notes Modal -->
+<div id="notesModal" class="modal">
+    <div class="modal-content">
+        <h3>Update Notes</h3>
+        <textarea id="notesText"></textarea>
+        <button onclick="saveNotes()">Save</button>
+        <button onclick="closeNotesModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- Status Modal -->
+<div id="statusModal" class="modal">
+    <div class="modal-content">
+        <h3>Change Status</h3>
+        <select id="statusSelect" onchange="toggleFollowUpDate()">
+            <option>New</option>
+            <option>Interested</option>
+            <option>Hot</option>
+            <option>Follow-up</option>
+            <option>Converted</option>
+            <option>Lost</option>
+        </select>
+        <div id="followUpDateDiv" style="display: none;">
+            <label for="followUpDate">Follow-up Date:</label>
+            <input type="date" id="followUpDate" required>
+        </div>
+        <button onclick="saveStatus()">Save</button>
+        <button onclick="closeStatusModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- Follow-up Date Edit Modal -->
+<div id="followUpDateModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit Follow-up Date</h3>
+        <div>
+            <label for="editFollowUpDate">Follow-up Date:</label>
+            <input type="date" id="editFollowUpDate" required>
+        </div>
+        <button onclick="saveFollowUpDate()">Save</button>
+        <button onclick="closeFollowUpDateModal()">Cancel</button>
+    </div>
+</div>
+
+<input type="file" id="recordingInput" accept="audio/mp3,audio/*" style="display:none"><script>
+    let currentLeadId = null;
+    let leads = []; // Global variable to store leads
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login.html';
+            return;
+        }
+        fetchLeads();
+        fetchCallLogs();
+    });
+
+    async function fetchLeads() {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('/api/employee/leads', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            leads = await res.json(); // Store leads globally
+            const tbody = document.querySelector('#leadsTable tbody');
+            tbody.innerHTML = '';
+            leads.forEach(lead => {
+                // Determine if follow-up is soon or overdue
+                let rowClass = '';
+                if (lead.followUpDate) {
+                    const followUpDate = new Date(lead.followUpDate);
+                    const today = new Date();
+                    const diffTime = followUpDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) {
+                        rowClass = 'follow-up-overdue'; // Overdue
+                    } else if (diffDays <= 2) {
+                        rowClass = 'follow-up-soon'; // Due soon (within 2 days)
+                    }
+                }
+                
+                tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td>${lead.name}</td>
+                        <td>${lead.phone || lead.email || 'N/A'}</td>
+                        <td>${lead.status || 'Pending'}</td>
+                        <td class="follow-up-date ${rowClass.includes('overdue') ? 'overdue' : rowClass.includes('soon') ? 'soon' : ''}">${lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : ''}</td>
+                        <td>${lead.notes || ''}</td>
+                        <td>
+                            <button class="btn-edit" onclick="openNotesModal('${lead._id}', '${lead.notes || ''}')">Edit Notes</button>
+                            <button class="btn-status" onclick="openStatusModal('${lead._id}', '${lead.status || 'New'}')">Change Status</button>
+                            ${lead.status === 'Follow-up' ? `<button class="btn-edit" onclick="openFollowUpDateModal('${lead._id}', '${lead.followUpDate || ''}')">Edit Follow-up Date</button>` : ''}
+                            <button class="btn-calls" onclick="viewCallLogs('${lead._id}')">View Calls</button>
+                            <button class="btn-upload" onclick="startUploadForLead('${lead._id}')">Upload Recording</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Update the follow-up summary
+            updateFollowUpSummary();
+        } catch (err) {
+            console.error('Error fetching leads:', err);
+        }
+    }
+
+    function updateFollowUpSummary() {
+        const summaryContent = document.getElementById('summaryContent');
+        let overdueCount = 0;
+        let dueSoonCount = 0;
+        let totalFollowUps = 0;
+        
+        leads.forEach(lead => {
+            if (lead.followUpDate) {
+                totalFollowUps++;
+                const followUpDate = new Date(lead.followUpDate);
+                const today = new Date();
+                const diffTime = followUpDate.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays < 0) {
+                    overdueCount++;
+                } else if (diffDays <= 2) {
+                    dueSoonCount++;
+                }
+            }
+        });
+        
+        summaryContent.innerHTML = `
+            <div style="display: flex; justify-content: space-around; margin: 10px 0;">
+                <div style="background: #dc3545; color: white; padding: 10px; border-radius: 5px; min-width: 100px;">
+                    <strong>${overdueCount}</strong><br>Overdue
+                </div>
+                <div style="background: #ffc107; color: black; padding: 10px; border-radius: 5px; min-width: 100px;">
+                    <strong>${dueSoonCount}</strong><br>Due Soon
+                </div>
+                <div style="background: #17a2b8; color: white; padding: 10px; border-radius: 5px; min-width: 100px;">
+                    <strong>${totalFollowUps}</strong><br>Total Follow-ups
+                </div>
+            </div>
+        `;
+    }
+
+    function openNotesModal(leadId, notes) {
+        currentLeadId = leadId;
+        document.getElementById('notesText').value = notes;
+        document.getElementById('notesModal').style.display = 'flex';
+    }
+
+    function closeNotesModal() {
+        document.getElementById('notesModal').style.display = 'none';
+    }
+
+    async function saveNotes() {
+        const notes = document.getElementById('notesText').value;
+        const token = localStorage.getItem('token');
+        await fetch('/api/employee/update-lead', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ leadId: currentLeadId, notes })
+        });
+        closeNotesModal();
+        fetchLeads();
+    }
+
+    function openStatusModal(leadId, status) {
+        currentLeadId = leadId;
+        document.getElementById('statusSelect').value = status;
+        
+        // If the lead already has a follow-up date, populate it
+        const lead = leads.find(l => l._id === leadId);
+        if (lead && lead.followUpDate) {
+            document.getElementById('followUpDate').value = new Date(lead.followUpDate).toISOString().split('T')[0];
+        }
+        
+        toggleFollowUpDate(); // Show/hide date input based on current status
+        document.getElementById('statusModal').style.display = 'flex';
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+        // Reset the follow-up date input
+        document.getElementById('followUpDate').value = '';
+        document.getElementById('followUpDateDiv').style.display = 'none';
+    }
+
+    function toggleFollowUpDate() {
+        const status = document.getElementById('statusSelect').value;
+        const followUpDateDiv = document.getElementById('followUpDateDiv');
+        const followUpDateInput = document.getElementById('followUpDate');
+        
+        if (status === 'Follow-up') {
+            followUpDateDiv.style.display = 'block';
+            followUpDateInput.required = true;
+            // Set default date to tomorrow if no date is set
+            if (!followUpDateInput.value) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                followUpDateInput.value = tomorrow.toISOString().split('T')[0];
+            }
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            followUpDateInput.min = today;
+        } else if (status === 'Hot') {
+            // For Hot status, show a message that it will be reassigned in 2 weeks
+            followUpDateDiv.style.display = 'none';
+            followUpDateInput.required = false;
+            // You could add a notification here that Hot leads are reassigned after 2 weeks
+            if (!document.getElementById('hotStatusMessage')) {
+                const message = document.createElement('div');
+                message.id = 'hotStatusMessage';
+                message.style.cssText = 'background: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ffeaa7;';
+                message.textContent = 'Note: Hot leads will be automatically reassigned to another employee after 2 weeks.';
+                followUpDateDiv.parentNode.insertBefore(message, followUpDateDiv.nextSibling);
+            }
+        } else {
+            followUpDateDiv.style.display = 'none';
+            followUpDateInput.required = false;
+            // Remove hot status message if it exists
+            const hotMessage = document.getElementById('hotStatusMessage');
+            if (hotMessage) hotMessage.remove();
+        }
+    }
+
+    async function saveStatus() {
+        const status = document.getElementById('statusSelect').value;
+        const followUpDate = document.getElementById('followUpDate').value;
+        const token = localStorage.getItem('token');
+        
+        // Validate that follow-up date is provided when status is Follow-up
+        if (status === 'Follow-up' && !followUpDate) {
+            alert('Please select a follow-up date');
+            return;
+        }
+        
+        const requestBody = { leadId: currentLeadId, status };
+        if (status === 'Follow-up' && followUpDate) {
+            requestBody.followUpDate = followUpDate;
+        }
+        
+        await fetch('/api/employee/update-lead', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(requestBody)
+        });
+        closeStatusModal();
+        fetchLeads();
+    }
+
+    async function addCallLog() {
+        const details = document.getElementById('callDetails').value;
+        const token = localStorage.getItem('token');
+        await fetch('/api/employee/call-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ details })
+        });
+        document.getElementById('callDetails').value = '';
+        fetchCallLogs();
+    }
+
+    async function fetchCallLogs() {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/employee/my-call-logs', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const logs = await res.json();
+        const list = document.getElementById('callLogsList');
+        list.innerHTML = logs.map(log => `<li>${log.details} - ${new Date(log.date).toLocaleString()}</li>`).join('');
+    }
+
+    function viewCallLogs(leadId) {
+        alert("This would fetch and show call logs for lead ID: " + leadId);
+    }
+
+    function openFollowUpDateModal(leadId, currentFollowUpDate) {
+        currentLeadId = leadId;
+        const dateInput = document.getElementById('editFollowUpDate');
+        dateInput.value = currentFollowUpDate ? new Date(currentFollowUpDate).toISOString().split('T')[0] : '';
+        
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+        
+        document.getElementById('followUpDateModal').style.display = 'flex';
+    }
+
+    function closeFollowUpDateModal() {
+        document.getElementById('followUpDateModal').style.display = 'none';
+    }
+
+    async function saveFollowUpDate() {
+        const followUpDate = document.getElementById('editFollowUpDate').value;
+        const token = localStorage.getItem('token');
+        
+        // Validate that the date is not in the past
+        const selectedDate = new Date(followUpDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+            alert('Follow-up date cannot be in the past');
+            return;
+        }
+        
+        await fetch('/api/employee/update-lead', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ leadId: currentLeadId, followUpDate })
+        });
+        closeFollowUpDateModal();
+        fetchLeads();
+    }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Ensure the input exists; if not, create it (defensive)
+  let recordingInput = document.getElementById('recordingInput');
+  if (!recordingInput) {
+    recordingInput = document.createElement('input');
+    recordingInput.type = 'file';
+    recordingInput.id = 'recordingInput';
+    recordingInput.accept = 'audio/mp3,audio/*';
+    recordingInput.style.display = 'none';
+    document.body.appendChild(recordingInput);
+  }
+
+  let currentLeadId = null;
+
+  // Called from your table button: onclick="startUploadForLead('...')"
+  window.startUploadForLead = function(leadId) {
+    currentLeadId = leadId;
+    recordingInput.value = ''; // reset
+    recordingInput.click();
+  };
+
+  recordingInput.addEventListener('change', async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    // Basic validation: allow audio files only and prefer .mp3
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/*'];
+    if (!file.type.startsWith('audio') && !file.name.toLowerCase().endsWith('.mp3')) {
+      alert('Please upload an MP3 or other audio file.');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Not logged in. Please login first.');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    if (!currentLeadId) {
+      alert('Lead ID is missing. Please try again.');
+      return;
+    }
+
+    // Optional: small UI feedback
+    const statusEl = document.getElementById('leadStatusMsg') || document.createElement('div');
+    statusEl.id = 'leadStatusMsg';
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Uploading...';
+    if (!document.getElementById('leadStatusMsg')) {
+      // append to page footer or near the list
+      document.body.appendChild(statusEl);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('recording', file);
+      formData.append('leadId', currentLeadId);
+
+      // NOTE: Use the exact route your server exposes.
+      // I used the route name we added in routes/employee.js: /api/employee/upload-call-log
+      const res = await fetch('/api/employee/upload-call-log', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}` // do NOT set Content-Type for FormData
+        },
+        body: formData
+      });
+
+      // Try parse JSON safely
+      let payload = null;
+      try { payload = await res.json(); } catch (e) { console.warn('No JSON response', e); }
+
+      if (!res.ok) {
+        console.error('Upload failed', res.status, payload);
+        statusEl.textContent = payload?.message || `Upload failed (status ${res.status})`;
+        alert('Upload failed: ' + (payload?.message || res.statusText));
+        return;
+      }
+
+      statusEl.textContent = 'Upload successful!';
+      // Refresh leads so the new recording URL (if shown) appears
+      if (typeof fetchLeads === 'function') fetchLeads();
+
+      // Optionally, show the uploaded URL
+      if (payload?.url) {
+        const link = document.createElement('a');
+        link.href = payload.url;
+        link.target = '_blank';
+        link.textContent = 'Open recording';
+        statusEl.appendChild(document.createElement('br'));
+        statusEl.appendChild(link);
+      }
+    } catch (err) {
+      console.error('Upload error', err);
+      statusEl.textContent = 'Upload failed (network error).';
+      alert('Upload failed: ' + err.message);
+    } finally {
+      // cleanup
+      currentLeadId = null;
+      recordingInput.value = '';
+      setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 4000);
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -14,19 +14,17 @@
 				<a href="/admin/overview.html">Overview</a>
 				<a href="/admin/users.html" class="active">Users</a>
 				<a href="/admin/leads.html">Leads</a>
-				<a href="/admin/campaigns.html">Campaigns</a>
-				<a href="/admin/pipelines.html">Pipelines</a>
-				<a href="/admin/sims.html">SIMs</a>
 				<a href="/admin/analytics.html">Analytics</a>
 				<a href="/admin/user-performance.html">User Performance</a>
-				<a href="/admin/settings.html">Settings</a>
 			</nav>
 		</aside>
 		<main class="admin-main">
 			<div class="admin-topbar">
 				<h2 class="page-title">Users</h2>
 				<div class="toolbar">
+					<button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
 					<button class="btn" id="refresh">Refresh</button>
+					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
 			<div class="grid cols-2">
@@ -76,6 +74,19 @@
 	<script src="../assets/admin.js"></script>
 	<script>
 		Admin.navActivate('/admin/users.html');
+		function toggleSidebar(){
+			const sb = document.querySelector('.admin-sidebar');
+			sb && sb.classList.toggle('open');
+		}
+		function logout(e){
+			e && e.preventDefault();
+			try {
+				localStorage.removeItem('token');
+				localStorage.removeItem('authToken');
+				localStorage.removeItem('role');
+			} catch(_){ }
+			window.location.href = '/login.html';
+		}
 		function rowUser(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
 		function rowEmp(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${u.manager?u.manager.name:'-'}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
 		async function load(){

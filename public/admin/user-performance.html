@@ -3,9 +3,11 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Admin • User Performance</title>
+	<title>Admin • User Performance & Audio Analytics</title>
 	<link rel="stylesheet" href="../assets/frappe.css" />
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 	<style>
 		.performance-grid {
 			display: grid;
@@ -114,6 +116,312 @@
 		.tab-content.active {
 			display: block;
 		}
+		
+		/* Enhanced UI Styles */
+		.audio-analytics {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			padding: 20px;
+			border-radius: var(--radius);
+			margin-bottom: 20px;
+		}
+		
+		.audio-stats {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 15px;
+			margin-top: 15px;
+		}
+		
+		.audio-stat {
+			background: rgba(255, 255, 255, 0.1);
+			padding: 15px;
+			border-radius: 8px;
+			text-align: center;
+		}
+		
+		.audio-stat-value {
+			font-size: 24px;
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+		
+		.audio-stat-label {
+			font-size: 12px;
+			opacity: 0.9;
+		}
+		
+		.real-time-indicator {
+			display: inline-block;
+			width: 8px;
+			height: 8px;
+			background: #10b981;
+			border-radius: 50%;
+			margin-right: 8px;
+			animation: pulse 2s infinite;
+		}
+		
+		@keyframes pulse {
+			0% { opacity: 1; }
+			50% { opacity: 0.5; }
+			100% { opacity: 1; }
+		}
+		
+		.performance-filters {
+			background: var(--bg-card);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			padding: 20px;
+			margin-bottom: 20px;
+		}
+		
+		.filter-row {
+			display: flex;
+			gap: 15px;
+			align-items: center;
+			flex-wrap: wrap;
+		}
+		
+		.filter-group {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+		}
+		
+		.filter-group label {
+			font-size: 12px;
+			color: var(--text-secondary);
+			font-weight: 500;
+		}
+		
+		.filter-group select,
+		.filter-group input {
+			padding: 8px 12px;
+			border: 1px solid var(--border);
+			border-radius: 4px;
+			background: var(--bg-card);
+			color: var(--text-primary);
+		}
+		
+		.audio-player {
+			background: var(--bg-secondary);
+			border-radius: 8px;
+			padding: 15px;
+			margin: 10px 0;
+			border: 1px solid var(--border);
+			transition: all 0.3s ease;
+		}
+		
+		.audio-player:hover {
+			box-shadow: var(--shadow-md);
+			transform: translateY(-2px);
+		}
+		
+		.audio-player audio {
+			border-radius: 4px;
+			width: 100%;
+		}
+		
+		.badge {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 12px;
+			font-size: 10px;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+		
+		.audio-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-top: 10px;
+		}
+		
+		.audio-controls button {
+			padding: 8px 12px;
+			border: none;
+			border-radius: 4px;
+			background: var(--primary);
+			color: white;
+			cursor: pointer;
+			font-size: 12px;
+		}
+		
+		.audio-controls button:hover {
+			background: var(--primary-dark);
+		}
+		
+		.performance-metrics {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			gap: 20px;
+			margin-bottom: 30px;
+		}
+		
+		.metric-card {
+			background: var(--bg-card);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			padding: 20px;
+			position: relative;
+			overflow: hidden;
+		}
+		
+		.metric-card::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 3px;
+			background: linear-gradient(90deg, var(--primary), var(--success));
+		}
+		
+		.metric-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 15px;
+		}
+		
+		.metric-icon {
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 18px;
+			color: white;
+		}
+		
+		.metric-value {
+			font-size: 28px;
+			font-weight: bold;
+			color: var(--text-primary);
+			margin-bottom: 5px;
+		}
+		
+		.metric-change {
+			font-size: 12px;
+			color: var(--success);
+		}
+		
+		.metric-change.negative {
+			color: var(--danger);
+		}
+		
+		.live-updates {
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: var(--bg-card);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			padding: 15px;
+			box-shadow: var(--shadow-lg);
+			max-width: 300px;
+			z-index: 1000;
+		}
+		
+		.live-update-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 10px;
+			padding: 8px;
+			background: var(--bg-secondary);
+			border-radius: 4px;
+		}
+		
+		.live-update-icon {
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 10px;
+			color: white;
+		}
+		
+		.live-update-text {
+			font-size: 12px;
+			color: var(--text-secondary);
+		}
+		
+		.export-buttons {
+			display: flex;
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+		
+		.export-btn {
+			padding: 10px 20px;
+			border: 1px solid var(--border);
+			background: var(--bg-card);
+			color: var(--text-primary);
+			border-radius: var(--radius);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			transition: all 0.3s ease;
+		}
+		
+		.export-btn:hover {
+			background: var(--primary);
+			color: white;
+			border-color: var(--primary);
+		}
+		
+		.loading {
+			text-align: center;
+			padding: 20px;
+			color: var(--text-secondary);
+			font-style: italic;
+		}
+		
+		.loading::after {
+			content: '';
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 2px solid var(--border);
+			border-radius: 50%;
+			border-top-color: var(--primary);
+			animation: spin 1s ease-in-out infinite;
+			margin-left: 10px;
+		}
+		
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		
+		/* Responsive improvements */
+		@media (max-width: 768px) {
+			.performance-grid,
+			.performance-metrics,
+			.audio-stats {
+				grid-template-columns: 1fr;
+			}
+			
+			.filter-row {
+				flex-direction: column;
+				align-items: stretch;
+		 }
+			
+			.export-buttons {
+				flex-direction: column;
+			}
+			
+			.live-updates {
+				position: static;
+				margin: 20px 0;
+			}
+		}
 	</style>
 </head>
 <body>
@@ -124,9 +432,7 @@
 				<a href="/admin/overview.html">Overview</a>
 				<a href="/admin/users.html">Users</a>
 				<a href="/admin/leads.html">Leads</a>
-				<a href="/admin/campaigns.html">Campaigns</a>
-				<a href="/admin/pipelines.html">Pipelines</a>
-				<a href="/admin/sims.html">SIMs</a>
+				
 				<a href="/admin/call-records.html">Call Records</a>
 				<a href="/admin/analytics.html">Analytics</a>
 				<a href="/admin/user-performance.html" class="active">User Performance</a>
@@ -135,9 +441,152 @@
 		</aside>
 		<main class="admin-main">
 			<div class="admin-topbar">
-				<h2 class="page-title">User Performance Analytics</h2>
+				<h2 class="page-title">
+					<span class="real-time-indicator"></span>
+					User Performance & Audio Analytics
+				</h2>
 				<div class="toolbar">
-					<button class="btn" id="refresh">Refresh</button>
+					<button class="btn" id="refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+					<button class="btn" id="autoRefresh"><i class="fas fa-play"></i> Auto-Refresh</button>
+				</div>
+			</div>
+
+			<!-- Audio Analytics Overview -->
+			<div class="audio-analytics">
+				<h3><i class="fas fa-microphone"></i> Audio Collection Overview</h3>
+				<div class="audio-stats">
+					<div class="audio-stat">
+						<div class="audio-stat-value" id="totalRecordings">-</div>
+						<div class="audio-stat-label">Total Recordings</div>
+					</div>
+					<div class="audio-stat">
+						<div class="audio-stat-value" id="totalAudioDuration">-</div>
+						<div class="audio-stat-label">Total Duration (hrs)</div>
+					</div>
+					<div class="audio-stat">
+						<div class="audio-stat-value" id="avgCallDuration">-</div>
+						<div class="audio-stat-label">Avg Call (min)</div>
+					</div>
+					<div class="audio-stat">
+						<div class="audio-stat-value" id="audioQualityScore">-</div>
+						<div class="audio-stat-label">Quality Score</div>
+					</div>
+					<div class="audio-stat">
+						<div class="audio-stat-value" id="duplicateRate">-</div>
+						<div class="audio-stat-label">Duplicate Rate %</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Performance Filters -->
+			<div class="performance-filters">
+				<h3><i class="fas fa-filter"></i> Performance Filters</h3>
+				<div class="filter-row">
+					<div class="filter-group">
+						<label>Date Range</label>
+						<select id="dateRange">
+							<option value="7">Last 7 Days</option>
+							<option value="30" selected>Last 30 Days</option>
+							<option value="90">Last 90 Days</option>
+							<option value="365">Last Year</option>
+							<option value="custom">Custom Range</option>
+						</select>
+					</div>
+					<div class="filter-group" id="customDateRange" style="display: none;">
+						<label>From</label>
+						<input type="date" id="dateFrom">
+					</div>
+					<div class="filter-group" id="customDateRangeTo" style="display: none;">
+						<label>To</label>
+						<input type="date" id="dateTo">
+					</div>
+					<div class="filter-group">
+						<label>Role</label>
+						<select id="roleFilter">
+							<option value="all">All Roles</option>
+							<option value="employee">Employees</option>
+							<option value="manager">Managers</option>
+						</select>
+					</div>
+					<div class="filter-group">
+						<label>Performance Level</label>
+						<select id="performanceFilter">
+							<option value="all">All Levels</option>
+							<option value="high">High Performers</option>
+							<option value="medium">Medium Performers</option>
+							<option value="low">Low Performers</option>
+						</select>
+					</div>
+					<div class="filter-group">
+						<label>Audio Quality</label>
+						<select id="audioQualityFilter">
+							<option value="all">All Qualities</option>
+							<option value="crystal_clear">Crystal Clear</option>
+							<option value="clear">Clear</option>
+							<option value="fair">Fair</option>
+							<option value="poor">Poor</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
+			<!-- Export Buttons -->
+			<div class="export-buttons">
+				<button class="export-btn" id="exportPerformance">
+					<i class="fas fa-download"></i> Export Performance Data
+				</button>
+				<button class="export-btn" id="exportAudioStats">
+					<i class="fas fa-music"></i> Export Audio Statistics
+				</button>
+				<button class="export-btn" id="exportCallLogs">
+					<i class="fas fa-phone"></i> Export Call Logs
+				</button>
+			</div>
+
+			<!-- Performance Metrics -->
+			<div class="performance-metrics">
+				<div class="metric-card">
+					<div class="metric-header">
+						<h3>Team Performance</h3>
+						<div class="metric-icon" style="background: var(--primary);">
+							<i class="fas fa-users"></i>
+						</div>
+					</div>
+					<div class="metric-value" id="teamPerformanceScore">-</div>
+					<div class="metric-change" id="teamPerformanceChange">+0% vs last period</div>
+				</div>
+				
+				<div class="metric-card">
+					<div class="metric-header">
+						<h3>Audio Quality</h3>
+						<div class="metric-icon" style="background: var(--success);">
+							<i class="fas fa-microphone"></i>
+						</div>
+					</div>
+					<div class="metric-value" id="audioQualityMetric">-</div>
+					<div class="metric-change" id="audioQualityChange">+0% vs last period</div>
+				</div>
+				
+				<div class="metric-card">
+					<div class="metric-header">
+						<h3>Conversion Rate</h3>
+						<div class="metric-icon" style="background: var(--warning);">
+							<i class="fas fa-chart-line"></i>
+						</div>
+					</div>
+					<div class="metric-value" id="conversionRateMetric">-</div>
+					<div class="metric-change" id="conversionRateChange">+0% vs last period</div>
+				</div>
+				
+				<div class="metric-card">
+					<div class="metric-header">
+						<h3>Call Efficiency</h3>
+						<div class="metric-icon" style="background: var(--info);">
+							<i class="fas fa-clock"></i>
+						</div>
+					</div>
+					<div class="metric-value" id="callEfficiencyMetric">-</div>
+					<div class="metric-change" id="callEfficiencyChange">+0% vs last period</div>
 				</div>
 			</div>
 
@@ -234,6 +683,7 @@
 					<button class="tab-btn active" data-tab="employees">Employees</button>
 					<button class="tab-btn" data-tab="managers">Managers</button>
 					<button class="tab-btn" data-tab="charts">Charts</button>
+					<button class="tab-btn" data-tab="audio">Audio Analytics</button>
 				</div>
 
 				<!-- Employees Tab -->
@@ -304,14 +754,59 @@
 						<canvas id="statusChart"></canvas>
 					</div>
 				</div>
+
+				<!-- Audio Analytics Tab -->
+				<div class="tab-content" id="audio-tab">
+					<div class="chart-container">
+						<h3>Audio Quality Distribution</h3>
+						<canvas id="audioQualityChart"></canvas>
+					</div>
+					<div class="chart-container">
+						<h3>Call Duration Trends</h3>
+						<canvas id="callDurationChart"></canvas>
+					</div>
+					<div class="chart-container">
+						<h3>Recording Upload Trends</h3>
+						<canvas id="recordingTrendsChart"></canvas>
+					</div>
+					
+					<div class="card">
+						<h3>Recent Audio Recordings</h3>
+						<div class="audio-recordings-list" id="audioRecordingsList">
+							<div class="loading">Loading audio recordings...</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		</main>
 	</div>
+
+	<!-- Live Updates Panel -->
+	<div class="live-updates" id="liveUpdates">
+		<h4><i class="fas fa-broadcast-tower"></i> Live Updates</h4>
+		<div id="liveUpdatesContent">
+			<div class="live-update-item">
+				<div class="live-update-icon" style="background: var(--success);">
+					<i class="fas fa-check"></i>
+				</div>
+				<div class="live-update-text">System monitoring active</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="../assets/admin.js"></script>
 	<script>
 		Admin.navActivate('/admin/user-performance.html');
 		let performanceData = null;
 		let charts = {};
+		let autoRefreshInterval = null;
+		let audioData = null;
+		let filters = {
+			dateRange: 30,
+			role: 'all',
+			performanceLevel: 'all',
+			audioQuality: 'all'
+		};
 
 		// Tab functionality
 		document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -324,13 +819,66 @@
 				
 				if (btn.dataset.tab === 'charts' && performanceData) {
 					renderCharts();
+				} else if (btn.dataset.tab === 'audio' && audioData) {
+					renderAudioCharts();
+					renderAudioRecordings();
 				}
 			});
 		});
 
+		// Filter functionality
+		document.getElementById('dateRange').addEventListener('change', handleFilterChange);
+		document.getElementById('roleFilter').addEventListener('change', handleFilterChange);
+		document.getElementById('performanceFilter').addEventListener('change', handleFilterChange);
+		document.getElementById('audioQualityFilter').addEventListener('change', handleFilterChange);
+		
+		// Custom date range inputs
+		document.getElementById('dateFrom').addEventListener('change', handleFilterChange);
+		document.getElementById('dateTo').addEventListener('change', handleFilterChange);
+
+		function handleFilterChange() {
+			filters.dateRange = document.getElementById('dateRange').value;
+			filters.role = document.getElementById('roleFilter').value;
+			filters.performanceLevel = document.getElementById('performanceFilter').value;
+			filters.audioQuality = document.getElementById('audioQualityFilter').value;
+
+			// Show/hide custom date inputs
+			if (filters.dateRange === 'custom') {
+				document.getElementById('customDateRange').style.display = 'block';
+				document.getElementById('customDateRangeTo').style.display = 'block';
+			} else {
+				document.getElementById('customDateRange').style.display = 'none';
+				document.getElementById('customDateRangeTo').style.display = 'none';
+			}
+
+			// Reload data with filters
+			loadPerformanceData();
+			loadAudioData();
+		}
+
+		// Initialize custom date inputs
+		function initializeCustomDateInputs() {
+			const today = new Date();
+			const thirtyDaysAgo = new Date();
+			thirtyDaysAgo.setDate(today.getDate() - 30);
+			
+			document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+			document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+		}
+
 		async function loadPerformanceData() {
 			try {
-				const response = await fetch('/api/admin/analytics/user-performance-overview', {
+				const queryParams = new URLSearchParams();
+				if (filters.dateRange !== 'custom') {
+					queryParams.append('days', filters.dateRange);
+				} else {
+					queryParams.append('from', document.getElementById('dateFrom').value);
+					queryParams.append('to', document.getElementById('dateTo').value);
+				}
+				if (filters.role !== 'all') queryParams.append('role', filters.role);
+				if (filters.performanceLevel !== 'all') queryParams.append('performance', filters.performanceLevel);
+
+				const response = await fetch(`/api/admin/analytics/user-performance-overview?${queryParams}`, {
 					headers: Admin.authHeaders()
 				});
 				
@@ -339,11 +887,48 @@
 					updateOverview();
 					renderEmployeeTable();
 					renderManagerTable();
+					updatePerformanceMetrics();
+					addLiveUpdate('Performance data refreshed', 'success');
 				} else {
 					console.error('Failed to load performance data');
+					addLiveUpdate('Failed to load performance data', 'error');
 				}
 			} catch (error) {
 				console.error('Error loading performance data:', error);
+				addLiveUpdate('Error loading performance data', 'error');
+			}
+		}
+
+		async function loadAudioData() {
+			try {
+				const queryParams = new URLSearchParams();
+				if (filters.dateRange !== 'custom') {
+					queryParams.append('days', filters.dateRange);
+				} else {
+					queryParams.append('from', document.getElementById('dateFrom').value);
+					queryParams.append('to', document.getElementById('dateTo').value);
+				}
+				if (filters.audioQuality !== 'all') queryParams.append('quality', filters.audioQuality);
+
+				const response = await fetch(`/api/admin/analytics/audio-overview?${queryParams}`, {
+					headers: Admin.authHeaders()
+				});
+				
+				if (response.ok) {
+					audioData = await response.json();
+					updateAudioOverview();
+					if (document.getElementById('audio-tab').classList.contains('active')) {
+						renderAudioCharts();
+						renderAudioRecordings();
+					}
+					addLiveUpdate('Audio data refreshed', 'success');
+				} else {
+					console.error('Failed to load audio data');
+					addLiveUpdate('Failed to load audio data', 'error');
+				}
+			} catch (error) {
+				console.error('Error loading audio data:', error);
+				addLiveUpdate('Error loading audio data', 'error');
 			}
 		}
 
@@ -373,6 +958,44 @@
 			document.getElementById('managerCompleted').textContent = managers.summary.totalCompletedLeads;
 			document.getElementById('managerPending').textContent = managers.summary.totalPendingLeads;
 			document.getElementById('avgManagerCompletion').textContent = managers.summary.avgCompletionRate + '%';
+		}
+
+		function updateAudioOverview() {
+			if (!audioData) return;
+			
+			const { overview } = audioData;
+			document.getElementById('totalRecordings').textContent = overview.totalRecordings;
+			document.getElementById('totalAudioDuration').textContent = (overview.totalDuration / 3600).toFixed(1);
+			document.getElementById('avgCallDuration').textContent = (overview.avgCallDuration / 60).toFixed(1);
+			document.getElementById('audioQualityScore').textContent = overview.avgQualityScore + '/10';
+			document.getElementById('duplicateRate').textContent = overview.duplicateRate.toFixed(1) + '%';
+		}
+
+		function updatePerformanceMetrics() {
+			if (!performanceData) return;
+			
+			const { overview, employees, managers } = performanceData;
+			
+			// Calculate team performance score
+			const teamScore = Math.round(
+				(overview.overallCompletionRate * 0.4) + 
+				((overview.totalWon / overview.totalLeads) * 100 * 0.6)
+			);
+			document.getElementById('teamPerformanceScore').textContent = teamScore + '%';
+			
+			// Calculate audio quality metric
+			if (audioData) {
+				document.getElementById('audioQualityMetric').textContent = audioData.overview.avgQualityScore + '/10';
+			}
+			
+			// Calculate conversion rate
+			const conversionRate = Math.round((overview.totalWon / overview.totalLeads) * 100);
+			document.getElementById('conversionRateMetric').textContent = conversionRate + '%';
+			
+			// Calculate call efficiency
+			const avgCallsPerLead = employees.summary.avgCallsPerLead || 0;
+			const efficiencyScore = Math.round(Math.max(0, 100 - (avgCallsPerLead * 10)));
+			document.getElementById('callEfficiencyMetric').textContent = efficiencyScore + '%';
 		}
 
 		function renderEmployeeTable() {
@@ -482,11 +1105,262 @@
 			});
 		}
 
+		function renderAudioCharts() {
+			if (!audioData) return;
+
+			// Audio Quality Distribution Chart
+			const qualityCtx = document.getElementById('audioQualityChart').getContext('2d');
+			if (charts.audioQuality) charts.audioQuality.destroy();
+			
+			charts.audioQuality = new Chart(qualityCtx, {
+				type: 'doughnut',
+				data: {
+					labels: ['Crystal Clear', 'Clear', 'Fair', 'Poor'],
+					datasets: [{
+						data: [
+							audioData.overview.qualityDistribution.crystalClear,
+							audioData.overview.qualityDistribution.clear,
+							audioData.overview.qualityDistribution.fair,
+							audioData.overview.qualityDistribution.poor
+						],
+						backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+						borderWidth: 2,
+						borderColor: '#ffffff'
+					}]
+				},
+				options: {
+					responsive: true,
+					plugins: {
+						legend: { position: 'bottom' }
+					}
+				}
+			});
+
+			// Call Duration Trends Chart
+			const durationCtx = document.getElementById('callDurationChart').getContext('2d');
+			if (charts.callDuration) charts.callDuration.destroy();
+			
+			charts.callDuration = new Chart(durationCtx, {
+				type: 'line',
+				data: {
+					labels: audioData.overview.durationTrends.map(d => d.date),
+					datasets: [{
+						label: 'Average Call Duration (minutes)',
+						data: audioData.overview.durationTrends.map(d => d.avgDuration / 60),
+						borderColor: '#6366f1',
+						backgroundColor: 'rgba(99, 102, 241, 0.1)',
+						tension: 0.4,
+						fill: true
+					}]
+				},
+				options: {
+					responsive: true,
+					scales: {
+						y: { beginAtZero: true }
+					}
+				}
+			});
+
+			// Recording Upload Trends Chart
+			const trendsCtx = document.getElementById('recordingTrendsChart').getContext('2d');
+			if (charts.recordingTrends) charts.recordingTrends.destroy();
+			
+			charts.recordingTrends = new Chart(trendsCtx, {
+				type: 'bar',
+				data: {
+					labels: audioData.overview.uploadTrends.map(t => t.date),
+					datasets: [{
+						label: 'Recordings Uploaded',
+						data: audioData.overview.uploadTrends.map(t => t.count),
+						backgroundColor: '#10b981',
+						borderColor: '#059669',
+						borderWidth: 1
+					}]
+				},
+				options: {
+					responsive: true,
+					scales: {
+						y: { beginAtZero: true }
+					}
+				}
+			});
+		}
+
+		function renderAudioRecordings() {
+			if (!audioData || !audioData.recentRecordings) return;
+			
+			const container = document.getElementById('audioRecordingsList');
+			container.innerHTML = '';
+			
+			audioData.recentRecordings.forEach(recording => {
+				const recordingDiv = document.createElement('div');
+				recordingDiv.className = 'audio-player';
+				recordingDiv.innerHTML = `
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+						<div>
+							<strong>${recording.lead.name}</strong> - ${recording.employee.name}
+							<br><small>${new Date(recording.createdAt).toLocaleString()}</small>
+						</div>
+						<div style="text-align: right;">
+							<span class="badge" style="background: ${getQualityColor(recording.audioQuality)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">
+								${recording.audioQuality}
+							</span>
+							<br><small>${(recording.duration / 60).toFixed(1)} min</small>
+						</div>
+					</div>
+					<audio controls style="width: 100%;">
+						<source src="${recording.recordingUrl}" type="audio/mpeg">
+						Your browser does not support the audio element.
+					</audio>
+					<div class="audio-controls">
+						<button onclick="downloadRecording('${recording.recordingUrl}', '${recording.lead.name}_${recording.employee.name}.mp3')">
+							<i class="fas fa-download"></i> Download
+						</button>
+						<button onclick="playRecording('${recording._id}')">
+							<i class="fas fa-play"></i> Play
+						</button>
+						<button onclick="viewCallDetails('${recording._id}')">
+							<i class="fas fa-info-circle"></i> Details
+						</button>
+					</div>
+				`;
+				container.appendChild(recordingDiv);
+			});
+		}
+
+		function getQualityColor(quality) {
+			const colors = {
+				'Crystal Clear': '#10b981',
+				'Clear': '#3b82f6',
+				'Fair': '#f59e0b',
+				'Poor': '#ef4444'
+			};
+			return colors[quality] || '#6b7280';
+		}
+
+		function downloadRecording(url, filename) {
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			addLiveUpdate(`Downloading ${filename}`, 'info');
+		}
+
+		function playRecording(recordingId) {
+			// Find and play the audio element
+			const audioElement = document.querySelector(`[data-recording-id="${recordingId}"] audio`);
+			if (audioElement) {
+				audioElement.play();
+				addLiveUpdate('Playing recording', 'info');
+			}
+		}
+
+		function viewCallDetails(recordingId) {
+			// This could open a modal with detailed call information
+			addLiveUpdate('Opening call details', 'info');
+		}
+
+		function addLiveUpdate(message, type = 'info') {
+			const container = document.getElementById('liveUpdatesContent');
+			const updateItem = document.createElement('div');
+			updateItem.className = 'live-update-item';
+			
+			const iconColors = {
+				success: '#10b981',
+				error: '#ef4444',
+				warning: '#f59e0b',
+				info: '#3b82f6'
+			};
+			
+			const icons = {
+				success: 'fas fa-check',
+				error: 'fas fa-exclamation-triangle',
+				warning: 'fas fa-exclamation-circle',
+				info: 'fas fa-info-circle'
+			};
+			
+			updateItem.innerHTML = `
+				<div class="live-update-icon" style="background: ${iconColors[type]};">
+					<i class="${icons[type]}"></i>
+				</div>
+				<div class="live-update-text">${message}</div>
+			`;
+			
+			container.appendChild(updateItem);
+			
+			// Remove old updates if too many
+			if (container.children.length > 5) {
+				container.removeChild(container.firstElementChild);
+			}
+			
+			// Auto-remove after 5 seconds
+			setTimeout(() => {
+				if (updateItem.parentNode) {
+					updateItem.parentNode.removeChild(updateItem);
+				}
+			}, 5000);
+		}
+
 		// Event listeners
-		document.getElementById('refresh').addEventListener('click', loadPerformanceData);
+		document.getElementById('refresh').addEventListener('click', () => {
+			loadPerformanceData();
+			loadAudioData();
+		});
+		
+		document.getElementById('autoRefresh').addEventListener('click', function() {
+			if (autoRefreshInterval) {
+				clearInterval(autoRefreshInterval);
+				autoRefreshInterval = null;
+				this.innerHTML = '<i class="fas fa-play"></i> Auto-Refresh';
+				this.style.background = 'var(--bg-card)';
+				addLiveUpdate('Auto-refresh stopped', 'warning');
+			} else {
+				autoRefreshInterval = setInterval(() => {
+					loadPerformanceData();
+					loadAudioData();
+				}, 30000); // Refresh every 30 seconds
+				this.innerHTML = '<i class="fas fa-pause"></i> Stop Auto-Refresh';
+				this.style.background = 'var(--primary)';
+				this.style.color = 'white';
+				addLiveUpdate('Auto-refresh started (30s)', 'success');
+			}
+		});
+
+		// Export functionality
+		document.getElementById('exportPerformance').addEventListener('click', () => {
+			exportData('performance', performanceData);
+		});
+		
+		document.getElementById('exportAudioStats').addEventListener('click', () => {
+			exportData('audio', audioData);
+		});
+		
+		document.getElementById('exportCallLogs').addEventListener('click', () => {
+			exportData('calls', { callLogs: performanceData });
+		});
+
+		function exportData(type, data) {
+			const jsonString = JSON.stringify(data, null, 2);
+			const blob = new Blob([jsonString], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `telecrm_${type}_${new Date().toISOString().split('T')[0]}.json`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+			addLiveUpdate(`${type} data exported successfully`, 'success');
+		}
 		
 		// Load data on page load
-		if (Admin.getToken()) loadPerformanceData();
+		if (Admin.getToken()) {
+			initializeCustomDateInputs();
+			loadPerformanceData();
+			loadAudioData();
+		}
 	</script>
 </body>
 </html>

@@ -42,6 +42,30 @@ router.get('/employees', async (req, res) => {
     }
 });
 
+// Get employees for auto-assign (simplified)
+router.get('/users/employees', async (req, res) => {
+    try {
+        const employees = await User.find({ role: 'employee' })
+            .select('_id name email')
+            .sort({ name: 1 });
+        res.json(employees);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get managers for auto-assign (simplified)
+router.get('/users/managers', async (req, res) => {
+    try {
+        const managers = await User.find({ role: 'manager' })
+            .select('_id name email')
+            .sort({ name: 1 });
+        res.json(managers);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Create new manager
 router.post('/managers', async (req, res) => {
     try {
@@ -164,10 +188,10 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // ===== LEAD MANAGEMENT =====
-// Get all leads (with optional filters: managerId, status, assigned=true|false)
+// Get all leads (with optional filters: managerId, status, assigned=true|false, page, limit)
 router.get('/leads', async (req, res) => {
     try {
-        const { managerId, status, assigned } = req.query;
+        const { managerId, status, assigned, page = 1, limit = 50 } = req.query;
         const filter = {};
 
         // Filter by manager ownership (createdBy)
@@ -185,11 +209,29 @@ router.get('/leads', async (req, res) => {
             filter.assignedTo = null;
         }
 
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination
+        const total = await Lead.countDocuments(filter);
+
+        // Get paginated leads
         const leads = await Lead.find(filter)
             .populate('assignedTo', 'name email')
             .populate('createdBy', 'name email')
-            .sort({ createdAt: -1 });
-        res.json(leads);
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        res.json({
+            leads,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum)
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -377,6 +419,26 @@ router.delete('/leads/:id', async (req, res) => {
     }
 });
 
+// Delete all leads
+router.delete('/leads', async (req, res) => {
+    try {
+        const { confirm } = req.query;
+        
+        if (confirm !== 'true') {
+            return res.status(400).json({ error: 'Confirmation required. Add ?confirm=true to confirm deletion.' });
+        }
+
+        const result = await Lead.deleteMany({});
+        res.json({ 
+            message: `All leads deleted successfully. ${result.deletedCount} leads were removed.`,
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        console.error('Delete all leads error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // Get lead analytics
 router.get('/leads/analytics', async (req, res) => {
     try {
@@ -487,7 +549,7 @@ router.get('/leads/analytics', async (req, res) => {
 // Get unfinished leads (status = "New")
 router.get('/leads/unfinished', async (req, res) => {
     try {
-        const { managerId, assigned } = req.query;
+        const { managerId, assigned, page = 1, limit = 50 } = req.query;
         const filter = { status: 'New' };
 
         // Filter by manager ownership (createdBy)
@@ -501,14 +563,29 @@ router.get('/leads/unfinished', async (req, res) => {
             filter.assignedTo = null;
         }
 
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination
+        const total = await Lead.countDocuments(filter);
+
+        // Get paginated leads
         const leads = await Lead.find(filter)
             .populate('assignedTo', 'name email')
             .populate('createdBy', 'name email')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
 
         res.json({
             leads,
+            total,
             count: leads.length,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
             message: 'Unfinished leads retrieved successfully'
         });
     } catch (err) {
@@ -520,7 +597,7 @@ router.get('/leads/unfinished', async (req, res) => {
 // Get finished leads (status != "New")
 router.get('/leads/finished', async (req, res) => {
     try {
-        const { managerId, assigned, status } = req.query;
+        const { managerId, assigned, status, page = 1, limit = 50 } = req.query;
         const filter = { status: { $ne: 'New' } };
 
         // Filter by manager ownership (createdBy)
@@ -538,14 +615,29 @@ router.get('/leads/finished', async (req, res) => {
             filter.status = status;
         }
 
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination
+        const total = await Lead.countDocuments(filter);
+
+        // Get paginated leads
         const leads = await Lead.find(filter)
             .populate('assignedTo', 'name email')
             .populate('createdBy', 'name email')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
 
         res.json({
             leads,
+            total,
             count: leads.length,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
             message: 'Finished leads retrieved successfully'
         });
     } catch (err) {
@@ -557,7 +649,7 @@ router.get('/leads/finished', async (req, res) => {
 // Get dead leads (status = "Dead")
 router.get('/leads/dead', async (req, res) => {
     try {
-        const { managerId, reason } = req.query;
+        const { managerId, reason, page = 1, limit = 50 } = req.query;
         const filter = { status: 'Dead' };
 
         // Filter by manager ownership (createdBy)
@@ -569,14 +661,29 @@ router.get('/leads/dead', async (req, res) => {
             filter.deadLeadReason = reason;
         }
 
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination
+        const total = await Lead.countDocuments(filter);
+
+        // Get paginated leads
         const leads = await Lead.find(filter)
             .populate('assignedTo', 'name email')
             .populate('createdBy', 'name email')
-            .sort({ deadLeadDate: -1 });
+            .sort({ deadLeadDate: -1 })
+            .skip(skip)
+            .limit(limitNum);
 
         res.json({
             leads,
+            total,
             count: leads.length,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
             message: 'Dead leads retrieved successfully'
         });
     } catch (err) {
@@ -617,6 +724,112 @@ router.put('/leads/:id/reactivate', async (req, res) => {
         });
     } catch (err) {
         console.error('Reactivate lead error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Auto assign leads
+router.post('/leads/auto-assign', async (req, res) => {
+    try {
+        const { status, assignType, personId, count, sector, region } = req.body;
+
+        // Validate required fields
+        if (!status || !assignType || !personId || !count) {
+            return res.status(400).json({ 
+                error: 'Missing required fields: status, assignType, personId, count' 
+            });
+        }
+
+        // Validate assignType
+        if (!['employee', 'manager'].includes(assignType)) {
+            return res.status(400).json({ 
+                error: 'assignType must be either "employee" or "manager"' 
+            });
+        }
+
+        // Verify the person exists and has the correct role
+        const person = await User.findById(personId);
+        if (!person) {
+            return res.status(404).json({ error: 'Person not found' });
+        }
+
+        if (person.role !== assignType) {
+            return res.status(400).json({ 
+                error: `Person is not an ${assignType}` 
+            });
+        }
+
+        // Build filter for leads to assign
+        const filter = {
+            status: status,
+            assignedTo: null, // Only unassigned leads
+            $or: [
+                { createdBy: { $exists: true } }, // Has a creator
+                { createdBy: null } // Or no creator (legacy leads)
+            ]
+        };
+
+        // Add optional filters
+        if (sector) {
+            filter.sector = sector;
+        }
+        if (region) {
+            filter.region = region;
+        }
+
+        // Find unassigned leads matching criteria
+        const availableLeads = await Lead.find(filter)
+            .sort({ createdAt: 1 }) // Oldest first
+            .limit(parseInt(count));
+
+        if (availableLeads.length === 0) {
+            return res.json({
+                message: 'No leads available for assignment with the given criteria',
+                assignedCount: 0,
+                skippedCount: 0
+            });
+        }
+
+        // Assign leads
+        let assignedCount = 0;
+        let skippedCount = 0;
+
+        for (const lead of availableLeads) {
+            try {
+                // Update the lead
+                lead.assignedTo = personId;
+                lead.assignedDate = new Date();
+                
+                // If assigning to employee, also set the manager as creator
+                if (assignType === 'employee' && person.manager) {
+                    lead.createdBy = person.manager;
+                } else if (assignType === 'manager') {
+                    lead.createdBy = personId;
+                }
+
+                await lead.save();
+                assignedCount++;
+            } catch (error) {
+                console.error(`Error assigning lead ${lead._id}:`, error);
+                skippedCount++;
+            }
+        }
+
+        res.json({
+            message: 'Auto assignment completed',
+            assignedCount,
+            skippedCount,
+            totalProcessed: availableLeads.length,
+            assignedTo: {
+                id: person._id,
+                name: person.name,
+                email: person.email,
+                role: person.role
+            }
+        });
+
+    } catch (err) {
+        console.error('Auto assign error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
@@ -793,8 +1006,31 @@ router.get('/analytics/manager-performance', async (req, res) => {
 // Get combined user performance overview
 router.get('/analytics/user-performance-overview', async (req, res) => {
     try {
-        // Get employee data directly
-        const employees = await User.find({ role: 'employee' })
+        const { days = 30, from, to, role, performance } = req.query;
+        
+        // Build date filter
+        let dateFilter = {};
+        if (from && to) {
+            dateFilter = {
+                createdAt: {
+                    $gte: new Date(from),
+                    $lte: new Date(to)
+                }
+            };
+        } else {
+            const daysAgo = new Date();
+            daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+            dateFilter = { createdAt: { $gte: daysAgo } };
+        }
+
+        // Build role filter
+        let roleFilter = {};
+        if (role && role !== 'all') {
+            roleFilter = { role };
+        }
+
+        // Get employee data with filters
+        const employees = await User.find({ role: 'employee', ...dateFilter, ...roleFilter })
             .populate('manager', 'name email')
             .select('name email manager createdAt');
 
@@ -832,6 +1068,25 @@ router.get('/analytics/user-performance-overview', async (req, res) => {
                 }
             };
         }));
+
+        // Apply performance level filtering
+        if (performance && performance !== 'all') {
+            const filteredStats = employeeStats.filter(emp => {
+                const rate = emp.stats.completionRate;
+                switch (performance) {
+                    case 'high':
+                        return rate >= 80;
+                    case 'medium':
+                        return rate >= 50 && rate < 80;
+                    case 'low':
+                        return rate < 50;
+                    default:
+                        return true;
+                }
+            });
+            employeeStats.length = 0;
+            employeeStats.push(...filteredStats);
+        }
 
         const employeeSummary = {
             totalEmployees: employees.length,
@@ -943,6 +1198,124 @@ router.get('/analytics/user-performance-overview', async (req, res) => {
     }
 });
 
+// Get audio analytics overview
+router.get('/analytics/audio-overview', async (req, res) => {
+    try {
+        const { days = 30, from, to, quality } = req.query;
+        
+        // Build date filter
+        let dateFilter = {};
+        if (from && to) {
+            dateFilter = {
+                createdAt: {
+                    $gte: new Date(from),
+                    $lte: new Date(to)
+                }
+            };
+        } else {
+            const daysAgo = new Date();
+            daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+            dateFilter = { createdAt: { $gte: daysAgo } };
+        }
+
+        // Build quality filter
+        let qualityFilter = {};
+        if (quality && quality !== 'all') {
+            qualityFilter = { 'callQuality.audioQuality': quality.replace('_', ' ') };
+        }
+
+        // Get call logs with recordings
+        const callLogs = await CallLog.find({
+            ...dateFilter,
+            ...qualityFilter,
+            recordingFile: { $exists: true, $ne: null }
+        }).populate('lead', 'name phone email')
+          .populate('employee', 'name email')
+          .sort({ createdAt: -1 });
+
+        // Calculate audio statistics
+        const totalRecordings = callLogs.length;
+        const totalDuration = callLogs.reduce((sum, log) => sum + (log.recordingDuration || 0), 0);
+        const avgCallDuration = totalRecordings > 0 ? totalDuration / totalRecordings : 0;
+
+        // Audio quality distribution
+        const qualityDistribution = callLogs.reduce((acc, log) => {
+            const quality = log.callQuality?.audioQuality || 'Unknown';
+            acc[quality] = (acc[quality] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Calculate average quality score
+        const qualityScores = {
+            'Crystal Clear': 10,
+            'Clear': 8,
+            'Fair': 6,
+            'Poor': 3,
+            'Unknown': 5
+        };
+        
+        const avgQualityScore = totalRecordings > 0 ? 
+            callLogs.reduce((sum, log) => {
+                const quality = log.callQuality?.audioQuality || 'Unknown';
+                return sum + qualityScores[quality];
+            }, 0) / totalRecordings : 0;
+
+        // Calculate duplicate rate (simplified - in real implementation, you'd check file hashes)
+        const duplicateRate = 0; // Placeholder - implement actual duplicate detection
+
+        // Generate trends data (last 7 days)
+        const trends = [];
+        const last7Days = new Date();
+        last7Days.setDate(last7Days.getDate() - 7);
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dayStart = new Date(date.setHours(0, 0, 0, 0));
+            const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+            
+            const dayLogs = callLogs.filter(log => 
+                log.createdAt >= dayStart && log.createdAt <= dayEnd
+            );
+            
+            trends.push({
+                date: dayStart.toLocaleDateString(),
+                count: dayLogs.length,
+                avgDuration: dayLogs.length > 0 ? 
+                    dayLogs.reduce((sum, log) => sum + (log.recordingDuration || 0), 0) / dayLogs.length : 0
+            });
+        }
+
+        // Get recent recordings for the audio tab
+        const recentRecordings = callLogs.slice(0, 10).map(log => ({
+            _id: log._id,
+            lead: log.lead,
+            employee: log.employee,
+            recordingUrl: log.recordingFile,
+            duration: log.recordingDuration || 0,
+            audioQuality: log.callQuality?.audioQuality || 'Unknown',
+            createdAt: log.createdAt
+        }));
+
+        res.json({
+            overview: {
+                totalRecordings,
+                totalDuration,
+                avgCallDuration,
+                avgQualityScore: Math.round(avgQualityScore * 10) / 10,
+                duplicateRate,
+                qualityDistribution,
+                durationTrends: trends.map(t => ({ date: t.date, avgDuration: t.avgDuration })),
+                uploadTrends: trends.map(t => ({ date: t.date, count: t.count }))
+            },
+            recentRecordings
+        });
+    } catch (err) {
+        console.error('Audio analytics error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // ===== SALES ANALYTICS =====
 // Total number of sales (won deals) by region and sector, plus total value by region/sector
 router.get('/sales/analytics', async (req, res) => {
@@ -1004,6 +1377,23 @@ router.get('/call-records', async (req, res) => {
     } catch (err) {
         console.error('Call records error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Delete a single call record
+router.delete('/call-records/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const record = await CallLog.findById(id);
+        if (!record) {
+            return res.status(404).json({ error: 'Call record not found' });
+        }
+
+        await CallLog.findByIdAndDelete(id);
+        return res.json({ message: 'Call record deleted successfully' });
+    } catch (err) {
+        console.error('Delete call record error:', err);
+        return res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 

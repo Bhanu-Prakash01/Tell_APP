@@ -1,425 +1,1333 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Admin • Call Records</title>
-	<link rel="stylesheet" href="../assets/frappe.css" />
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	<style>
-		.chart-title{margin:0 0 12px;font-weight:600;font-size:16px}
-		.grid.charts{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-		.card .chart-box{height:300px}
-		@media (max-width: 768px){ .grid.charts{grid-template-columns:1fr} }
-		
-		/* Call Records specific styles */
-		.call-status-badge {
-			display: inline-block;
-			padding: 4px 8px;
-			border-radius: 12px;
-			font-size: 11px;
-			font-weight: 600;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			min-width: 70px;
-			text-align: center;
-		}
-		
-		.call-status-completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-		.call-status-missed { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-		.call-status-declined { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-		.call-status-not_lifted { background: rgba(100, 116, 139, 0.1); color: #64748b; }
-		.call-status-wrong_number { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-		.call-status-busy { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
-		.call-status-unreachable { background: rgba(251, 113, 133, 0.1); color: #fb7185; }
-		.call-status-voicemail { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-		
-		.quality-indicator {
-			display: inline-flex;
-			align-items: center;
-			gap: 4px;
-			font-size: 12px;
-		}
-		
-		.quality-indicator .dot {
-			width: 8px;
-			height: 8px;
-			border-radius: 50%;
-		}
-		
-		.quality-excellent .dot { background: #10b981; }
-		.quality-good .dot { background: #3b82f6; }
-		.quality-fair .dot { background: #f59e0b; }
-		.quality-poor .dot { background: #ef4444; }
-		
-		.call-duration {
-			font-family: monospace;
-			font-weight: 600;
-			color: var(--text-primary);
-		}
-		
-		.employee-info {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		
-		.employee-avatar {
-			width: 24px;
-			height: 24px;
-			border-radius: 50%;
-			background: var(--primary);
-			color: white;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			font-size: 10px;
-			font-weight: 600;
-		}
-	</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin • Call Records</title>
+    <link rel="stylesheet" href="../assets/frappe.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --warning-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --card-shadow-hover: 0 20px 40px rgba(0,0,0,0.15);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body { background: var(--fr-bg); min-height: 100vh; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+        .admin-shell {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .admin-sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .brand {
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #fff, #e0e6ed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-sidebar nav {
+            padding: 20px 0;
+        }
+
+        .admin-sidebar nav a {
+            display: block;
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            font-weight: 500;
+        }
+
+        .admin-sidebar nav a:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: #3498db;
+        }
+
+        .admin-sidebar nav a.active {
+            background: rgba(52, 152, 219, 0.2);
+            color: white;
+            border-left-color: #3498db;
+        }
+
+        .admin-main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 0;
+        }
+
+        .admin-topbar { display:flex; justify-content:space-between; align-items:center; background: var(--fr-surface); border:1px solid var(--fr-border); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); margin: 16px; }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .grid.stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 16px; }
+
+        .card.stat-card { padding: 20px; }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon.primary { background: var(--primary-gradient); }
+        .stat-icon.success { background: var(--success-gradient); }
+        .stat-icon.danger { background: var(--danger-gradient); }
+        .stat-icon.warning { background: var(--warning-gradient); }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .controls-card { margin: 16px; }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: var(--transition);
+            background: #f8fafc;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .select-control {
+            padding: 12px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .select-control:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger-gradient);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(250, 112, 154, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #64748b;
+            border: 2px solid #e1e8ed;
+        }
+
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .records-container { margin: 16px; }
+
+        .records-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .record-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            border: 1px solid #e1e8ed;
+            overflow: hidden;
+        }
+
+        .record-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .record-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .record-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .record-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .record-details h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .record-details p {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .record-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-missed { background: #fef2f2; color: #dc2626; }
+        .status-declined { background: #fef3c7; color: #d97706; }
+        .status-not_lifted { background: #dbeafe; color: #1d4ed8; }
+        .status-wrong_number { background: #f3f4f6; color: #374151; }
+        .status-busy { background: #fef2f2; color: #dc2626; }
+        .status-unreachable { background: #fef2f2; color: #dc2626; }
+        .status-voicemail { background: #dbeafe; color: #1d4ed8; }
+
+        .record-body {
+            padding: 20px 25px;
+        }
+
+        .record-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .audio-section {
+            margin-bottom: 20px;
+        }
+
+        .audio-player {
+            width: 100%;
+            height: 50px;
+            border-radius: 25px;
+            background: #f8fafc;
+            border: 2px solid #e1e8ed;
+            outline: none;
+        }
+
+        .audio-player::-webkit-media-controls-panel {
+            background: #f8fafc;
+        }
+
+        .play-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .play-btn.playing {
+            background: var(--danger-gradient);
+        }
+
+        .record-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .action-btn.view {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .action-btn.listen {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .action-btn.delete {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .pagination-btn {
+            padding: 10px 16px;
+            border: 2px solid #e1e8ed;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            border-color: #3498db;
+            background: #f8fafc;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+
+        .empty-description {
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 3% auto;
+            padding: 0;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 30px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .detail-section h4 {
+            margin: 0 0 15px 0;
+            color: #1e293b;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .enhanced-audio-player {
+            width: 100%;
+            height: 60px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 2px solid #e1e8ed;
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            border: 2px solid #e1e8ed;
+        }
+
+        .speed-control label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .speed-control select {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 15px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .notes-section {
+            margin-top: 30px;
+        }
+
+        .notes-section h4 {
+            margin: 0 0 15px 0;
+            color: #1e293b;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notes-content {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #374151;
+            border-left: 4px solid #3498db;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                transition: var(--transition);
+            }
+            
+            .admin-main {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                margin: 20px;
+            }
+            
+            .controls-section,
+            .records-container {
+                margin: 0 20px 20px 20px;
+            }
+            
+            .record-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-	<div class="admin-shell">
-		<aside class="admin-sidebar">
-			<div class="brand"><h1>TeleCRM Admin</h1></div>
-			<nav>
-				<a href="/admin/overview.html">Overview</a>
-				<a href="/admin/users.html">Users</a>
-				<a href="/admin/leads.html">Leads</a>
-				<a href="/admin/campaigns.html">Campaigns</a>
-				<a href="/admin/pipelines.html">Pipelines</a>
-				<a href="/admin/sims.html">SIMs</a>
-				<a href="/admin/call-records.html" class="active">Call Records</a>
-				<a href="/admin/analytics.html">Analytics</a>
-				<a href="/admin/user-performance.html">User Performance</a>
-				<a href="/admin/settings.html">Settings</a>
-			</nav>
-		</aside>
-		<main class="admin-main">
-			<div class="admin-topbar">
-				<h2 class="page-title">Call Records</h2>
-				<div class="toolbar">
-					<button class="btn" id="refresh">Refresh</button>
-					<select class="input" id="statusFilter" style="min-width:140px">
-						<option value="">All Status</option>
-						<option value="completed">Completed</option>
-						<option value="missed">Missed</option>
-						<option value="declined">Declined</option>
-						<option value="not_lifted">Not Lifted</option>
-						<option value="wrong_number">Wrong Number</option>
-						<option value="busy">Busy</option>
-						<option value="unreachable">Unreachable</option>
-						<option value="voicemail">Voicemail</option>
-					</select>
-					<select class="input" id="employeeFilter" style="min-width:160px">
-						<option value="">All Employees</option>
-					</select>
-					<input class="input" id="searchFilter" placeholder="Search calls..." style="min-width:200px" />
-				</div>
-			</div>
-			
-			<!-- Call Records Summary -->
-			<div class="grid cols-4" id="callSummary" style="margin-bottom:16px">
-				<div class="card"><div>Total Calls</div><h3 id="mTotalCalls">-</h3></div>
-				<div class="card"><div>Completed Calls</div><h3 id="mCompletedCalls">-</h3></div>
-				<div class="card"><div>Success Rate</div><h3 id="mSuccessRate">-</h3></div>
-				<div class="card"><div>Avg Duration</div><h3 id="mAvgDuration">-</h3></div>
-			</div>
-			
-			<!-- Call Records Table -->
-			<div class="card">
-				<div class="table-header">
-					<h3 class="table-title">
-						<i class="fas fa-phone"></i>
-						Call Records
-					</h3>
-					<div class="table-actions">
-						<span class="selected-count" id="totalRecords">0 records</span>
-					</div>
-				</div>
-				<div class="table-wrapper">
-					<table class="data-table">
-						<thead>
-							<tr>
-								<th>Employee</th>
-								<th>Lead</th>
-								<th>Status</th>
-								<th>Duration</th>
-								<th>Quality</th>
-								<th>SIM</th>
-								<th>Date</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody id="callRecordsTable">
-							<!-- Call records will be loaded here -->
-						</tbody>
-					</table>
-				</div>
-			</div>
-			
-			<!-- Call Analytics Charts -->
-			<div class="grid cols-2 charts" style="margin-top:24px">
-				<div class="card">
-					<h3 class="chart-title">Call Status Distribution</h3>
-					<div class="chart-box"><canvas id="callStatusChart"></canvas></div>
-				</div>
-				<div class="card">
-					<h3 class="chart-title">Calls by Employee</h3>
-					<div class="chart-box"><canvas id="callsByEmployeeChart"></canvas></div>
-				</div>
-				<div class="card">
-					<h3 class="chart-title">Calls by Hour</h3>
-					<div class="chart-box"><canvas id="callsByHourChart"></canvas></div>
-				</div>
-				<div class="card">
-					<h3 class="chart-title">Calls by Day</h3>
-					<div class="chart-box"><canvas id="callsByDayChart"></canvas></div>
-				</div>
-			</div>
-		</main>
-	</div>
-	
-	<script src="../assets/admin.js"></script>
-	<script>
-		Admin.navActivate('/admin/call-records.html');
-		let callRecords = [];
-		let charts = {};
-		
-		function formatDuration(seconds) {
-			if (!seconds) return '0s';
-			const mins = Math.floor(seconds / 60);
-			const secs = seconds % 60;
-			return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-		}
-		
-		function getCallStatusBadge(status) {
-			const statusMap = {
-				'completed': 'Completed',
-				'missed': 'Missed',
-				'declined': 'Declined',
-				'not_lifted': 'Not Lifted',
-				'wrong_number': 'Wrong Number',
-				'busy': 'Busy',
-				'unreachable': 'Unreachable',
-				'voicemail': 'Voicemail'
-			};
-			return `<span class="call-status-badge call-status-${status}">${statusMap[status] || status}</span>`;
-		}
-		
-		function getQualityIndicator(quality) {
-			if (!quality) return '-';
-			const qualityMap = {
-				'Excellent': 'excellent',
-				'Good': 'good',
-				'Fair': 'fair',
-				'Poor': 'poor'
-			};
-			const cls = qualityMap[quality] || 'good';
-			return `<span class="quality-indicator quality-${cls}"><span class="dot"></span>${quality}</span>`;
-		}
-		
-		function renderCallRecordsTable(records) {
-			const tbody = document.getElementById('callRecordsTable');
-			
-			if (records.length === 0) {
-				tbody.innerHTML = `
-					<tr>
-						<td colspan="8" class="empty-state">
-							<i class="fas fa-phone-slash"></i>
-							<h4>No call records found</h4>
-							<p>Call records will appear here once employees start logging calls.</p>
-						</td>
-					</tr>
-				`;
-				return;
-			}
-			
-			tbody.innerHTML = records.map(record => `
-				<tr>
-					<td>
-						<div class="employee-info">
-							<div class="employee-avatar">${(record.employee?.name || 'U').charAt(0).toUpperCase()}</div>
-							<div>
-								<strong>${record.employee?.name || 'Unknown'}</strong><br>
-								<small>${record.employee?.email || 'No email'}</small>
-							</div>
-						</div>
-					</td>
-					<td>
-						<strong>${record.lead?.name || 'Unknown Lead'}</strong><br>
-						<small>${record.lead?.phone || 'No phone'} • ${record.lead?.sector || 'Unknown'}</small>
-					</td>
-					<td>${getCallStatusBadge(record.callStatus)}</td>
-					<td><span class="call-duration">${formatDuration(record.callDuration)}</span></td>
-					<td>
-						<div>Signal: ${getQualityIndicator(record.callQuality?.signalStrength)}</div>
-						<div>Audio: ${getQualityIndicator(record.callQuality?.audioQuality)}</div>
-					</td>
-					<td>
-						<small>${record.simCard?.simNumber || 'No SIM'}<br>
-						${record.simCard?.carrier || 'Unknown'}</small>
-					</td>
-					<td>${Admin.fmtDate(record.createdAt)}</td>
-					<td>
-						<button class="btn btn-outline" onclick="viewCallDetails('${record._id}')" title="View Details">
-							<i class="fas fa-eye"></i>
-						</button>
-					</td>
-				</tr>
-			`).join('');
-		}
-		
-		function renderCharts(analytics) {
-			// Call Status Distribution
-			const statusData = Object.entries(analytics.statusDistribution || {});
-			if (statusData.length > 0) {
-				renderChart('callStatusChart', 'doughnut', 
-					statusData.map(([status, count]) => status.charAt(0).toUpperCase() + status.slice(1)), 
-					statusData.map(([status, count]) => count)
-				);
-			}
-			
-			// Calls by Employee
-			const employeeData = Object.entries(analytics.callsByEmployee || {});
-			if (employeeData.length > 0) {
-				renderChart('callsByEmployeeChart', 'bar', 
-					employeeData.map(([name, data]) => name), 
-					employeeData.map(([name, data]) => data.totalCalls)
-				);
-			}
-			
-			// Calls by Hour
-			const hourData = Object.entries(analytics.callsByHour || {});
-			if (hourData.length > 0) {
-				renderChart('callsByHourChart', 'line', 
-					hourData.map(([hour, count]) => `${hour}:00`), 
-					hourData.map(([hour, count]) => count)
-				);
-			}
-			
-			// Calls by Day
-			const dayData = Object.entries(analytics.callsByDay || {});
-			if (dayData.length > 0) {
-				renderChart('callsByDayChart', 'bar', 
-					dayData.map(([day, count]) => day), 
-					dayData.map(([day, count]) => count)
-				);
-			}
-		}
-		
-		function renderChart(id, type, labels, data) {
-			const el = document.getElementById(id);
-			if (!el) return;
-			
-			const ctx = el.getContext('2d');
-			if (charts[id]) charts[id].destroy();
-			
-			const colors = type === 'line' ? '#5E64FF' : 
-				['#5E64FF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6', '#64748b'];
-			
-			const ds = type === 'line' ? 
-				{ label: id, data, borderColor: colors, backgroundColor: 'rgba(94,100,255,.12)', tension: .4, fill: true } :
-				{ label: id, data, backgroundColor: colors.slice(0, labels.length), borderRadius: 8 };
-			
-			charts[id] = new Chart(ctx, {
-				type,
-				data: { labels, datasets: [ds] },
-				options: { 
-					plugins: { legend: { display: false } }, 
-					responsive: true, 
-					maintainAspectRatio: false 
-				}
-			});
-		}
-		
-		function applyFilters() {
-			const statusFilter = document.getElementById('statusFilter').value;
-			const employeeFilter = document.getElementById('employeeFilter').value;
-			const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
-			
-			let filtered = callRecords;
-			
-			if (statusFilter) {
-				filtered = filtered.filter(record => record.callStatus === statusFilter);
-			}
-			
-			if (employeeFilter) {
-				filtered = filtered.filter(record => record.employee?._id === employeeFilter);
-			}
-			
-			if (searchFilter) {
-				filtered = filtered.filter(record => 
-					record.lead?.name?.toLowerCase().includes(searchFilter) ||
-					record.lead?.phone?.includes(searchFilter) ||
-					record.employee?.name?.toLowerCase().includes(searchFilter)
-				);
-			}
-			
-			renderCallRecordsTable(filtered);
-			document.getElementById('totalRecords').textContent = `${filtered.length} records`;
-		}
-		
-		async function loadCallRecords() {
-			try {
-				const [recordsRes, analyticsRes] = await Promise.all([
-					fetch('/api/admin/call-records', { headers: Admin.authHeaders() }),
-					fetch('/api/admin/call-records/analytics', { headers: Admin.authHeaders() })
-				]);
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <div class="brand">
+                <h1>TeleCRM Admin</h1>
+            </div>
+            <nav>
+                <a href="/admin/overview.html">Overview</a>
+                <a href="/admin/users.html">Users</a>
+                <a href="/admin/leads.html">Leads</a>
 				
-				if (recordsRes.ok) {
-					callRecords = await recordsRes.json();
-					renderCallRecordsTable(callRecords);
-					document.getElementById('totalRecords').textContent = `${callRecords.length} records`;
-					
-					// Populate employee filter
-					const employees = [...new Set(callRecords.map(r => r.employee?._id).filter(Boolean))];
-					const employeeSelect = document.getElementById('employeeFilter');
-					employeeSelect.innerHTML = '<option value="">All Employees</option>' + 
-						employees.map(id => {
-							const emp = callRecords.find(r => r.employee?._id === id)?.employee;
-							return `<option value="${id}">${emp?.name || 'Unknown'}</option>`;
-						}).join('');
-				}
-				
-				if (analyticsRes.ok) {
-					const analytics = await analyticsRes.json();
-					
-					// Update summary metrics
-					document.getElementById('mTotalCalls').textContent = analytics.totalCalls || 0;
-					document.getElementById('mCompletedCalls').textContent = analytics.statusDistribution?.completed || 0;
-					document.getElementById('mSuccessRate').textContent = 
-						analytics.totalCalls > 0 ? 
-						Math.round((analytics.statusDistribution?.completed || 0) / analytics.totalCalls * 100) + '%' : '0%';
-					document.getElementById('mAvgDuration').textContent = formatDuration(analytics.avgCallDuration || 0);
-					
-					// Render charts
-					renderCharts(analytics);
-				}
-			} catch (error) {
-				console.error('Failed to load call records:', error);
-			}
-		}
-		
-		function viewCallDetails(recordId) {
-			const record = callRecords.find(r => r._id === recordId);
-			if (!record) return;
-			
-			alert(`Call Details:\n\nEmployee: ${record.employee?.name || 'Unknown'}\nLead: ${record.lead?.name || 'Unknown'}\nStatus: ${record.callStatus}\nDuration: ${formatDuration(record.callDuration)}\nNotes: ${record.notes || 'No notes'}`);
-		}
-		
-		// Event listeners
-		document.getElementById('refresh').addEventListener('click', loadCallRecords);
-		document.getElementById('statusFilter').addEventListener('change', applyFilters);
-		document.getElementById('employeeFilter').addEventListener('change', applyFilters);
-		document.getElementById('searchFilter').addEventListener('input', () => {
-			setTimeout(applyFilters, 300);
-		});
-		
-		// Load data on page load
-		if (Admin.getToken()) {
-			loadCallRecords();
-		}
-	</script>
+                <a href="/admin/call-records.html" class="active">Call Records</a>
+                <a href="/admin/analytics.html">Analytics</a>
+                <a href="/admin/user-performance.html">User Performance</a>
+            </nav>
+        </aside>
+        
+        <main class="admin-main">
+            <!-- Page Header -->
+            <div class="admin-topbar">
+                <h2 class="page-title">Call Records</h2>
+                <div class="toolbar">
+                    <button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
+                    <a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid stats">
+                <div class="card stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="stat-number" id="totalCalls">0</div>
+                    <div class="stat-label">Total Calls</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon success">
+                        <i class="fas fa-headphones"></i>
+                    </div>
+                    <div class="stat-number" id="recordedCalls">0</div>
+                    <div class="stat-label">With Recordings</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-number" id="avgDuration">0m</div>
+                    <div class="stat-label">Avg Duration</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon danger">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="stat-number" id="todayCalls">0</div>
+                    <div class="stat-label">Today's Calls</div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="card controls-card">
+                <div class="toolbar" style="gap:12px; flex-wrap: wrap;">
+                    <div class="search-container" style="min-width:280px; position:relative;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="search" class="input" placeholder="Search calls by lead, phone, employee, or status..." style="padding-left:36px;">
+                    </div>
+                    <select id="pageSize" class="input" style="width:180px">
+                        <option value="10">10 per page</option>
+                        <option value="25" selected>25 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="100">100 per page</option>
+                    </select>
+                    <button class="btn" onclick="loadCallRecords()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline" id="autoBtn" onclick="toggleAutoRefresh(this)">
+                        <i class="fas fa-play"></i> Auto-refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Records Container -->
+            <div class="records-container">
+                <div class="records-grid" id="recordsGrid">
+                    <!-- Records will be populated here -->
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination-container" id="paginationContainer" style="display: none;">
+                    <button class="pagination-btn" id="prev">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <div class="pagination-info">
+                        <span id="count">0</span> of <span id="total">0</span> calls
+                    </div>
+                    <button class="pagination-btn" id="next">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Call Details Modal -->
+    <div id="callDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-phone"></i> Call Details</h3>
+                <span class="close" onclick="closeCallDetails()">&times;</span>
+            </div>
+            <div class="modal-body" id="callDetailsContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/admin.js"></script>
+    <script>
+        Admin && Admin.navActivate && Admin.navActivate('/admin/call-records.html');
+        function toggleSidebar(){
+            const sb = document.querySelector('.admin-sidebar');
+            sb && sb.classList.toggle('open');
+        }
+        function logout(e){
+            e && e.preventDefault();
+            try {
+                localStorage.removeItem('token');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('role');
+            } catch(_){ }
+            window.location.href = '/login.html';
+        }
+        
+        let callRecords = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        let pageSize = 25;
+        let searchTerm = '';
+        let autoRefreshInterval = null;
+        let currentPlayingAudio = null;
+
+        function fmtDate(d) { 
+            try { 
+                return new Date(d).toLocaleString(); 
+            } catch(e) { 
+                return '-'; 
+            } 
+        }
+        
+        function fmtDuration(s) { 
+            if(!s) return '0s'; 
+            const m = Math.floor(s/60), sec = s%60; 
+            return m ? `${m}m ${sec}s` : `${sec}s`; 
+        }
+
+        function updateStats() {
+            const totalCalls = callRecords.length;
+            const recordedCalls = callRecords.filter(r => r.recordingFile || r.recordingUrl).length;
+            const avgDuration = totalCalls > 0 ? 
+                Math.round(callRecords.reduce((sum, r) => sum + (r.callDuration || 0), 0) / totalCalls / 60) : 0;
+            const today = new Date().toDateString();
+            const todayCalls = callRecords.filter(r => 
+                new Date(r.callStartTime).toDateString() === today
+            ).length;
+
+            document.getElementById('totalCalls').textContent = totalCalls;
+            document.getElementById('recordedCalls').textContent = recordedCalls;
+            document.getElementById('avgDuration').textContent = `${avgDuration}m`;
+            document.getElementById('todayCalls').textContent = todayCalls;
+        }
+
+        async function loadCallRecords() {
+            try {
+                console.log('Loading call records...');
+                const token = Admin.getToken();
+                if (!token) {
+                    console.error('No auth token found');
+                    alert('Please login first');
+                    return;
+                }
+                
+                console.log('Making API call to /api/admin/call-records');
+                const res = await fetch('/api/admin/call-records', { 
+                    headers: Admin.authHeaders() 
+                });
+                
+                console.log('Response status:', res.status);
+                if (!res.ok) { 
+                    const errorText = await res.text();
+                    console.error('API Error:', errorText);
+                    alert(`Failed to load call records: ${res.status} ${res.statusText}`);
+                    return; 
+                }
+                
+                const data = await res.json();
+                console.log('Received data:', data);
+                callRecords = data;
+                updateStats();
+                applyFilters();
+            } catch (error) {
+                console.error('Error loading call records:', error);
+                alert('Error loading call records: ' + error.message);
+            }
+        }
+
+        function applyFilters() {
+            filteredRecords = callRecords.filter(record => {
+                const searchLower = searchTerm.toLowerCase();
+                return (
+                    (record.lead?.name || '').toLowerCase().includes(searchLower) ||
+                    (record.lead?.phone || '').toLowerCase().includes(searchLower) ||
+                    (record.employee?.name || '').toLowerCase().includes(searchLower) ||
+                    (record.callStatus || '').toLowerCase().includes(searchLower)
+                );
+            });
+            currentPage = 1;
+            renderCallRecords();
+        }
+
+        function renderCallRecords() {
+            const grid = document.getElementById('recordsGrid');
+            const total = filteredRecords.length;
+            
+            if (!total) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-phone-slash"></i>
+                        </div>
+                        <div class="empty-title">No Call Records Found</div>
+                        <div class="empty-description">
+                            ${searchTerm ? 'Try adjusting your search criteria.' : 'No call records have been uploaded yet.'}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('paginationContainer').style.display = 'none';
+                return;
+            }
+            
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageRecords = filteredRecords.slice(start, end);
+            
+            grid.innerHTML = pageRecords.map(record => `
+                <div class="record-card">
+                    <div class="record-header">
+                        <div class="record-info">
+                            <div class="record-avatar">
+                                ${(record.lead?.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div class="record-details">
+                                <h4>${record.lead?.name || 'Unknown Lead'}</h4>
+                                <p>${record.lead?.phone || 'No phone'} • ${record.employee?.name || 'Unknown Employee'}</p>
+                            </div>
+                        </div>
+                        <span class="record-status status-${record.callStatus}">${record.callStatus}</span>
+                    </div>
+                    
+                    <div class="record-body">
+                        <div class="record-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">${fmtDuration(record.callDuration)}</div>
+                                <div class="metric-label">Duration</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${fmtDate(record.callStartTime).split(',')[0]}</div>
+                                <div class="metric-label">Date</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">₹${record.callCost || 0}</div>
+                                <div class="metric-label">Cost</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${record.outcome || 'N/A'}</div>
+                                <div class="metric-label">Outcome</div>
+                            </div>
+                        </div>
+                        
+                        ${record.recordingFile || record.recordingUrl ? `
+                        <div class="audio-section">
+                            <button class="play-btn" onclick="playPauseAudio('${record._id}')" data-record-id="${record._id}">
+                                <i class="fas fa-play"></i> Play Recording
+                            </button>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="record-actions">
+                            <button class="action-btn view" onclick="viewCallDetails('${record._id}')">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                            ${record.recordingFile || record.recordingUrl ? `
+                            <button class="action-btn listen" onclick="playInModal('${record._id}')">
+                                <i class="fas fa-headphones"></i> Listen
+                            </button>
+                            ` : ''}
+                            <button class="action-btn delete" onclick="deleteCallRecord('${record._id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            updatePagination(total);
+        }
+
+        function updatePagination(total) {
+            const container = document.getElementById('paginationContainer');
+            const pages = Math.max(1, Math.ceil(total / pageSize));
+            const showingStart = total ? (currentPage - 1) * pageSize + 1 : 0;
+            const showingEnd = Math.min(currentPage * pageSize, total);
+            
+            document.getElementById('count').textContent = `${showingStart}-${showingEnd}`;
+            document.getElementById('total').textContent = total;
+            document.getElementById('prev').disabled = currentPage <= 1;
+            document.getElementById('next').disabled = currentPage >= pages;
+            
+            container.style.display = 'flex';
+        }
+
+        function playPauseAudio(recordId) {
+            const button = document.querySelector(`[data-record-id="${recordId}"]`);
+            const record = callRecords.find(r => r._id === recordId);
+            
+            if (!record || (!record.recordingFile && !record.recordingUrl)) {
+                alert('No recording available');
+                return;
+            }
+            
+            if (currentPlayingAudio && currentPlayingAudio !== recordId) {
+                // Stop other playing audio
+                const otherButton = document.querySelector(`[data-record-id="${currentPlayingAudio}"]`);
+                if (otherButton) {
+                    otherButton.innerHTML = '<i class="fas fa-play"></i> Play Recording';
+                    otherButton.classList.remove('playing');
+                }
+            }
+            
+            if (button.classList.contains('playing')) {
+                // Stop playing
+                button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
+                button.classList.remove('playing');
+                currentPlayingAudio = null;
+            } else {
+                // Start playing
+                const audioUrl = record.recordingFile || record.recordingUrl;
+                const audio = new Audio(audioUrl);
+                
+                audio.addEventListener('ended', () => {
+                    button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
+                    button.classList.remove('playing');
+                    currentPlayingAudio = null;
+                });
+                
+                audio.addEventListener('error', () => {
+                    alert('Error playing audio file');
+                    button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
+                    button.classList.remove('playing');
+                    currentPlayingAudio = null;
+                });
+                
+                audio.play();
+                button.innerHTML = '<i class="fas fa-pause"></i> Pause';
+                button.classList.add('playing');
+                currentPlayingAudio = recordId;
+            }
+        }
+
+        async function viewCallDetails(recordId) {
+            try {
+                const record = callRecords.find(r => r._id === recordId);
+                if (!record) {
+                    alert('Call record not found');
+                    return;
+                }
+                
+                const modal = document.getElementById('callDetailsModal');
+                const content = document.getElementById('callDetailsContent');
+                
+                content.innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-user"></i> Lead Information</h4>
+                            <div class="detail-item">
+                                <span class="detail-label">Name:</span>
+                                <span class="detail-value">${record.lead?.name || 'Unknown'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Phone:</span>
+                                <span class="detail-value">${record.lead?.phone || '-'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Employee:</span>
+                                <span class="detail-value">${record.employee?.name || 'Unknown'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value">
+                                    <span class="record-status status-${record.callStatus}">${record.callStatus}</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4><i class="fas fa-chart-line"></i> Call Metrics</h4>
+                            <div class="detail-item">
+                                <span class="detail-label">Duration:</span>
+                                <span class="detail-value">${fmtDuration(record.callDuration)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Start Time:</span>
+                                <span class="detail-value">${fmtDate(record.callStartTime)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Outcome:</span>
+                                <span class="detail-value">${record.outcome || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cost:</span>
+                                <span class="detail-value">₹${record.callCost || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${record.recordingFile || record.recordingUrl ? `
+                    <div class="audio-section">
+                        <h4><i class="fas fa-headphones"></i> Call Recording</h4>
+                        <audio class="enhanced-audio-player" controls preload="none">
+                            <source src="${record.recordingFile || record.recordingUrl}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="audio-controls">
+                            <div class="speed-control">
+                                <label>Playback Speed:</label>
+                                <select onchange="changePlaybackSpeed(this.value)">
+                                    <option value="0.5">0.5x</option>
+                                    <option value="0.75">0.75x</option>
+                                    <option value="1" selected>1x</option>
+                                    <option value="1.25">1.25x</option>
+                                    <option value="1.5">1.5x</option>
+                                    <option value="2">2x</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${record.notes ? `
+                    <div class="notes-section">
+                        <h4><i class="fas fa-sticky-note"></i> Call Notes</h4>
+                        <div class="notes-content">${record.notes}</div>
+                    </div>
+                    ` : ''}
+                    
+                    ${record.followUpNotes ? `
+                    <div class="notes-section">
+                        <h4><i class="fas fa-calendar-check"></i> Follow-up Notes</h4>
+                        <div class="notes-content">${record.followUpNotes}</div>
+                    </div>
+                    ` : ''}
+                `;
+                
+                modal.style.display = 'block';
+            } catch (error) {
+                console.error('Error loading call details:', error);
+                alert('Error loading call details');
+            }
+        }
+
+        function playInModal(recordId) {
+            viewCallDetails(recordId);
+        }
+
+        function changePlaybackSpeed(speed) {
+            const audio = document.querySelector('.enhanced-audio-player');
+            if (audio) {
+                audio.playbackRate = parseFloat(speed);
+            }
+        }
+
+        function closeCallDetails() {
+            document.getElementById('callDetailsModal').style.display = 'none';
+        }
+
+        async function deleteCallRecord(recordId) {
+            if (!confirm('Are you sure you want to delete this call record? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                console.log('Deleting call record:', recordId);
+                const token = Admin.getToken();
+                if (!token) {
+                    console.error('No auth token found');
+                    alert('Please login first');
+                    return;
+                }
+                
+                const res = await fetch(`/api/admin/call-records/${recordId}`, { 
+                    method: 'DELETE', 
+                    headers: Admin.authHeaders() 
+                });
+                
+                console.log('Delete response status:', res.status);
+                if (!res.ok) { 
+                    const errorText = await res.text();
+                    console.error('Delete API Error:', errorText);
+                    alert(`Failed to delete call record: ${res.status} ${res.statusText}`);
+                    return; 
+                }
+                
+                const result = await res.json();
+                console.log('Delete result:', result);
+                callRecords = callRecords.filter(r => r._id !== recordId);
+                updateStats();
+                applyFilters();
+                alert('Call record deleted successfully');
+            } catch (error) {
+                console.error('Error deleting call record:', error);
+                alert('Error deleting call record: ' + error.message);
+            }
+        }
+
+        function toggleAutoRefresh(btn) {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.innerHTML = '<i class="fas fa-play"></i> Auto-refresh';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline');
+            } else {
+                autoRefreshInterval = setInterval(loadCallRecords, 30000); // 30 seconds
+                btn.innerHTML = '<i class="fas fa-pause"></i> Stop refresh';
+                btn.classList.remove('btn-outline');
+                btn.classList.add('btn-primary');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCallRecords();
+            
+            // Search functionality
+            document.getElementById('search').addEventListener('input', (e) => {
+                searchTerm = e.target.value;
+                applyFilters();
+            });
+            
+            // Page size change
+            document.getElementById('pageSize').addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value) || 25;
+                currentPage = 1;
+                renderCallRecords();
+            });
+            
+            // Pagination
+            document.getElementById('prev').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderCallRecords();
+                }
+            });
+            
+            document.getElementById('next').addEventListener('click', () => {
+                const pages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+                if (currentPage < pages) {
+                    currentPage++;
+                    renderCallRecords();
+                }
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (event) => {
+                const modal = document.getElementById('callDetailsModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -98,6 +98,10 @@
 		.tab-content.active {
 			display: block;
 		}
+		.btn.active {
+			background: #007bff !important;
+			color: white !important;
+		}
 	</style>
 </head>
 <body>
@@ -108,19 +112,16 @@
 				<a href="/admin/overview.html">Overview</a>
 				<a href="/admin/users.html">Users</a>
 				<a href="/admin/leads.html" class="active">Leads</a>
-				<a href="/admin/campaigns.html">Campaigns</a>
-				<a href="/admin/pipelines.html">Pipelines</a>
-				<a href="/admin/sims.html">SIMs</a>
 				<a href="/admin/call-records.html">Call Records</a>
 				<a href="/admin/analytics.html">Analytics</a>
 				<a href="/admin/user-performance.html">User Performance</a>
-				<a href="/admin/settings.html">Settings</a>
 			</nav>
 		</aside>
 		<main class="admin-main">
 			<div class="admin-topbar">
 				<h2 class="page-title">Leads Management</h2>
 				<div class="toolbar">
+					<button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
 					<input class="input" style="min-width:240px" id="q" placeholder="Search leads..." />
 					<select class="input" id="status">
 						<option value="">All Status</option>
@@ -137,10 +138,13 @@
                     <select class="input" id="mgrSelect" title="Select Manager" style="min-width:220px"></select>
                     <button class="btn" id="assignToManager">Assign to Manager</button>
 					<button class="btn" id="toggleCreateLead">Create Lead</button>
+					<button class="btn" id="autoAssignBtn" style="background: #28a745; color: white;">Auto Assign</button>
 					<a class="btn" id="downloadLeadTemplate" href="#">Template</a>
 					<a class="btn" id="exportLeads" href="#">Export</a>
 					<label class="btn" for="leadCsv">Import CSV</label>
 					<input type="file" id="leadCsv" accept=".csv" style="display:none" />
+					<button class="btn btn-delete" id="deleteAllLeads" style="background: #dc3545; color: white;">Delete All Leads</button>
+					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
 			
@@ -266,6 +270,77 @@
 				</div>
 			</div>
 
+			<!-- Auto Assign Modal -->
+			<div id="autoAssignModal" class="modal">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h3>Auto Assign Leads</h3>
+						<span class="close" id="closeAutoAssignModal">&times;</span>
+					</div>
+					<form id="autoAssignForm">
+						<div class="form-group">
+							<label for="autoAssignStatus">Lead Status:</label>
+							<select class="input" id="autoAssignStatus" required>
+								<option value="">Select Status</option>
+								<option value="New">New</option>
+								<option value="Interested">Interested</option>
+								<option value="Follow-up">Follow-up</option>
+								<option value="Hot">Hot</option>
+								<option value="Cold">Cold</option>
+								<option value="Won">Won</option>
+								<option value="Lost">Lost</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="autoAssignType">Assign To:</label>
+							<select class="input" id="autoAssignType" required>
+								<option value="">Select Type</option>
+								<option value="employee">Employee</option>
+								<option value="manager">Manager</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="autoAssignPerson">Select Person:</label>
+							<select class="input" id="autoAssignPerson" required disabled>
+								<option value="">Select Person</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="autoAssignCount">Number of Leads:</label>
+							<input type="number" class="input" id="autoAssignCount" min="1" max="100" value="10" required>
+						</div>
+						<div class="form-group">
+							<label for="autoAssignSector">Sector Filter (Optional):</label>
+							<select class="input" id="autoAssignSector">
+								<option value="">All Sectors</option>
+								<option value="Technology">Technology</option>
+								<option value="Healthcare">Healthcare</option>
+								<option value="Finance">Finance</option>
+								<option value="Education">Education</option>
+								<option value="Real Estate">Real Estate</option>
+								<option value="Other">Other</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="autoAssignRegion">Region Filter (Optional):</label>
+							<select class="input" id="autoAssignRegion">
+								<option value="">All Regions</option>
+								<option value="North">North</option>
+								<option value="South">South</option>
+								<option value="East">East</option>
+								<option value="West">West</option>
+								<option value="Central">Central</option>
+								<option value="Haryana">Haryana</option>
+							</select>
+						</div>
+						<div class="toolbar">
+							<button type="submit" class="btn" style="background: #28a745; color: white;">Auto Assign</button>
+							<button type="button" class="btn btn-outline" id="cancelAutoAssign">Cancel</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
 			<div class="card">
                 <table class="table" id="leadsTable">
 					<thead>
@@ -277,13 +352,54 @@
 					<tbody></tbody>
 				</table>
 			</div>
+
+			<!-- Pagination Controls -->
+			<div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+				<div class="pagination-info" style="color: #666; font-size: 14px;">
+					<span id="paginationInfo">Showing 0 to 0 of 0 leads</span>
+				</div>
+				<div class="pagination-controls" style="display: flex; gap: 10px; align-items: center;">
+					<button id="firstPage" class="btn btn-sm" style="padding: 8px 12px; font-size: 12px;" disabled>First</button>
+					<button id="prevPage" class="btn btn-sm" style="padding: 8px 12px; font-size: 12px;" disabled>Previous</button>
+					<span id="pageNumbers" style="display: flex; gap: 5px;"></span>
+					<button id="nextPage" class="btn btn-sm" style="padding: 8px 12px; font-size: 12px;" disabled>Next</button>
+					<button id="lastPage" class="btn btn-sm" style="padding: 8px 12px; font-size: 12px;" disabled>Last</button>
+				</div>
+				<div class="pagination-size" style="display: flex; align-items: center; gap: 10px;">
+					<label for="pageSize" style="font-size: 14px; color: #666;">Leads per page:</label>
+					<select id="pageSize" class="input" style="width: 80px; padding: 5px;">
+						<option value="25">25</option>
+						<option value="50" selected>50</option>
+						<option value="100">100</option>
+					</select>
+				</div>
+			</div>
 		</main>
 	</div>
 	<script src="../assets/admin.js"></script>
 	<script>
 		Admin.navActivate('/admin/leads.html');
+		function toggleSidebar(){
+			const sb = document.querySelector('.admin-sidebar');
+			sb && sb.classList.toggle('open');
+		}
+		function logout(e){
+			e && e.preventDefault();
+			try {
+				localStorage.removeItem('token');
+				localStorage.removeItem('authToken');
+				localStorage.removeItem('role');
+			} catch(_){ }
+			window.location.href = '/login.html';
+		}
 		let leads=[]; let filtered=[];
 		let leadToDelete = null;
+		
+		// Pagination variables
+		let currentPage = 1;
+		let pageSize = 50;
+		let totalLeads = 0;
+		let totalPages = 0;
 
         function row(l){
             const isDead = l.status === 'Dead';
@@ -440,6 +556,10 @@
                 if (assigned) params.append('assigned', assigned);
                 if (managerId) params.append('managerId', managerId);
                 
+                // Add pagination parameters
+                params.append('page', currentPage);
+                params.append('limit', pageSize);
+                
                 // Add tab-specific endpoint
                 if (currentTab === 'unfinished') {
                     url = '/api/admin/leads/unfinished';
@@ -462,7 +582,18 @@
                     const data = await res.json();
                     leads = data.leads || data; // Handle both new format (with count) and old format
                     filtered = [...leads];
+                    
+                    // Update pagination info
+                    if (data.total !== undefined) {
+                        totalLeads = data.total;
+                        totalPages = Math.ceil(totalLeads / pageSize);
+                    } else {
+                        totalLeads = leads.length;
+                        totalPages = 1;
+                    }
+                    
                     applyFilter();
+                    updatePagination();
                     
                     // Update tab count if available
                     if (data.count !== undefined) {
@@ -608,20 +739,85 @@
 			}
 		});
 
-		document.getElementById('downloadLeadTemplate').addEventListener('click', (e)=>{
+		document.getElementById('downloadLeadTemplate').addEventListener('click', async (e)=>{
 			e.preventDefault();
-			window.location = '/api/import-export/templates/leads';
+			try{
+				const res = await fetch('/api/import-export/templates/leads', { headers: Admin.authHeaders() });
+				if(!res.ok) throw new Error('Failed to download template');
+				const blob = await res.blob();
+				const disp = res.headers.get('Content-Disposition')||'';
+				const filename = getFilenameFromDisposition(disp) || 'leads-template.csv';
+				saveBlob(blob, filename);
+			}catch(err){ console.error(err); alert('Template download failed.'); }
 		});
-		document.getElementById('exportLeads').addEventListener('click', (e)=>{
+		document.getElementById('exportLeads').addEventListener('click', async (e)=>{
 			e.preventDefault();
-			window.location = '/api/import-export/leads/export';
+			try{
+				const res = await fetch('/api/import-export/leads/export', { headers: Admin.authHeaders() });
+				if(!res.ok) throw new Error('Failed to export leads');
+				const blob = await res.blob();
+				const disp = res.headers.get('Content-Disposition')||'';
+				const filename = getFilenameFromDisposition(disp) || 'leads-export.csv';
+				saveBlob(blob, filename);
+			}catch(err){ console.error(err); alert('Export failed.'); }
 		});
+
+		function getFilenameFromDisposition(disposition){
+			try{
+				const m = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition);
+				return decodeURIComponent(m?.[1] || m?.[2] || '');
+			}catch(_){ return ''; }
+		}
+		function saveBlob(blob, filename){
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+			window.URL.revokeObjectURL(url);
+		}
+ 
 		document.getElementById('leadCsv').addEventListener('change', async (e)=>{
-			const f = e.target.files[0]; if(!f) return;
-			const fd = new FormData(); fd.append('file', f);
-			const res = await fetch('/api/import-export/leads/import', { method:'POST', headers: Admin.authHeaders(), body: fd });
-			if(res.ok){ alert('Leads imported'); load(); } else { const j = await res.json().catch(()=>({})); alert('Import failed: '+(j.error||res.status)); }
-			e.target.value = '';
+			const f = e.target.files[0]; 
+			if(!f) return;
+			
+			// Show loading indicator
+			const originalText = e.target.previousElementSibling.textContent;
+			e.target.previousElementSibling.textContent = 'Importing...';
+			e.target.previousElementSibling.disabled = true;
+			
+			try {
+				const fd = new FormData(); 
+				fd.append('file', f);
+				
+				const token = Admin.getToken();
+				if (!token) {
+					alert('Authentication token not found. Please log in.');
+					return;
+				}
+				
+				const res = await fetch('/api/import-export/leads/import', { 
+					method:'POST', 
+					headers: Admin.authHeaders(), 
+					body: fd 
+				});
+				
+				const result = await res.json().catch(() => ({}));
+				
+				if(res.ok){ 
+					alert(`Import completed!\nSuccess: ${result.successCount || 0}\nErrors: ${result.errorCount || 0}`);
+					load(); 
+				} else { 
+					console.error('Import failed:', result);
+					alert('Import failed: ' + (result.error || result.message || res.statusText || res.status)); 
+				}
+			} catch (error) {
+				console.error('Import error:', error);
+				alert('Import failed: ' + error.message);
+			} finally {
+				// Reset UI
+				e.target.previousElementSibling.textContent = originalText;
+				e.target.previousElementSibling.disabled = false;
+				e.target.value = '';
+			}
 		});
 
 		// Tab functionality
@@ -635,6 +831,225 @@
 				currentTab = btn.getAttribute('data-tab');
 				load(); // Reload data based on tab
 			});
+		});
+
+		// Delete All Leads Function
+		async function deleteAllLeads() {
+			const confirmMessage = `Are you sure you want to delete ALL leads?\n\nThis action cannot be undone and will permanently remove ${leads.length} leads from the database.\n\nType "DELETE ALL" to confirm:`;
+			const userInput = prompt(confirmMessage);
+			
+			if (userInput !== 'DELETE ALL') {
+				alert('Operation cancelled. No leads were deleted.');
+				return;
+			}
+
+			try {
+				console.log('Deleting all leads...');
+				const res = await fetch('/api/admin/leads?confirm=true', {
+					method: 'DELETE',
+					headers: Admin.authHeaders()
+				});
+
+				if (res.ok) {
+					const result = await res.json();
+					alert(`Success! ${result.deletedCount} leads have been permanently deleted.`);
+					leads = [];
+					filtered = [];
+					load(); // Reload the table
+				} else {
+					const errorData = await res.json().catch(() => ({}));
+					alert(`Failed to delete all leads: ${errorData.error || res.statusText}`);
+				}
+			} catch (error) {
+				console.error('Error deleting all leads:', error);
+				alert('Error deleting all leads: ' + error.message);
+			}
+		}
+
+		// Pagination functions
+		function updatePagination() {
+			const startIndex = (currentPage - 1) * pageSize + 1;
+			const endIndex = Math.min(currentPage * pageSize, totalLeads);
+			
+			// Update pagination info
+			document.getElementById('paginationInfo').textContent = 
+				`Showing ${startIndex} to ${endIndex} of ${totalLeads} leads`;
+			
+			// Update button states
+			document.getElementById('firstPage').disabled = currentPage === 1;
+			document.getElementById('prevPage').disabled = currentPage === 1;
+			document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+			document.getElementById('lastPage').disabled = currentPage === totalPages || totalPages === 0;
+			
+			// Update page numbers
+			updatePageNumbers();
+		}
+		
+		function updatePageNumbers() {
+			const pageNumbersContainer = document.getElementById('pageNumbers');
+			pageNumbersContainer.innerHTML = '';
+			
+			if (totalPages <= 1) return;
+			
+			const maxVisiblePages = 5;
+			let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+			let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+			
+			// Adjust start page if we're near the end
+			if (endPage - startPage + 1 < maxVisiblePages) {
+				startPage = Math.max(1, endPage - maxVisiblePages + 1);
+			}
+			
+			// Add page number buttons
+			for (let i = startPage; i <= endPage; i++) {
+				const pageBtn = document.createElement('button');
+				pageBtn.className = `btn btn-sm ${i === currentPage ? 'active' : ''}`;
+				pageBtn.style.cssText = 'padding: 8px 12px; font-size: 12px; min-width: 40px;';
+				pageBtn.textContent = i;
+				pageBtn.addEventListener('click', () => goToPage(i));
+				pageNumbersContainer.appendChild(pageBtn);
+			}
+		}
+		
+		function goToPage(page) {
+			if (page >= 1 && page <= totalPages && page !== currentPage) {
+				currentPage = page;
+				load();
+			}
+		}
+		
+		function goToFirstPage() {
+			goToPage(1);
+		}
+		
+		function goToPrevPage() {
+			goToPage(currentPage - 1);
+		}
+		
+		function goToNextPage() {
+			goToPage(currentPage + 1);
+		}
+		
+		function goToLastPage() {
+			goToPage(totalPages);
+		}
+		
+		function changePageSize() {
+			pageSize = parseInt(document.getElementById('pageSize').value);
+			currentPage = 1; // Reset to first page
+			load();
+		}
+
+		// Auto assign helper functions
+		async function loadAutoAssignOptions() {
+			// Reset form
+			document.getElementById('autoAssignForm').reset();
+			document.getElementById('autoAssignPerson').disabled = true;
+			document.getElementById('autoAssignPerson').innerHTML = '<option value="">Select Person</option>';
+		}
+
+		async function loadAutoAssignPersons(type) {
+			const personSelect = document.getElementById('autoAssignPerson');
+			personSelect.innerHTML = '<option value="">Loading...</option>';
+			
+			try {
+				const endpoint = type === 'employee' ? '/api/admin/users/employees' : '/api/admin/users/managers';
+				const res = await fetch(endpoint, { headers: Admin.authHeaders() });
+				
+				if (res.ok) {
+					const users = await res.json();
+					personSelect.innerHTML = '<option value="">Select Person</option>';
+					
+					users.forEach(user => {
+						const option = document.createElement('option');
+						option.value = user._id;
+						option.textContent = `${user.name} (${user.email})`;
+						personSelect.appendChild(option);
+					});
+					
+					personSelect.disabled = false;
+				} else {
+					personSelect.innerHTML = '<option value="">Error loading persons</option>';
+				}
+			} catch (error) {
+				console.error('Error loading persons:', error);
+				personSelect.innerHTML = '<option value="">Error loading persons</option>';
+			}
+		}
+
+		// Add event listener for delete all leads button
+		document.getElementById('deleteAllLeads').addEventListener('click', deleteAllLeads);
+
+		// Pagination event listeners
+		document.getElementById('firstPage').addEventListener('click', goToFirstPage);
+		document.getElementById('prevPage').addEventListener('click', goToPrevPage);
+		document.getElementById('nextPage').addEventListener('click', goToNextPage);
+		document.getElementById('lastPage').addEventListener('click', goToLastPage);
+		document.getElementById('pageSize').addEventListener('change', changePageSize);
+
+		// Auto Assign functionality
+		document.getElementById('autoAssignBtn').addEventListener('click', () => {
+			document.getElementById('autoAssignModal').style.display = 'block';
+			loadAutoAssignOptions();
+		});
+
+		document.getElementById('closeAutoAssignModal').addEventListener('click', () => {
+			document.getElementById('autoAssignModal').style.display = 'none';
+		});
+
+		document.getElementById('cancelAutoAssign').addEventListener('click', () => {
+			document.getElementById('autoAssignModal').style.display = 'none';
+		});
+
+		// Auto assign type change handler
+		document.getElementById('autoAssignType').addEventListener('change', (e) => {
+			const personSelect = document.getElementById('autoAssignPerson');
+			personSelect.disabled = !e.target.value;
+			personSelect.innerHTML = '<option value="">Select Person</option>';
+			
+			if (e.target.value) {
+				loadAutoAssignPersons(e.target.value);
+			}
+		});
+
+		// Auto assign form submit
+		document.getElementById('autoAssignForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+			
+			const formData = {
+				status: document.getElementById('autoAssignStatus').value,
+				assignType: document.getElementById('autoAssignType').value,
+				personId: document.getElementById('autoAssignPerson').value,
+				count: parseInt(document.getElementById('autoAssignCount').value),
+				sector: document.getElementById('autoAssignSector').value || null,
+				region: document.getElementById('autoAssignRegion').value || null
+			};
+
+			if (!formData.status || !formData.assignType || !formData.personId) {
+				alert('Please fill in all required fields');
+				return;
+			}
+
+			try {
+				const res = await fetch('/api/admin/leads/auto-assign', {
+					method: 'POST',
+					headers: { ...Admin.authHeaders(), 'Content-Type': 'application/json' },
+					body: JSON.stringify(formData)
+				});
+
+				const result = await res.json();
+				
+				if (res.ok) {
+					alert(`Auto assignment completed!\nAssigned: ${result.assignedCount} leads\nSkipped: ${result.skippedCount} leads`);
+					document.getElementById('autoAssignModal').style.display = 'none';
+					load(); // Refresh the leads table
+				} else {
+					alert('Auto assignment failed: ' + (result.error || 'Unknown error'));
+				}
+			} catch (error) {
+				console.error('Auto assign error:', error);
+				alert('Auto assignment failed: ' + error.message);
+			}
 		});
 		
 		if(Admin.getToken()) load();

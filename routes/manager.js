@@ -7,6 +7,7 @@ const Campaign = require('../models/Campaign');
 const CallLog = require('../models/CallLog');
 const auth = require('../middleware/auth');
 const roles = require('../middleware/roles');
+const csvStringify = require('csv-stringify'); // Add this line
 
 // All manager routes require authentication and manager role
 router.use(auth);
@@ -296,6 +297,37 @@ router.post('/leads', async (req, res) => {
     }
 });
 
+// Update lead status only
+router.put('/leads/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        
+        const lead = await Lead.findById(id);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        // Verify manager has access to this lead
+        const managerId = req.user.id;
+        const employees = await User.find({ managerId: managerId }).select('_id');
+        const employeeIds = employees.map(emp => emp._id);
+        
+        if (!employeeIds.includes(lead.assignedTo)) {
+            return res.status(403).json({ error: 'Not authorized to update this lead' });
+        }
+        
+        // Update lead status
+        lead.status = status;
+        lead.updatedAt = new Date();
+        await lead.save();
+        
+        res.json({ message: 'Lead status updated successfully', lead });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // Update lead status and assignment
 router.put('/leads/:id', async (req, res) => {
     try {
@@ -536,6 +568,65 @@ router.post('/campaigns', async (req, res) => {
         
         res.status(201).json({ message: 'Campaign created successfully', campaign });
     } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Pause Campaign
+router.put('/campaigns/:id/pause', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const campaign = await Campaign.findOneAndUpdate(
+            { _id: id, createdBy: req.user.id }, // Ensure manager owns the campaign
+            { status: 'paused' },
+            { new: true }
+        );
+
+        if (!campaign) {
+            return res.status(404).json({ error: 'Campaign not found or not authorized' });
+        }
+
+        res.json({ message: 'Campaign paused successfully', campaign });
+    } catch (err) {
+        console.error('Pause campaign error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Resume Campaign
+router.put('/campaigns/:id/resume', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const campaign = await Campaign.findOneAndUpdate(
+            { _id: id, createdBy: req.user.id }, // Ensure manager owns the campaign
+            { status: 'active' },
+            { new: true }
+        );
+
+        if (!campaign) {
+            return res.status(404).json({ error: 'Campaign not found or not authorized' });
+        }
+
+        res.json({ message: 'Campaign resumed successfully', campaign });
+    } catch (err) {
+        console.error('Resume campaign error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Delete Campaign
+router.delete('/campaigns/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const campaign = await Campaign.findOneAndDelete({ _id: id, createdBy: req.user.id }); // Ensure manager owns the campaign
+
+        if (!campaign) {
+            return res.status(404).json({ error: 'Campaign not found or not authorized' });
+        }
+
+        res.json({ message: 'Campaign deleted successfully' });
+    } catch (err) {
+        console.error('Delete campaign error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
@@ -870,6 +961,95 @@ router.post('/leads/assign/manual-map', async (req, res) => {
     }
 });
 
+// Export Leads
+router.get('/export/leads', async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const employees = await User.find({ manager: managerId }).select('_id');
+        const employeeIds = employees.map(emp => emp._id);
+
+        const leads = await Lead.find({
+            $or: [
+                { createdBy: managerId },
+                { assignedTo: { $in: employeeIds } }
+            ]
+        })
+        .select('name phone email status sector region assignedTo createdBy createdAt')
+        .populate('assignedTo', 'name')
+        .populate('createdBy', 'name');
+
+        const csvData = leads.map(lead => ({
+            Name: lead.name,
+            Phone: lead.phone,
+            Email: lead.email,
+            Status: lead.status,
+            Sector: lead.sector,
+            Region: lead.region,
+            AssignedTo: lead.assignedTo?.name || 'Unassigned',
+            CreatedBy: lead.createdBy?.name || 'N/A',
+            CreatedAt: lead.createdAt.toISOString()
+        }));
+
+        const csv = require('csv-stringify').stringify(csvData, { header: true });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="leads.csv"');
+        csv.pipe(res);
+
+    } catch (err) {
+        console.error('Export leads error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Export Campaigns
+router.get('/export/campaigns', async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const campaigns = await Campaign.find({ createdBy: managerId })
+            .select('name type status startDate endDate leadsGenerated budget description');
+
+        const csvData = campaigns.map(campaign => ({
+            Name: campaign.name,
+            Type: campaign.type,
+            Status: campaign.status,
+            StartDate: campaign.startDate.toISOString(),
+            EndDate: campaign.endDate.toISOString(),
+            LeadsGenerated: campaign.leadsGenerated,
+            Budget: campaign.budget,
+            Description: campaign.description
+        }));
+
+        const csv = csvStringify.stringify(csvData, { header: true });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="campaigns.csv"');
+        csv.pipe(res);
+
+    } catch (err) {
+        console.error('Export campaigns error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Download Lead Import Template
+router.get('/download-lead-template', (req, res) => {
+    try {
+        const headers = [
+            'name', 'company', 'phone', 'email', 'status', 'source', 'assignedToEmail', 'notes', 'campaignId'
+        ];
+        const csv = csvStringify.stringify([headers], { header: false });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="lead_import_template.csv"');
+        csv.pipe(res);
+
+    } catch (err) {
+        console.error('Download lead template error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // Bulk lead operations
 router.post('/leads/bulk-update', async (req, res) => {
     try {
@@ -904,12 +1084,20 @@ router.post('/leads/bulk-update', async (req, res) => {
 // Get performance report
 router.get('/reports/performance', async (req, res) => {
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, employeeId, campaignId } = req.query;
         const managerId = req.user.id;
-        
-        const employees = await User.find({ manager: managerId });
-        const employeeIds = employees.map(emp => emp._id);
-        
+
+        // Get all employees under this manager
+        const employees = await User.find({ manager: managerId }).select('_id name');
+        let employeeIds = employees.map(emp => emp._id);
+
+        if (employeeId) {
+            if (!employeeIds.includes(employeeId)) {
+                return res.status(403).json({ error: 'Not authorized to view this employee\'s report' });
+            }
+            employeeIds = [employeeId]; // Filter by specific employee
+        }
+
         let dateFilter = {};
         if (startDate && endDate) {
             dateFilter = {
@@ -919,39 +1107,148 @@ router.get('/reports/performance', async (req, res) => {
                 }
             };
         }
+
+        let campaignFilterQuery = {};
+        if (campaignId) {
+            campaignFilterQuery = { campaign: campaignId };
+        }
         
         const leads = await Lead.find({
             $or: [
                 { createdBy: managerId },
                 { assignedTo: { $in: employeeIds } }
             ],
-            ...dateFilter
+            ...dateFilter,
+            ...campaignFilterQuery
         });
-        
+
+        // Calculate team performance with leadsGenerated, leadsConverted, etc.
+        const teamPerformanceMap = {};
+        employees.forEach(emp => {
+            teamPerformanceMap[emp._id.toString()] = {
+                employeeName: emp.name,
+                leadsGenerated: 0,
+                leadsConverted: 0,
+                conversionRate: 0,
+                revenueGenerated: 0,
+                avgResponseTime: 'N/A',
+                performanceRating: 'average'
+            };
+        });
+
+        leads.forEach(lead => {
+            const assignedToId = lead.assignedTo?.toString();
+            if (assignedToId && teamPerformanceMap[assignedToId]) {
+                teamPerformanceMap[assignedToId].leadsGenerated++;
+                if (lead.status === 'Won') {
+                    teamPerformanceMap[assignedToId].leadsConverted++;
+                    teamPerformanceMap[assignedToId].revenueGenerated += lead.sellingPrice || 0;
+                }
+            }
+        });
+
+        const teamPerformance = Object.values(teamPerformanceMap).map(p => {
+            p.conversionRate = p.leadsGenerated > 0 ? 
+                ((p.leadsConverted / p.leadsGenerated) * 100).toFixed(1) : 0;
+            return p;
+        });
+
+        // Status distribution
+        const leadsByStatus = leads.reduce((acc, lead) => {
+            acc[lead.status] = (acc[lead.status] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Monthly Revenue Trend (simplified for now)
+        const monthlyRevenueTrend = {};
+        leads.filter(l => l.status === 'Won' && l.sellingPrice && l.createdAt).forEach(l => {
+            const month = new Date(l.createdAt).toLocaleString('default', { month: 'short', year: 'numeric' });
+            monthlyRevenueTrend[month] = (monthlyRevenueTrend[month] || 0) + l.sellingPrice;
+        });
+
         const report = {
             period: { startDate, endDate },
             totalLeads: leads.length,
-            leadsByStatus: leads.reduce((acc, lead) => {
-                acc[lead.status] = (acc[lead.status] || 0) + 1;
-                return acc;
-            }, {}),
-            leadsBySector: leads.reduce((acc, lead) => {
-                acc[lead.sector] = (acc[lead.sector] || 0) + 1;
-                return acc;
-            }, {}),
-            leadsByRegion: leads.reduce((acc, lead) => {
-                acc[lead.region] = (acc[lead.region] || 0) + 1;
-                return acc;
-            }, {}),
+            leadsByStatus: leadsByStatus,
             totalSales: leads
                 .filter(l => l.status === 'Won' && l.sellingPrice)
                 .reduce((sum, l) => sum + l.sellingPrice, 0),
             conversionRate: leads.length > 0 ? 
-                ((leads.filter(l => l.status === 'Won').length / leads.length) * 100).toFixed(1) : 0
+                ((leads.filter(l => l.status === 'Won').length / leads.length) * 100).toFixed(1) : 0,
+            avgSalesCycle: '30', // Placeholder for now
+            teamPerformance: teamPerformance,
+            monthlyRevenueTrend: monthlyRevenueTrend
         };
         
         res.json(report);
     } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Export Reports
+router.get('/export/reports', async (req, res) => {
+    try {
+        const { startDate, endDate, employeeId, campaignId } = req.query;
+        const managerId = req.user.id;
+
+        // This logic is similar to /reports/performance, consider refactoring to reuse
+        const employees = await User.find({ manager: managerId }).select('_id name');
+        let employeeIds = employees.map(emp => emp._id);
+
+        if (employeeId) {
+            if (!employeeIds.includes(employeeId)) {
+                return res.status(403).json({ error: 'Not authorized to view this employee\'s report' });
+            }
+            employeeIds = [employeeId];
+        }
+
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                createdAt: {
+                    $gte: new Date(startDate),
+                    $lte: new Date(endDate)
+                }
+            };
+        }
+
+        let campaignFilterQuery = {};
+        if (campaignId) {
+            campaignFilterQuery = { campaign: campaignId };
+        }
+
+        const leads = await Lead.find({
+            $or: [
+                { createdBy: managerId },
+                { assignedTo: { $in: employeeIds } }
+            ],
+            ...dateFilter,
+            ...campaignFilterQuery
+        })
+        .select('name phone email status sellingPrice assignedTo createdBy createdAt')
+        .populate('assignedTo', 'name')
+        .populate('createdBy', 'name');
+
+        const csvData = leads.map(lead => ({
+            'Lead Name': lead.name,
+            'Phone': lead.phone,
+            'Email': lead.email,
+            'Status': lead.status,
+            'Selling Price': lead.sellingPrice || 0,
+            'Assigned To': lead.assignedTo?.name || 'Unassigned',
+            'Created By': lead.createdBy?.name || 'N/A',
+            'Created At': lead.createdAt.toISOString()
+        }));
+
+        const csv = csvStringify.stringify(csvData, { header: true });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="performance_report.csv"');
+        csv.pipe(res);
+
+    } catch (err) {
+        console.error('Export reports error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 });

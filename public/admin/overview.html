@@ -15,21 +15,18 @@
 				<a href="/admin/overview.html" class="active">Overview</a>
 				<a href="/admin/users.html">Users</a>
 				<a href="/admin/leads.html">Leads</a>
-				<a href="/admin/campaigns.html">Campaigns</a>
-				<a href="/admin/pipelines.html">Pipelines</a>
-				<a href="/admin/sims.html">SIMs</a>
 				<a href="/admin/call-records.html">Call Records</a>
 				<a href="/admin/analytics.html">Analytics</a>
 				<a href="/admin/user-performance.html">User Performance</a>
-				<a href="/admin/settings.html">Settings</a>
 			</nav>
 		</aside>
 		<main class="admin-main">
 			<div class="admin-topbar">
 				<h2 class="page-title">Overview</h2>
 				<div class="toolbar">
+					<button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
 					<button class="btn" id="refreshBtn">Refresh</button>
-					<a class="btn btn-outline" href="/login.html" onclick="localStorage.clear()">Logout</a>
+					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
 			<div class="grid cols-4" id="metrics">
@@ -51,6 +48,19 @@
 	<script src="../assets/admin.js"></script>
 	<script>
 		Admin.navActivate('/admin/overview.html');
+		function toggleSidebar(){
+			const sb = document.querySelector('.admin-sidebar');
+			sb && sb.classList.toggle('open');
+		}
+		function logout(e){
+			e && e.preventDefault();
+			try {
+				localStorage.removeItem('token');
+				localStorage.removeItem('authToken');
+				localStorage.removeItem('role');
+			} catch(_){ }
+			window.location.href = '/login.html';
+		}
 		async function loadDashboard(){
 			const res = await fetch('/api/admin/performance/dashboard',{ headers: Admin.authHeaders() });
 			if(!res.ok) return;

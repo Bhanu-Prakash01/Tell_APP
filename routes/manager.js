@@ -9,6 +9,9 @@ const auth = require('../middleware/auth');
 const roles = require('../middleware/roles');
 const csvStringify = require('csv-stringify'); // Add this line
 
+// test creds for mamanger email: m1@m1 password: m1
+
+
 // All manager routes require authentication and manager role
 router.use(auth);
 router.use(roles(['manager']));
@@ -17,8 +20,21 @@ router.use(roles(['manager']));
 // Get team members (employees under this manager)
 router.get('/team', async (req, res) => {
     try {
-        const employees = await User.find({ manager: req.user.id })
+        const employees = await User.find({ manager: req.user._id })
             .select('name email role createdAt')
+            .sort({ name: 1 });
+        
+        res.json(employees);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Get team members for assignment (simplified)
+router.get('/team/for-assignment', async (req, res) => {
+    try {
+        const employees = await User.find({ manager: req.user._id })
+            .select('_id name email')
             .sort({ name: 1 });
         
         res.json(employees);
@@ -30,7 +46,7 @@ router.get('/team', async (req, res) => {
 // Get team performance summary
 router.get('/team/performance', async (req, res) => {
     try {
-        const employees = await User.find({ manager: req.user.id });
+        const employees = await User.find({ manager: req.user._id });
         const employeeIds = employees.map(emp => emp._id);
         
         // Get leads assigned to team members
@@ -66,7 +82,7 @@ router.get('/team/performance', async (req, res) => {
 // Get all leads under manager's team
 router.get('/leads', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const { assignedOnly, status } = req.query;
         
         // Get all employees under this manager
@@ -100,7 +116,7 @@ router.get('/leads', async (req, res) => {
 // Get leads for assignment purposes (leads assigned to manager by admin + leads assigned to manager's team)
 router.get('/leads/for-assignment', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const { status } = req.query;
         
         // Get all employees under this manager
@@ -137,7 +153,7 @@ router.get('/leads/for-assignment', async (req, res) => {
 // Convenience endpoint: only leads assigned to this manager's team
 router.get('/leads/assigned', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const employees = await User.find({ manager: managerId }).select('_id name');
         const employeeIds = employees.map(emp => emp._id);
         const leads = await Lead.find({ assignedTo: { $in: employeeIds } })
@@ -156,7 +172,7 @@ router.get('/leads/assigned', async (req, res) => {
 // Get lead analytics for manager's team
 router.get('/leads/analytics', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name');
@@ -257,7 +273,7 @@ router.get('/leads/analytics', async (req, res) => {
 router.get('/leads/status/:status', async (req, res) => {
     try {
         const { status } = req.params;
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name');
@@ -280,12 +296,42 @@ router.get('/leads/status/:status', async (req, res) => {
     }
 });
 
+// Get single lead by ID
+router.get('/leads/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const managerId = req.user._id;
+        
+        // Get all employees under this manager
+        const employees = await User.find({ manager: managerId }).select('_id');
+        const employeeIds = employees.map(emp => emp._id);
+        
+        const lead = await Lead.findOne({
+            _id: id,
+            $or: [
+                { createdBy: managerId },
+                { assignedTo: { $in: employeeIds } }
+            ]
+        })
+        .populate('assignedTo', 'name email')
+        .populate('createdBy', 'name email');
+        
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        res.json(lead);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // Create new lead
 router.post('/leads', async (req, res) => {
     try {
         const leadData = {
             ...req.body,
-            createdBy: req.user.id
+            createdBy: req.user._id
         };
         
         const lead = new Lead(leadData);
@@ -309,8 +355,8 @@ router.put('/leads/:id/status', async (req, res) => {
         }
         
         // Verify manager has access to this lead
-        const managerId = req.user.id;
-        const employees = await User.find({ managerId: managerId }).select('_id');
+        const managerId = req.user._id;
+        const employees = await User.find({ manager: managerId }).select('_id');
         const employeeIds = employees.map(emp => emp._id);
         
         if (!employeeIds.includes(lead.assignedTo)) {
@@ -340,10 +386,10 @@ router.put('/leads/:id', async (req, res) => {
         }
         
         // Verify manager has access to this lead
-        const employees = await User.find({ manager: req.user.id }).select('_id');
+        const employees = await User.find({ manager: req.user._id }).select('_id');
         const employeeIds = employees.map(emp => emp._id);
         
-        if (!employeeIds.includes(lead.assignedTo) && lead.createdBy.toString() !== req.user.id.toString()) {
+        if (!employeeIds.includes(lead.assignedTo) && lead.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({ error: 'Not authorized to update this lead' });
         }
         
@@ -363,10 +409,36 @@ router.put('/leads/:id', async (req, res) => {
     }
 });
 
+// Delete lead
+router.delete('/leads/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const lead = await Lead.findById(id);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        // Verify manager has access to this lead
+        const employees = await User.find({ manager: req.user._id }).select('_id');
+        const employeeIds = employees.map(emp => emp._id);
+        
+        if (!employeeIds.includes(lead.assignedTo) && lead.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Not authorized to delete this lead' });
+        }
+        
+        await Lead.findByIdAndDelete(id);
+        
+        res.json({ message: 'Lead deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // Get unfinished leads (status = "New") for manager's team
 router.get('/leads/unfinished', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const { assigned } = req.query;
         
         // Get all employees under this manager
@@ -409,7 +481,7 @@ router.get('/leads/unfinished', async (req, res) => {
 // Get finished leads (status != "New") for manager's team
 router.get('/leads/finished', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const { assigned, status } = req.query;
         
         // Get all employees under this manager
@@ -457,7 +529,7 @@ router.get('/leads/finished', async (req, res) => {
 // Get dead leads for manager's team
 router.get('/leads/dead', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const { reason } = req.query;
         
         // Get all employees under this manager
@@ -509,7 +581,7 @@ router.put('/leads/:id/reactivate', async (req, res) => {
         }
         
         // Check if manager has permission to reactivate this lead
-        if (lead.createdBy.toString() !== req.user.id.toString()) {
+        if (lead.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({ error: 'Not authorized to reactivate this lead' });
         }
         
@@ -540,7 +612,7 @@ router.put('/leads/:id/reactivate', async (req, res) => {
 // Get campaigns created by manager
 router.get('/campaigns', async (req, res) => {
     try {
-        const campaigns = await Campaign.find({ createdBy: req.user.id })
+        const campaigns = await Campaign.find({ createdBy: req.user._id })
             .populate('assignedTo', 'name email')
             .sort({ createdAt: -1 });
         
@@ -555,7 +627,7 @@ router.post('/campaigns', async (req, res) => {
     try {
         const campaignData = {
             ...req.body,
-            createdBy: req.user.id,
+            createdBy: req.user._id,
             metrics: {
                 reach: 0, impressions: 0, clicks: 0, conversions: 0,
                 engagementRate: 0, conversionRate: 0, ctr: 0, roi: 0,
@@ -577,7 +649,7 @@ router.put('/campaigns/:id/pause', async (req, res) => {
     try {
         const { id } = req.params;
         const campaign = await Campaign.findOneAndUpdate(
-            { _id: id, createdBy: req.user.id }, // Ensure manager owns the campaign
+            { _id: id, createdBy: req.user._id }, // Ensure manager owns the campaign
             { status: 'paused' },
             { new: true }
         );
@@ -598,7 +670,7 @@ router.put('/campaigns/:id/resume', async (req, res) => {
     try {
         const { id } = req.params;
         const campaign = await Campaign.findOneAndUpdate(
-            { _id: id, createdBy: req.user.id }, // Ensure manager owns the campaign
+            { _id: id, createdBy: req.user._id }, // Ensure manager owns the campaign
             { status: 'active' },
             { new: true }
         );
@@ -618,7 +690,7 @@ router.put('/campaigns/:id/resume', async (req, res) => {
 router.delete('/campaigns/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const campaign = await Campaign.findOneAndDelete({ _id: id, createdBy: req.user.id }); // Ensure manager owns the campaign
+        const campaign = await Campaign.findOneAndDelete({ _id: id, createdBy: req.user._id }); // Ensure manager owns the campaign
 
         if (!campaign) {
             return res.status(404).json({ error: 'Campaign not found or not authorized' });
@@ -635,7 +707,7 @@ router.delete('/campaigns/:id', async (req, res) => {
 // Get call records for manager's team
 router.get('/call-records', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id');
@@ -657,7 +729,7 @@ router.get('/call-records', async (req, res) => {
 // Get call records analytics for manager's team
 router.get('/call-records/analytics', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id');
@@ -735,7 +807,7 @@ router.get('/call-records/analytics', async (req, res) => {
 // Get team call analytics
 router.get('/calls/analytics', async (req, res) => {
     try {
-        const employees = await User.find({ manager: req.user.id });
+        const employees = await User.find({ manager: req.user._id });
         
         // Mock call data for team
         const callData = {
@@ -767,7 +839,7 @@ router.get('/calls/analytics', async (req, res) => {
 // Get manager dashboard data
 router.get('/dashboard', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name');
@@ -832,7 +904,7 @@ router.post('/leads/assign', async (req, res) => {
         const { leadIds, employeeId } = req.body;
         
         // Verify employee is under this manager
-        const employee = await User.findOne({ _id: employeeId, manager: req.user.id });
+        const employee = await User.findOne({ _id: employeeId, manager: req.user._id });
         if (!employee) {
             return res.status(403).json({ error: 'Employee not found or not under your management' });
         }
@@ -854,7 +926,7 @@ router.post('/leads/assign/auto', async (req, res) => {
     try {
         const { leadIds, perEmployee } = req.body;
 
-        const team = await User.find({ manager: req.user.id }).select('_id');
+        const team = await User.find({ manager: req.user._id }).select('_id');
         if (team.length === 0) return res.status(400).json({ error: 'No team members under your management' });
 
         let candidateLeads = [];
@@ -865,7 +937,7 @@ router.post('/leads/assign/auto', async (req, res) => {
             const employeeIds = team.map(t => t._id);
             candidateLeads = await Lead.find({
                 $or: [
-                    { createdBy: req.user.id },
+                    { createdBy: req.user._id },
                     { assignedTo: { $in: employeeIds } },
                     { assignedTo: { $exists: false } },
                 ]
@@ -874,7 +946,7 @@ router.post('/leads/assign/auto', async (req, res) => {
 
         // Filter authorized leads and prefer unassigned first
         const isAuthorized = (lead) => (
-            lead.createdBy?.toString() === req.user.id.toString() ||
+            lead.createdBy?.toString() === req.user._id.toString() ||
             !lead.assignedTo ||
             team.find(t => t._id.toString() === String(lead.assignedTo))
         );
@@ -937,7 +1009,7 @@ router.post('/leads/assign/manual-map', async (req, res) => {
         if (!Array.isArray(assignments) || assignments.length === 0) {
             return res.status(400).json({ error: 'assignments array is required' });
         }
-        const team = await User.find({ manager: req.user.id }).select('_id');
+        const team = await User.find({ manager: req.user._id }).select('_id');
         const teamIds = new Set(team.map(t=> String(t._id)));
         const results = []; let totalAssigned = 0; let totalSkipped = 0;
         for (const a of assignments) {
@@ -946,7 +1018,7 @@ router.post('/leads/assign/manual-map', async (req, res) => {
             const leads = await Lead.find({ _id: { $in: a.leadIds } });
             let assigned = 0; let skipped = 0;
             for (const lead of leads) {
-                const isAuth = lead.createdBy?.toString() === req.user.id.toString() || !lead.assignedTo || teamIds.has(String(lead.assignedTo));
+                const isAuth = lead.createdBy?.toString() === req.user._id.toString() || !lead.assignedTo || teamIds.has(String(lead.assignedTo));
                 if (!isAuth) { skipped++; continue; }
                 lead.assignedTo = a.employeeId;
                 await lead.save();
@@ -964,7 +1036,7 @@ router.post('/leads/assign/manual-map', async (req, res) => {
 // Export Leads
 router.get('/export/leads', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const employees = await User.find({ manager: managerId }).select('_id');
         const employeeIds = employees.map(emp => emp._id);
 
@@ -1005,7 +1077,7 @@ router.get('/export/leads', async (req, res) => {
 // Export Campaigns
 router.get('/export/campaigns', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         const campaigns = await Campaign.find({ createdBy: managerId })
             .select('name type status startDate endDate leadsGenerated budget description');
 
@@ -1057,11 +1129,11 @@ router.post('/leads/bulk-update', async (req, res) => {
         
         // Verify manager has access to these leads
         const leads = await Lead.find({ _id: { $in: leadIds } });
-        const employees = await User.find({ manager: req.user.id }).select('_id');
+        const employees = await User.find({ manager: req.user._id }).select('_id');
         const employeeIds = employees.map(emp => emp._id);
         
         const authorizedLeads = leads.filter(lead => 
-            employeeIds.includes(lead.assignedTo) || lead.createdBy.toString() === req.user.id.toString()
+            employeeIds.includes(lead.assignedTo) || lead.createdBy.toString() === req.user._id.toString()
         );
         
         if (authorizedLeads.length !== leadIds.length) {
@@ -1085,7 +1157,7 @@ router.post('/leads/bulk-update', async (req, res) => {
 router.get('/reports/performance', async (req, res) => {
     try {
         const { startDate, endDate, employeeId, campaignId } = req.query;
-        const managerId = req.user.id;
+        const managerId = req.user._id;
 
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name');
@@ -1190,7 +1262,7 @@ router.get('/reports/performance', async (req, res) => {
 router.get('/export/reports', async (req, res) => {
     try {
         const { startDate, endDate, employeeId, campaignId } = req.query;
-        const managerId = req.user.id;
+        const managerId = req.user._id;
 
         // This logic is similar to /reports/performance, consider refactoring to reuse
         const employees = await User.find({ manager: managerId }).select('_id name');
@@ -1253,11 +1325,81 @@ router.get('/export/reports', async (req, res) => {
     }
 });
 
+// ===== EMPLOYEE MANAGEMENT =====
+// Get employees under this manager
+router.get('/employees', async (req, res) => {
+    try {
+        const employees = await User.find({ manager: req.user._id })
+            .select('_id name email role createdAt')
+            .sort({ name: 1 });
+        
+        res.json(employees);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+// Update lead status and assignment (for assignment functionality)
+router.put('/update-lead-status', async (req, res) => {
+    try {
+        const { leadId, assignedTo, notes } = req.body;
+        
+        if (!leadId) {
+            return res.status(400).json({ error: 'Lead ID is required' });
+        }
+        
+        const lead = await Lead.findById(leadId);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        // Verify manager has access to this lead
+        const managerId = req.user._id;
+        const employees = await User.find({ manager: managerId }).select('_id');
+        const employeeIds = employees.map(emp => emp._id);
+        
+        const hasAccess = lead.createdBy.toString() === managerId.toString() || 
+                         employeeIds.some(id => id.toString() === lead.assignedTo?.toString());
+        
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Not authorized to update this lead' });
+        }
+        
+        // Update lead assignment
+        if (assignedTo) {
+            // Verify the employee is under this manager
+            const employee = await User.findOne({ _id: assignedTo, manager: managerId });
+            if (!employee) {
+                return res.status(403).json({ error: 'Employee not found or not under your management' });
+            }
+            lead.assignedTo = assignedTo;
+        }
+        
+        // Update notes if provided
+        if (notes) {
+            lead.notes = notes;
+        }
+        
+        lead.updatedAt = new Date();
+        await lead.save();
+        
+        // Return updated lead with populated data
+        const updatedLead = await Lead.findById(leadId)
+            .populate('assignedTo', 'name email')
+            .populate('createdBy', 'name email');
+        
+        res.json({ message: 'Lead updated successfully', lead: updatedLead });
+    } catch (err) {
+        console.error('Update lead status error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 // ===== EMPLOYEE RECORDS =====
 // Get comprehensive employee records with leads and call logs
 router.get('/employee-records', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name email');
@@ -1300,7 +1442,7 @@ router.get('/employee-records', async (req, res) => {
 // Get employee records analytics
 router.get('/employee-records/analytics', async (req, res) => {
     try {
-        const managerId = req.user.id;
+        const managerId = req.user._id;
         
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id name email');

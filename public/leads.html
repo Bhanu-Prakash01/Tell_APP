@@ -741,7 +741,7 @@
         }
 
         function getAuthToken() {
-            return localStorage.getItem('authToken') || '';
+            return localStorage.getItem('token') || '';
         }
 
         function toggleSidebar() {
@@ -753,7 +753,6 @@
             e && e.preventDefault();
             try {
                 localStorage.removeItem('token');
-                localStorage.removeItem('authToken');
                 localStorage.removeItem('role');
             } catch (_){ }
             window.location.href = '/login.html';

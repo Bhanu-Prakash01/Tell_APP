@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - TeleCRM</title>
+    <link rel="stylesheet" href="assets/frappe.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Enhanced Admin Panel Styles */
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 60px;
+            --header-height: 64px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--fr-bg);
+            color: var(--fr-text);
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #ffffff;
+            border-right: 1px solid var(--fr-border);
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+            transition: all var(--transition-speed) ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--fr-border);
+            border-radius: 2px;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--fr-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 20px 10px;
+            justify-content: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--fr-text);
+        }
+
+        .logo i {
+            font-size: 24px;
+            color: var(--fr-primary);
+        }
+
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--fr-muted);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--fr-bg);
+            color: var(--fr-text);
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            display: none;
+        }
+
+        /* Navigation */
+        .nav-section {
+            padding: 16px 0;
+        }
+
+        .nav-title {
+            padding: 0 20px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--fr-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar.collapsed .nav-title {
+            display: none;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: var(--fr-muted);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .sidebar.collapsed .nav-item {
+            padding: 10px 0;
+            justify-content: center;
+        }
+
+        .nav-item:hover {
+            background: var(--fr-bg);
+            color: var(--fr-text);
+        }
+
+        .nav-item.active {
+            background: rgba(94, 100, 255, 0.08);
+            color: var(--fr-primary);
+            border-right: 2px solid var(--fr-primary);
+        }
+
+        .nav-item i {
+            width: 18px;
+            font-size: 16px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar.collapsed .nav-item i {
+            margin-right: 0;
+        }
+
+        .nav-text {
+            font-weight: 500;
+        }
+
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+
+        .nav-badge {
+            background: var(--fr-red);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto;
+            font-weight: 600;
+        }
+
+        .sidebar.collapsed .nav-badge {
+            display: none;
+        }
+
+        /* Tooltip for collapsed sidebar */
+        .nav-tooltip {
+            position: absolute;
+            left: 60px;
+            background: var(--fr-text);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 1001;
+        }
+
+        .sidebar.collapsed .nav-item:hover .nav-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left var(--transition-speed) ease;
+            min-height: 100vh;
+            background: var(--fr-bg);
+        }
+
+        .sidebar.collapsed + .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Header */
+        .main-header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--fr-border);
+            padding: 0 24px;
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: var(--fr-text);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: var(--fr-bg);
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--fr-text);
+            margin: 0;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--fr-muted);
+            margin-top: 2px;
+        }
+
+        .breadcrumb-separator {
+            color: var(--fr-border);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-profile:hover {
+            background: var(--fr-bg);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--fr-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--fr-text);
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--fr-muted);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Section Management */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--fr-border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--fr-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafbfc;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--fr-text);
+            margin: 0;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--fr-primary);
+            color: white;
+            border-color: var(--fr-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--fr-primary-600);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--fr-text);
+            border-color: var(--fr-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--fr-bg);
+            border-color: var(--fr-primary);
+        }
+
+        .btn-danger {
+            background: var(--fr-red);
+            color: white;
+            border-color: var(--fr-red);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--fr-text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--fr-border);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--fr-primary);
+            box-shadow: 0 0 0 3px rgba(94, 100, 255, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 6px;
+            border: 1px solid var(--fr-border);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--fr-border);
+        }
+
+        .table th {
+            background: #fafbfc;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--fr-text);
+        }
+
+        .table tbody tr:hover {
+            background: #fafbfc;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .badge-admin { background: #fef3c7; color: #92400e; }
+        .badge-manager { background: #dbeafe; color: #1e40af; }
+        .badge-employee { background: #dcfce7; color: #166534; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-inactive { background: #fecaca; color: #991b1b; }
+
+        /* Search and Filters */
+        .search-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--fr-muted);
+        }
+
+        .empty-state i {
+            font-size: 36px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 6px 0;
+            color: var(--fr-text);
+            font-size: 16px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 13px;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--fr-muted);
+        }
+
+        .loading i {
+            font-size: 20px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ffffff;
+            border: 1px solid var(--fr-border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            max-width: 350px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-success { border-left: 3px solid var(--fr-green); }
+        .notification-error { border-left: 3px solid var(--fr-red); }
+        .notification-info { border-left: 3px solid var(--fr-primary); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1002;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--fr-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--fr-muted);
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .modal-close:hover {
+            background: var(--fr-bg);
+            color: var(--fr-text);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--fr-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+
+            .main-header {
+                padding: 0 16px;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .search-filters {
+                flex-direction: column;
+            }
+
+            .search-box,
+            .filter-select {
+                min-width: auto;
+            }
+
+            .table th,
+            .table td {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
+
+        /* Sidebar Overlay for Mobile */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid var(--fr-border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--fr-primary);
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--fr-muted);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            font-size: 20px;
+            color: var(--fr-primary);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-cog"></i>
+                    <span class="logo-text">Admin Panel</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Main</div>
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-chart-pie"></i>
+                    <span class="nav-text">Dashboard</span>
+                    <span class="nav-tooltip">Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span class="nav-text">User Management</span>
+                    <span class="nav-tooltip">User Management</span>
+                </a>
+                <a href="#" class="nav-item" data-section="roles">
+                    <i class="fas fa-user-shield"></i>
+                    <span class="nav-text">Roles & Permissions</span>
+                    <span class="nav-tooltip">Roles & Permissions</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">Data Management</div>
+                <a href="#" class="nav-item" data-section="leads">
+                    <i class="fas fa-address-book"></i>
+                    <span class="nav-text">Leads</span>
+                    <span class="nav-badge" id="leadsCount">0</span>
+                    <span class="nav-tooltip">Leads</span>
+                </a>
+                <a href="#" class="nav-item" data-section="calls">
+                    <i class="fas fa-phone"></i>
+                    <span class="nav-text">Call Records</span>
+                    <span class="nav-tooltip">Call Records</span>
+                </a>
+                <a href="#" class="nav-item" data-section="sims">
+                    <i class="fas fa-sim-card"></i>
+                    <span class="nav-text">SIM Cards</span>
+                    <span class="nav-tooltip">SIM Cards</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">System</div>
+                <a href="#" class="nav-item" data-section="settings">
+                    <i class="fas fa-cogs"></i>
+                    <span class="nav-text">Settings</span>
+                    <span class="nav-tooltip">Settings</span>
+                </a>
+                <a href="/" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Back to Home</span>
+                    <span class="nav-tooltip">Back to Home</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-text">Logout</span>
+                    <span class="nav-tooltip">Logout</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                        <div class="breadcrumb" id="breadcrumb">
+                            <span>Admin Panel</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="header-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="refreshCurrentSection()">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Admin</div>
+                            <div class="user-role">Administrator</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Dashboard Section -->
+                <section class="content-section active" id="dashboard-section">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats will be loaded here -->
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Activity</h3>
+                            <button class="btn btn-secondary btn-sm" onclick="loadRecentActivity()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="recentActivity">
+                                <!-- Recent activity will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">System Status</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="systemStatus">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--fr-border);">
+                                    <span>Database Connection</span>
+                                    <span class="badge badge-active">Connected</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--fr-border);">
+                                    <span>API Status</span>
+                                    <span class="badge badge-active">Operational</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                                    <span>Server Status</span>
+                                    <span class="badge badge-active">Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Users Section -->
+                <section class="content-section" id="users-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">User Management</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-primary btn-sm" onclick="openAddUserModal()">
+                                    <i class="fas fa-plus"></i>
+                                    Add User
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="loadUsers()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Search and Filters -->
+                            <div class="search-filters">
+                                <div class="search-box">
+                                    <input type="text" class="form-control" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
+                                </div>
+                                <div class="filter-select">
+                                    <select class="form-control" id="roleFilter" onchange="filterUsers()">
+                                        <option value="">All Roles</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="manager">Manager</option>
+                                        <option value="employee">Employee</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="clearUserFilters()">
+                                    <i class="fas fa-times"></i>
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div id="usersContainer">
+                                <!-- Users table will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Roles Section -->
+                <section class="content-section" id="roles-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Roles & Permissions</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="rolesContainer">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4 style="margin: 0;">Administrator</h4>
+                                            <span class="badge badge-admin">Admin</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <p style="margin-bottom: 12px; font-size: 13px; color: var(--fr-muted);">Full system access and control</p>
+                                            <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+                                                <li>User Management</li>
+                                                <li>System Settings</li>
+                                                <li>Data Management</li>
+                                                <li>Reports & Analytics</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4 style="margin: 0;">Manager</h4>
+                                            <span class="badge badge-manager">Manager</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <p style="margin-bottom: 12px; font-size: 13px; color: var(--fr-muted);">Team and lead management</p>
+                                            <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+                                                <li>Team Management</li>
+                                                <li>Lead Assignment</li>
+                                                <li>Call Records</li>
+                                                <li>Performance Reports</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4 style="margin: 0;">Employee</h4>
+                                            <span class="badge badge-employee">Employee</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <p style="margin-bottom: 12px; font-size: 13px; color: var(--fr-muted);">Lead handling and call management</p>
+                                            <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+                                                <li>Assigned Leads</li>
+                                                <li>Call Logging</li>
+                                                <li>Lead Updates</li>
+                                                <li>Basic Reports</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Leads Section -->
+                <section class="content-section" id="leads-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Leads Management</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="exportLeads()">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="loadLeads()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Search and Filters -->
+                            <div class="search-filters">
+                                <div class="search-box">
+                                    <input type="text" class="form-control" id="leadSearch" placeholder="Search leads..." onkeyup="filterLeads()">
+                                </div>
+                                <div class="filter-select">
+                                    <select class="form-control" id="leadStatusFilter" onchange="filterLeads()">
+                                        <option value="">All Statuses</option>
+                                        <option value="New">New</option>
+                                        <option value="Interested">Interested</option>
+                                        <option value="Hot">Hot</option>
+                                        <option value="Follow-up">Follow-up</option>
+                                        <option value="Won">Won</option>
+                                        <option value="Lost">Lost</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="clearLeadFilters()">
+                                    <i class="fas fa-times"></i>
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div id="leadsContainer">
+                                <!-- Leads table will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Call Records Section -->
+                <section class="content-section" id="calls-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Call Records</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="exportCallRecords()">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="loadCallRecords()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Search and Filters -->
+                            <div class="search-filters">
+                                <div class="search-box">
+                                    <input type="text" class="form-control" id="callSearch" placeholder="Search calls..." onkeyup="filterCalls()">
+                                </div>
+                                <div class="filter-select">
+                                    <select class="form-control" id="callStatusFilter" onchange="filterCalls()">
+                                        <option value="">All Statuses</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="missed">Missed</option>
+                                        <option value="declined">Declined</option>
+                                    </select>
+                                </div>
+                                <input type="date" class="form-control filter-select" id="callDateFilter" onchange="filterCalls()">
+                            </div>
+
+                            <div id="callsContainer">
+                                <!-- Call records table will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SIM Cards Section -->
+                <section class="content-section" id="sims-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">SIM Cards Management</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-primary btn-sm" onclick="openAddSimModal()">
+                                    <i class="fas fa-plus"></i>
+                                    Add SIM
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="loadSims()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="simsContainer">
+                                <!-- SIM cards table will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section class="content-section" id="settings-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">System Settings</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                                <!-- General Settings -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h4 style="margin: 0;">General Settings</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label class="form-label">System Name</label>
+                                            <input type="text" class="form-control" value="TeleCRM System" id="systemName">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Default Timezone</label>
+                                            <select class="form-control" id="timezone">
+                                                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                                                <option value="UTC">UTC</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" onclick="saveGeneralSettings()">
+                                            <i class="fas fa-save"></i>
+                                            Save Settings
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Security Settings -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h4 style="margin: 0;">Security Settings</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label class="form-label">Session Timeout (minutes)</label>
+                                            <input type="number" class="form-control" value="60" id="sessionTimeout">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Password Policy</label>
+                                            <select class="form-control" id="passwordPolicy">
+                                                <option value="basic">Basic (6+ characters)</option>
+                                                <option value="strong">Strong (8+ chars, mixed case, numbers)</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" onclick="saveSecuritySettings()">
+                                            <i class="fas fa-save"></i>
+                                            Save Settings
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Database Settings -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h4 style="margin: 0;">Database Settings</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <span>Auto Backup</span>
+                                            <span class="badge badge-active">Enabled</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <span>Last Backup</span>
+                                            <span style="font-size: 13px; color: var(--fr-muted);">2 hours ago</span>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" onclick="createBackup()">
+                                            <i class="fas fa-database"></i>
+                                            Create Backup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New User</h3>
+                <button class="modal-close" onclick="closeAddUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="userName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="userEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" id="userPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select class="form-control" id="userRole" required>
+                            <option value="">Select Role</option>
+                            <option value="admin">Administrator</option>
+                            <option value="manager">Manager</option>
+                            <option value="employee">Employee</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="managerGroup" style="display: none;">
+                        <label class="form-label">Assign to Manager</label>
+                        <select class="form-control" id="userManager">
+                            <option value="">Select Manager</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveUser()">
+                    <i class="fas fa-save"></i>
+                    Save User
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add SIM Modal -->
+    <div class="modal" id="addSimModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add SIM Card</h3>
+                <button class="modal-close" onclick="closeAddSimModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addSimForm">
+                    <div class="form-group">
+                        <label class="form-label">SIM Number</label>
+                        <input type="text" class="form-control" id="simNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Carrier</label>
+                        <select class="form-control" id="simCarrier" required>
+                            <option value="">Select Carrier</option>
+                            <option value="Airtel">Airtel</option>
+                            <option value="Jio">Jio</option>
+                            <option value="Vi">Vi</option>
+                            <option value="BSNL">BSNL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Plan Type</label>
+                        <select class="form-control" id="simPlan" required>
+                            <option value="">Select Plan</option>
+                            <option value="Prepaid">Prepaid</option>
+                            <option value="Postpaid">Postpaid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Cost</label>
+                        <input type="number" class="form-control" id="simCost" step="0.01">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddSimModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSim()">
+                    <i class="fas fa-save"></i>
+                    Save SIM
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #ffffff; padding: 24px; border-radius: 8px; text-align: center;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; color: var(--fr-primary);"></i>
+            <p style="margin: 0; color: var(--fr-text);">Loading...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script>
+        // Global variables
+        let currentUser = null;
+        let allUsers = [];
+        let allLeads = [];
+        let allCalls = [];
+        let allSims = [];
+        let currentSection = 'dashboard';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                await checkAuth();
+                initializeNavigation();
+                initializeSidebar();
+                await loadInitialData();
+                showSection('dashboard');
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                showNotification('Failed to initialize application', 'error');
+            }
+        }
+
+        // Authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                const response = await axios.get('/api/auth/me');
+                currentUser = response.data;
+                
+                if (currentUser.role !== 'admin') {
+                    showNotification('Access denied. Admin role required.', 'error');
+                    setTimeout(() => window.location.href = '/', 2000);
+                    return;
+                }
+
+                updateUserProfile();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+            }
+        }
+
+        function updateUserProfile() {
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+            }
+        }
+
+        // Sidebar functionality
+        function initializeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            // Desktop sidebar toggle
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                const icon = sidebarToggle.querySelector('i');
+                icon.className = sidebar.classList.contains('collapsed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            });
+
+            // Mobile menu toggle
+            mobileMenuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('mobile-open');
+                sidebarOverlay.classList.toggle('active');
+            });
+
+            // Close mobile menu when clicking overlay
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('mobile-open');
+                sidebarOverlay.classList.remove('active');
+            });
+
+            // Close mobile menu when clicking nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        sidebar.classList.remove('mobile-open');
+                        sidebarOverlay.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        // Navigation
+        function initializeNavigation() {
+            const navItems = document.querySelectorAll('.nav-item[data-section]');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = item.dataset.section;
+                    if (section) {
+                        showSection(section);
+                    }
+                });
+            });
+        }
+
+        function showSection(sectionId) {
+            currentSection = sectionId;
+
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show target section
+            const targetSection = document.getElementById(`${sectionId}-section`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const activeNavItem = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeNavItem) {
+                activeNavItem.classList.add('active');
+            }
+
+            // Update page title and breadcrumb
+            updatePageHeader(sectionId);
+
+            // Load section-specific data
+            loadSectionData(sectionId);
+        }
+
+        function updatePageHeader(sectionId) {
+            const titles = {
+                'dashboard': 'Dashboard',
+                'users': 'User Management',
+                'roles': 'Roles & Permissions',
+                'leads': 'Leads Management',
+                'calls': 'Call Records',
+                'sims': 'SIM Cards',
+                'settings': 'Settings'
+            };
+
+            const title = titles[sectionId] || 'Admin Panel';
+            document.getElementById('pageTitle').textContent = title;
+            
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = `
+                <span>Admin Panel</span>
+                <span class="breadcrumb-separator">/</span>
+                <span>${title}</span>
+            `;
+        }
+
+        async function loadSectionData(sectionId) {
+            try {
+                switch(sectionId) {
+                    case 'dashboard':
+                        await loadDashboardData();
+                        break;
+                    case 'users':
+                        await loadUsers();
+                        break;
+                    case 'leads':
+                        await loadLeads();
+                        break;
+                    case 'calls':
+                        await loadCallRecords();
+                        break;
+                    case 'sims':
+                        await loadSims();
+                        break;
+                }
+            } catch (error) {
+                console.error(`Failed to load ${sectionId} data:`, error);
+                showNotification(`Failed to load ${sectionId} data`, 'error');
+            }
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            showLoading(true);
+            try {
+                await loadDashboardData();
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                showNotification('Failed to load initial data', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboardData() {
+            try {
+                const [usersRes, leadsRes, callsRes, simsRes] = await Promise.all([
+                    axios.get('/api/admin/users'),
+                    axios.get('/api/admin/leads'),
+                    axios.get('/api/admin/call-logs'),
+                    axios.get('/api/admin/sims')
+                ]);
+
+                const stats = {
+                    users: usersRes.data.length,
+                    leads: leadsRes.data.length,
+                    calls: callsRes.data.length,
+                    sims: simsRes.data.length
+                };
+
+                renderDashboardStats(stats);
+                updateNavBadges(stats);
+                await loadRecentActivity();
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                // Show mock data if API fails
+                const mockStats = { users: 0, leads: 0, calls: 0, sims: 0 };
+                renderDashboardStats(mockStats);
+            }
+        }
+
+        function renderDashboardStats(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">${stats.users}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-address-book"></i>
+                    </div>
+                    <div class="stat-number">${stats.leads}</div>
+                    <div class="stat-label">Total Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="stat-number">${stats.calls}</div>
+                    <div class="stat-label">Call Records</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-sim-card"></i>
+                    </div>
+                    <div class="stat-number">${stats.sims}</div>
+                    <div class="stat-label">SIM Cards</div>
+                </div>
+            `;
+        }
+
+        function updateNavBadges(stats) {
+            document.getElementById('leadsCount').textContent = stats.leads || 0;
+        }
+
+        async function loadRecentActivity() {
+            const container = document.getElementById('recentActivity');
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--fr-bg); border-radius: 6px;">
+                        <div style="width: 6px; height: 6px; background: var(--fr-green); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 13px;">New user registered</div>
+                            <div style="font-size: 11px; color: var(--fr-muted);">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--fr-bg); border-radius: 6px;">
+                        <div style="width: 6px; height: 6px; background: var(--fr-primary); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 13px;">Lead status updated</div>
+                            <div style="font-size: 11px; color: var(--fr-muted);">15 minutes ago</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--fr-bg); border-radius: 6px;">
+                        <div style="width: 6px; height: 6px; background: var(--fr-orange); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 13px;">System backup completed</div>
+                            <div style="font-size: 11px; color: var(--fr-muted);">1 hour ago</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Users functions
+        async function loadUsers() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/admin/users');
+                allUsers = response.data;
+                renderUsers(allUsers);
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                showNotification('Failed to load users', 'error');
+                renderUsers([]);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderUsers(users) {
+            const container = document.getElementById('usersContainer');
+            
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>No Users Found</h3>
+                        <p>No users match your current filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Manager</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map(user => `
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div class="user-avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                                                ${user.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span style="font-weight: 500;">${user.name}</span>
+                                        </div>
+                                    </td>
+                                    <td>${user.email}</td>
+                                    <td><span class="badge badge-${user.role}">${user.role}</span></td>
+                                    <td>${user.manager ? user.manager.name : '-'}</td>
+                                    <td>
+                                        <div>${new Date(user.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 11px; color: var(--fr-muted);">${new Date(user.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="editUser('${user._id}')" title="Edit User">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user._id}')" title="Delete User">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            const roleFilter = document.getElementById('roleFilter').value;
+            
+            let filteredUsers = allUsers.filter(user => {
+                const matchesSearch = user.name.toLowerCase().includes(searchTerm) || 
+                                    user.email.toLowerCase().includes(searchTerm);
+                const matchesRole = !roleFilter || user.role === roleFilter;
+                return matchesSearch && matchesRole;
+            });
+            
+            renderUsers(filteredUsers);
+        }
+
+        function clearUserFilters() {
+            document.getElementById('userSearch').value = '';
+            document.getElementById('roleFilter').value = '';
+            renderUsers(allUsers);
+        }
+
+        // User Modal functions
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
+            loadManagersForSelect();
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('active');
+            document.getElementById('addUserForm').reset();
+        }
+
+        async function loadManagersForSelect() {
+            try {
+                const response = await axios.get('/api/admin/managers');
+                const managers = response.data;
+                const select = document.getElementById('userManager');
+                
+                select.innerHTML = '<option value="">Select Manager</option>';
+                managers.forEach(manager => {
+                    const option = document.createElement('option');
+                    option.value = manager._id;
+                    option.textContent = manager.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load managers:', error);
+            }
+        }
+
+        // Show/hide manager selection based on role
+        document.getElementById('userRole').addEventListener('change', function() {
+            const managerGroup = document.getElementById('managerGroup');
+            if (this.value === 'employee') {
+                managerGroup.style.display = 'block';
+            } else {
+                managerGroup.style.display = 'none';
+            }
+        });
+
+        async function saveUser() {
+            const form = document.getElementById('addUserForm');
+            const formData = new FormData(form);
+            
+            const userData = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                password: document.getElementById('userPassword').value,
+                role: document.getElementById('userRole').value
+            };
+
+            if (userData.role === 'employee') {
+                const managerId = document.getElementById('userManager').value;
+                if (managerId) {
+                    userData.manager = managerId;
+                }
+            }
+
+            try {
+                showLoading(true);
+                await axios.post('/api/auth/register', userData);
+                showNotification('User created successfully', 'success');
+                closeAddUserModal();
+                loadUsers();
+            } catch (error) {
+                console.error('Failed to create user:', error);
+                showNotification('Failed to create user', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Leads functions
+        async function loadLeads() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/admin/leads');
+                allLeads = response.data;
+                renderLeads(allLeads);
+            } catch (error) {
+                console.error('Failed to load leads:', error);
+                showNotification('Failed to load leads', 'error');
+                renderLeads([]);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderLeads(leads) {
+            const container = document.getElementById('leadsContainer');
+            
+            if (leads.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-address-book"></i>
+                        <h3>No Leads Found</h3>
+                        <p>No leads match your current filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Lead</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leads.map(lead => `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 500;">${lead.name}</div>
+                                        ${lead.notes ? `<div style="font-size: 11px; color: var(--fr-muted);">${lead.notes.substring(0, 30)}${lead.notes.length > 30 ? '...' : ''}</div>` : ''}
+                                    </td>
+                                    <td>
+                                        <div>${lead.phone}</div>
+                                        <div style="font-size: 11px; color: var(--fr-muted);">${lead.email || 'No email'}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-${lead.status.toLowerCase().replace(/\s+/g, '-')}">${lead.status}</span>
+                                    </td>
+                                    <td>
+                                        ${lead.assignedTo ? lead.assignedTo.name : '<span style="color: var(--fr-muted);">Unassigned</span>'}
+                                    </td>
+                                    <td>
+                                        <div>${new Date(lead.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 11px; color: var(--fr-muted);">${new Date(lead.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="viewLead('${lead._id}')" title="View Lead">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteLead('${lead._id}')" title="Delete Lead">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterLeads() {
+            const searchTerm = document.getElementById('leadSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('leadStatusFilter').value;
+            
+            let filteredLeads = allLeads.filter(lead => {
+                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || 
+                                    lead.phone.includes(searchTerm) ||
+                                    (lead.email && lead.email.toLowerCase().includes(searchTerm));
+                const matchesStatus = !statusFilter || lead.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+            
+            renderLeads(filteredLeads);
+        }
+
+        function clearLeadFilters() {
+            document.getElementById('leadSearch').value = '';
+            document.getElementById('leadStatusFilter').value = '';
+            renderLeads(allLeads);
+        }
+
+        // Call Records functions
+        async function loadCallRecords() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/admin/call-logs');
+                allCalls = response.data;
+                renderCallRecords(allCalls);
+            } catch (error) {
+                console.error('Failed to load call records:', error);
+                showNotification('Failed to load call records', 'error');
+                renderCallRecords([]);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderCallRecords(calls) {
+            const container = document.getElementById('callsContainer');
+            
+            if (calls.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-phone"></i>
+                        <h3>No Call Records Found</h3>
+                        <p>No call records match your current filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Lead</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${calls.map(call => `
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="user-avatar" style="width: 24px; height: 24px; font-size: 10px;">
+                                                ${call.employee?.name?.charAt(0) || 'U'}
+                                            </div>
+                                            <span>${call.employee?.name || 'Unknown'}</span>
+                                        </div>
+                                    </td>
+                                    <td>${call.lead?.name || 'Unknown Lead'}</td>
+                                    <td>${call.lead?.phone || 'No phone'}</td>
+                                    <td>
+                                        <span class="badge badge-${call.callStatus === 'completed' ? 'active' : 'inactive'}">${call.callStatus}</span>
+                                    </td>
+                                    <td>${formatDuration(call.callDuration)}</td>
+                                    <td>
+                                        <div>${new Date(call.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 11px; color: var(--fr-muted);">${new Date(call.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="viewCall('${call._id}')" title="View Call">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            ${call.recordingUrl ? 
+                                                `<button class="btn btn-primary btn-sm" onclick="playRecording('${call._id}')" title="Play Recording">
+                                                    <i class="fas fa-play"></i>
+                                                </button>` : ''
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterCalls() {
+            const searchTerm = document.getElementById('callSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('callStatusFilter').value;
+            const dateFilter = document.getElementById('callDateFilter').value;
+            
+            let filteredCalls = allCalls.filter(call => {
+                const matchesSearch = (call.employee?.name || '').toLowerCase().includes(searchTerm) || 
+                                    (call.lead?.name || '').toLowerCase().includes(searchTerm) ||
+                                    (call.lead?.phone || '').includes(searchTerm);
+                const matchesStatus = !statusFilter || call.callStatus === statusFilter;
+                const matchesDate = !dateFilter || new Date(call.createdAt).toDateString() === new Date(dateFilter).toDateString();
+                return matchesSearch && matchesStatus && matchesDate;
+            });
+            
+            renderCallRecords(filteredCalls);
+        }
+
+        // SIM Cards functions
+        async function loadSims() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/admin/sims');
+                allSims = response.data;
+                renderSims(allSims);
+            } catch (error) {
+                console.error('Failed to load SIM cards:', error);
+                showNotification('Failed to load SIM cards', 'error');
+                renderSims([]);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderSims(sims) {
+            const container = document.getElementById('simsContainer');
+            
+            if (sims.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-sim-card"></i>
+                        <h3>No SIM Cards Found</h3>
+                        <p>No SIM cards have been added yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>SIM Number</th>
+                                <th>Carrier</th>
+                                <th>Plan Type</th>
+                                <th>Status</th>
+                                <th>Monthly Cost</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sims.map(sim => `
+                                <tr>
+                                    <td style="font-weight: 500;">${sim.simNumber}</td>
+                                    <td>${sim.carrier}</td>
+                                    <td>${sim.planType || 'N/A'}</td>
+                                    <td>
+                                        <span class="badge badge-${sim.status === 'active' ? 'active' : 'inactive'}">${sim.status || 'active'}</span>
+                                    </td>
+                                    <td>₹${sim.monthlyCost || 0}</td>
+                                    <td>
+                                        <div>${new Date(sim.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 11px; color: var(--fr-muted);">${new Date(sim.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="editSim('${sim._id}')" title="Edit SIM">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteSim('${sim._id}')" title="Delete SIM">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // SIM Modal functions
+        function openAddSimModal() {
+            document.getElementById('addSimModal').classList.add('active');
+        }
+
+        function closeAddSimModal() {
+            document.getElementById('addSimModal').classList.remove('active');
+            document.getElementById('addSimForm').reset();
+        }
+
+        async function saveSim() {
+            const simData = {
+                simNumber: document.getElementById('simNumber').value,
+                carrier: document.getElementById('simCarrier').value,
+                planType: document.getElementById('simPlan').value,
+                monthlyCost: document.getElementById('simCost').value
+            };
+
+            try {
+                showLoading(true);
+                await axios.post('/api/admin/sims', simData);
+                showNotification('SIM card added successfully', 'success');
+                closeAddSimModal();
+                loadSims();
+            } catch (error) {
+                console.error('Failed to add SIM card:', error);
+                showNotification('Failed to add SIM card', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Settings functions
+        function saveGeneralSettings() {
+            showNotification('General settings saved successfully', 'success');
+        }
+
+        function saveSecuritySettings() {
+            showNotification('Security settings saved successfully', 'success');
+        }
+
+        function createBackup() {
+            showNotification('Database backup initiated', 'info');
+        }
+
+        // Utility functions
+        function formatDuration(seconds) {
+            if (!seconds) return '0s';
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${remainingSeconds}s`;
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--fr-muted); margin-left: auto;">&times;</button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Refresh functions
+        function refreshCurrentSection() {
+            loadSectionData(currentSection);
+        }
+
+        // Export functions
+        async function exportLeads() {
+            showNotification('Leads export feature coming soon', 'info');
+        }
+
+        async function exportCallRecords() {
+            showNotification('Call records export feature coming soon', 'info');
+        }
+
+        // Placeholder functions for future implementation
+        function editUser(userId) {
+            showNotification('Edit user feature coming soon', 'info');
+        }
+
+        function deleteUser(userId) {
+            if (confirm('Are you sure you want to delete this user?')) {
+                showNotification('Delete user feature coming soon', 'info');
+            }
+        }
+
+        function viewLead(leadId) {
+            showNotification('View lead details feature coming soon', 'info');
+        }
+
+        function deleteLead(leadId) {
+            if (confirm('Are you sure you want to delete this lead?')) {
+                showNotification('Delete lead feature coming soon', 'info');
+            }
+        }
+
+        function viewCall(callId) {
+            showNotification('View call details feature coming soon', 'info');
+        }
+
+        function playRecording(callId) {
+            showNotification('Play recording feature coming soon', 'info');
+        }
+
+        function editSim(simId) {
+            showNotification('Edit SIM feature coming soon', 'info');
+        }
+
+        function deleteSim(simId) {
+            if (confirm('Are you sure you want to delete this SIM card?')) {
+                showNotification('Delete SIM feature coming soon', 'info');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

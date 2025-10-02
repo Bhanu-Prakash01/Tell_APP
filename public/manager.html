@@ -1,1563 +1,2332 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manager • TeleCRM Dashboard</title>
-    <link rel="stylesheet" href="../assets/frappe.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Panel - Tele Calling System</title>
+    <link rel="stylesheet" href="assets/frappe.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Enhanced Manager Panel Styles */
         :root {
-            --primary-gradient: #5E64FF;
-            --success-gradient: #10b981;
-            --danger-gradient: #ef4444;
-            --warning-gradient: #f59e0b;
-            --card-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            --card-shadow-hover: 0 20px 40px rgba(0,0,0,0.15);
-            --border-radius: 12px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 70px;
+            --header-height: 70px;
+            --transition-speed: 0.3s;
         }
 
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
-        body { background: var(--fr-bg); min-height: 100vh; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--fr-bg);
+            color: var(--fr-text);
+            overflow-x: hidden;
+        }
 
-        .admin-shell {
+        /* Layout Structure */
+        .manager-layout {
             display: flex;
             min-height: 100vh;
+            position: relative;
         }
 
-        .admin-sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 0;
-            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1a1d29 0%, #0f1419 100%);
+            color: #e2e8f0;
             position: fixed;
+            left: 0;
+            top: 0;
             height: 100vh;
+            z-index: 1000;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
-        .brand {
-            padding: 30px 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
         }
 
-        .brand h1 {
-            margin: 0;
-            font-size: 24px;
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 20px 10px;
+            justify-content: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
             font-weight: 700;
             color: #ffffff;
         }
 
-        .admin-sidebar nav {
+        .logo i {
+            font-size: 24px;
+            color: var(--fr-primary);
+        }
+
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            display: none;
+        }
+
+        /* Navigation */
+        .nav-section {
             padding: 20px 0;
         }
 
-        .admin-sidebar nav a {
-            display: block;
-            padding: 15px 25px;
-            color: rgba(255,255,255,0.8);
+        .nav-title {
+            padding: 0 20px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar.collapsed .nav-title {
+            display: none;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #94a3b8;
             text-decoration: none;
-            transition: var(--transition);
+            transition: all 0.2s ease;
             border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .sidebar.collapsed .nav-item {
+            padding: 12px 0;
+            justify-content: center;
+        }
+
+        .nav-item:hover {
+            background: rgba(94, 100, 255, 0.1);
+            color: #ffffff;
+            border-left-color: var(--fr-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(94, 100, 255, 0.15);
+            color: #ffffff;
+            border-left-color: var(--fr-primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            font-size: 16px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar.collapsed .nav-item i {
+            margin-right: 0;
+        }
+
+        .nav-text {
             font-weight: 500;
+            font-size: 14px;
         }
 
-        .admin-sidebar nav a:hover {
-            background: rgba(255,255,255,0.1);
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+
+        .nav-badge {
+            background: var(--fr-primary);
             color: white;
-            border-left-color: #3498db;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto;
+            font-weight: 600;
         }
 
-        .admin-sidebar nav a.active {
-            background: rgba(52, 152, 219, 0.2);
+        .sidebar.collapsed .nav-badge {
+            display: none;
+        }
+
+        /* Tooltip for collapsed sidebar */
+        .nav-tooltip {
+            position: absolute;
+            left: 70px;
+            background: #1e293b;
             color: white;
-            border-left-color: #3498db;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 1001;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .admin-main {
+        .sidebar.collapsed .nav-item:hover .nav-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Main Content */
+        .main-content {
             flex: 1;
-            margin-left: 280px;
-            padding: 0;
+            margin-left: var(--sidebar-width);
+            transition: margin-left var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            background: var(--fr-bg);
         }
 
-        .admin-topbar{display:flex;justify-content:space-between;align-items:center;background:var(--fr-surface);border:1px solid var(--fr-border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:20px}
+        .sidebar.collapsed + .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Header */
+        .main-header {
+            background: var(--fr-surface);
+            border-bottom: 1px solid var(--fr-border);
+            padding: 0 30px;
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--fr-text);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: var(--fr-border);
+        }
 
         .page-title {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 700;
-            margin: 0 0 10px 0;
-            color: #1e293b;
-        }
-
-        .page-subtitle {
-            color: #64748b;
-            font-size: 16px;
+            color: var(--fr-text);
             margin: 0;
         }
 
-        .stats-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 16px; margin: 16px 0; }
-
-        .stat-card { background: var(--fr-surface); border:1px solid var(--fr-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 20px; }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--card-shadow-hover);
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--fr-muted);
         }
 
-        .stat-icon {
-            width: 60px;
-            height: 60px;
+        .breadcrumb-separator {
+            color: var(--fr-border);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-profile:hover {
+            background: var(--fr-bg);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
+            background: var(--fr-primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
             color: white;
-            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 14px;
         }
 
-        .stat-icon.primary { background: var(--primary-gradient); }
-        .stat-icon.success { background: var(--success-gradient); }
-        .stat-icon.danger { background: var(--danger-gradient); }
-        .stat-icon.warning { background: var(--warning-gradient); }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--fr-text);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--fr-muted);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Section Management */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--fr-surface);
+            border: 1px solid var(--fr-border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--fr-primary), var(--fr-primary-600));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--fr-primary);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+
+        .stat-icon.primary { background: var(--fr-primary); }
+        .stat-icon.success { background: var(--fr-green); }
+        .stat-icon.warning { background: var(--fr-orange); }
+        .stat-icon.danger { background: var(--fr-red); }
 
         .stat-number {
             font-size: 32px;
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 5px;
+            color: var(--fr-text);
+            line-height: 1;
+            margin-bottom: 8px;
         }
 
         .stat-label {
-            color: #64748b;
             font-size: 14px;
+            color: var(--fr-muted);
             font-weight: 500;
         }
 
-        .controls-section {
-            background: white;
-            margin: 0 40px 30px 40px;
-            padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            border: 1px solid #e1e8ed;
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr auto auto auto;
-            gap: 15px;
+        .stat-trend {
+            display: flex;
             align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            margin-top: 8px;
         }
 
-        .search-container {
-            position: relative;
+        .stat-trend.positive { color: var(--fr-green); }
+        .stat-trend.negative { color: var(--fr-red); }
+
+        /* Cards */
+        .card {
+            background: var(--fr-surface);
+            border: 1px solid var(--fr-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
         }
 
-        .search-input {
-            width: 100%;
-            padding: 12px 20px 12px 45px;
-            border: 2px solid #e1e8ed;
-            border-radius: 25px;
-            font-size: 14px;
-            transition: var(--transition);
-            background: #f8fafc;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #3498db;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-        }
-
-        .select-control {
-            padding: 12px 20px;
-            border: 2px solid #e1e8ed;
-            border-radius: 25px;
-            background: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .select-control:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: var(--primary-gradient);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-success {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
-        }
-
-        .btn-danger {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(250, 112, 154, 0.3);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: #64748b;
-            border: 2px solid #e1e8ed;
-        }
-
-        .btn-outline:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-        }
-
-        .content-section { background: var(--fr-surface); border:1px solid var(--fr-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 20px; }
-
-        .section-header {
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--fr-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f1f5f9;
         }
 
-        .section-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--fr-text);
+            margin: 0;
+        }
+
+        .card-actions {
             display: flex;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .section-title i {
-            color: #3498db;
-        }
-
-        /* Tab Styles */
-        .tabs {
-            display: flex;
             gap: 8px;
-            border-bottom: 2px solid #f1f5f9;
-            margin-bottom: 25px;
-        }
-
-        .tab-btn {
-            padding: 12px 24px;
-            border: none;
-            background: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
-            border-bottom: 3px solid transparent;
-            font-weight: 600;
-            color: #64748b;
-            transition: var(--transition);
-            border-radius: var(--border-radius) var(--border-radius) 0 0;
-            font-size: 14px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            white-space: nowrap;
         }
 
-        .tab-btn:hover {
-            color: #1e293b;
-            background: #f8fafc;
+        .btn-primary {
+            background: var(--fr-primary);
+            color: white;
+            border-color: var(--fr-primary);
         }
 
-        .tab-btn.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-            background: #f8fafc;
+        .btn-primary:hover {
+            background: var(--fr-primary-600);
+            transform: translateY(-1px);
         }
 
-        /* Filters Section */
-        .filters-section {
-            background: #f8fafc;
-            padding: 20px;
+        .btn-secondary {
+            background: transparent;
+            color: var(--fr-text);
+            border-color: var(--fr-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--fr-bg);
+            border-color: var(--fr-primary);
+        }
+
+        .btn-success {
+            background: var(--fr-green);
+            color: white;
+            border-color: var(--fr-green);
+        }
+
+        .btn-success:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
             border-radius: 8px;
-            margin-bottom: 25px;
-            border: 1px solid #e1e8ed;
+            border: 1px solid var(--fr-border);
         }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            align-items: end;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .filter-group label {
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .filter-group select,
-        .filter-group input {
-            padding: 12px 16px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            background: white;
-            color: #1e293b;
-            font-size: 14px;
-            transition: var(--transition);
-        }
-
-        .filter-group select:focus,
-        .filter-group input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        /* Table Styles */
-        .table-container { overflow-x:auto; border-radius: var(--radius); border:1px solid var(--fr-border); background: var(--fr-surface); }
 
         .table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
+            background: var(--fr-surface);
         }
 
         .table th,
         .table td {
-            padding: 15px 12px;
+            padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 14px;
+            border-bottom: 1px solid var(--fr-border);
         }
 
         .table th {
-            background: #f8fafc;
+            background: var(--fr-bg);
             font-weight: 600;
-            color: #1e293b;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 12px;
+            font-size: 14px;
+            color: var(--fr-text);
         }
 
-        .table tr:last-child td {
+        .table tbody tr:hover {
+            background: var(--fr-bg);
+        }
+
+        .table tbody tr:last-child td {
             border-bottom: none;
         }
 
-        .table tr:hover {
-            background: #f8fafc;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-assigned { background: #dcfce7; color: #166534; }
-        .status-in_progress { background: #dbeafe; color: #1d4ed8; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fef3c7; color: #d97706; }
-
-        .action-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
+        /* Badges */
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            margin-right: 5px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: capitalize;
         }
 
-        .action-btn:hover {
-            transform: translateY(-1px);
-        }
+        .badge-new { background: #dbeafe; color: #1e40af; }
+        .badge-interested { background: #dcfce7; color: #166534; }
+        .badge-hot { background: #fecaca; color: #991b1b; }
+        .badge-follow-up { background: #fef3c7; color: #92400e; }
+        .badge-won { background: #bbf7d0; color: #15803d; }
+        .badge-lost { background: #f3e8ff; color: #7c3aed; }
 
-        .action-btn.edit {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .action-btn.delete {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-
-        .action-btn.view {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        /* Chart Container */
-        .chart-container {
-            background: white;
-            padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            border: 1px solid #e1e8ed;
-            margin: 0 40px 40px 40px;
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .chart-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
+        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: var(--fr-muted);
         }
 
-        .empty-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
             opacity: 0.5;
         }
 
-        .empty-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #1e293b;
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            color: var(--fr-text);
         }
 
-        .empty-description {
-            font-size: 16px;
-            margin-bottom: 30px;
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
         }
 
-
-
-
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .filters-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .admin-sidebar {
-                transform: translateX(-100%);
-                transition: var(--transition);
-            }
-            
-            .admin-main {
-                margin-left: 0;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-                margin: 20px;
-            }
-            
-            .content-section,
-            .chart-container {
-                margin: 0 20px 20px 20px;
-            }
-            
-            .tabs {
-                flex-wrap: wrap;
-            }
-        }
-
-        /* Loading Animation */
+        /* Loading */
         .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--fr-muted);
+        }
+
+        .loading i {
+            font-size: 24px;
             animation: spin 1s linear infinite;
+            margin-right: 12px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--fr-surface);
+            border: 1px solid var(--fr-border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
+            max-width: 400px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-success { border-left: 4px solid var(--fr-green); }
+        .notification-error { border-left: 4px solid var(--fr-red); }
+        .notification-info { border-left: 4px solid var(--fr-primary); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .content-area {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+            }
+
+            .main-header {
+                padding: 0 20px;
+            }
+
+            .user-info {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .table-container {
+                font-size: 14px;
+            }
+
+            .table th,
+            .table td {
+                padding: 8px 12px;
+            }
+        }
+
+        /* Sidebar Overlay for Mobile */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .quick-action {
+            background: var(--fr-surface);
+            border: 1px solid var(--fr-border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: var(--fr-text);
+        }
+
+        .quick-action:hover {
+            border-color: var(--fr-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .quick-action i {
+            font-size: 24px;
+            color: var(--fr-primary);
+            margin-bottom: 12px;
+        }
+
+        .quick-action-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .quick-action-desc {
+            font-size: 12px;
+            color: var(--fr-muted);
+        }
     </style>
 </head>
 <body>
-    <div class="admin-shell">
-        <aside class="admin-sidebar">
-            <div class="brand">
-                <h1>TeleCRM Manager</h1>
-            </div>
-            <nav>
-                <a href="/manager.html" class="active">Dashboard</a>
-                <a href="/leads.html">Leads</a>
-                <a href="/reports.html">Reports</a>
-                <a href="#" onclick="showMyLeads()">My Leads</a>
-            </nav>
-        </aside>
-        
-        <main class="admin-main">
-            <!-- Page Header -->
-            <div class="admin-topbar">
-                <div>
-                    <h1 class="page-title" style="margin:0">Manager Dashboard</h1>
-                    <p class="page-subtitle" style="margin:4px 0 0 0">Monitor team performance, manage leads, and track progress</p>
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="manager-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-phone-alt"></i>
+                    <span class="logo-text">TeleCRM</span>
                 </div>
-                <div class="toolbar">
-                    <button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
-                    <a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
-                </div>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
 
-            <!-- Statistics Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon primary">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number" id="totalLeads">0</div>
-                    <div class="stat-label">Total Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon success">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div class="stat-number" id="assignedLeads">0</div>
-                    <div class="stat-label">Assigned Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon warning">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-number" id="pendingLeads">0</div>
-                    <div class="stat-label">Pending Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon danger">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-number" id="conversionRate">0%</div>
-                    <div class="stat-label">Conversion Rate</div>
-                </div>
+            <div class="nav-section">
+                <div class="nav-title">Main</div>
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="nav-text">Dashboard</span>
+                    <span class="nav-tooltip">Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-section="leads">
+                    <i class="fas fa-users"></i>
+                    <span class="nav-text">Manage Leads</span>
+                    <span class="nav-badge" id="leadsCount">0</span>
+                    <span class="nav-tooltip">Manage Leads</span>
+                </a>
+                <a href="#" class="nav-item" data-section="assignment">
+                    <i class="fas fa-user-plus"></i>
+                    <span class="nav-text">Lead Assignment</span>
+                    <span class="nav-tooltip">Lead Assignment</span>
+                </a>
             </div>
 
-            <!-- Main Content Tabs -->
-            <div class="content-section">
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="showTab('assignments')">
-                        <i class="fas fa-tasks"></i> Lead Assignments
-                    </button>
-                    <button class="tab-btn" onclick="showTab('performance')">
-                        <i class="fas fa-chart-bar"></i> Team Performance
-                    </button>
-                    <button class="tab-btn" onclick="showTab('myLeads')">
-                        <i class="fas fa-fire"></i> My Leads
-                    </button>
-                </div>
+            <div class="nav-section">
+                <div class="nav-title">Team</div>
+                <a href="#" class="nav-item" data-section="team">
+                    <i class="fas fa-users-cog"></i>
+                    <span class="nav-text">Team Management</span>
+                    <span class="nav-tooltip">Team Management</span>
+                </a>
+                <a href="#" class="nav-item" data-section="call-records">
+                    <i class="fas fa-microphone"></i>
+                    <span class="nav-text">Call Records</span>
+                    <span class="nav-badge" id="callsCount">0</span>
+                    <span class="nav-tooltip">Call Records</span>
+                </a>
+            </div>
 
-                <!-- Lead Assignments Tab -->
-                <div id="assignments" class="tab-content">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-tasks"></i> Lead Assignment Management
-                        </h3>
-                        <button class="btn btn-primary" onclick="assignNewLeads()">
-                            <i class="fas fa-plus"></i> Assign New Leads
+            <div class="nav-section">
+                <div class="nav-title">Analytics</div>
+                <a href="#" class="nav-item" data-section="reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="nav-text">Reports</span>
+                    <span class="nav-tooltip">Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-section="analytics">
+                    <i class="fas fa-analytics"></i>
+                    <span class="nav-text">Analytics</span>
+                    <span class="nav-tooltip">Analytics</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">System</div>
+                <a href="/" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Back to Home</span>
+                    <span class="nav-tooltip">Back to Home</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-text">Logout</span>
+                    <span class="nav-tooltip">Logout</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                        <div class="breadcrumb" id="breadcrumb">
+                            <span>Manager Panel</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="header-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="refreshCurrentSection()">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Refresh</span>
                         </button>
                     </div>
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar" id="userAvatar">M</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Manager</div>
+                            <div class="user-role">Manager</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-                    <div class="filters-section">
-                        <div class="filters-grid">
-                            <div class="filter-group">
-                                <label>Employee</label>
-                                <select id="employeeFilter">
-                                    <option value="">All Employees</option>
-                                </select>
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Dashboard Section -->
+                <section class="content-section active" id="dashboard-section">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats will be loaded here -->
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Quick Actions</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="quick-actions">
+                                <a href="#" class="quick-action" onclick="showSection('assignment')">
+                                    <i class="fas fa-user-plus"></i>
+                                    <div class="quick-action-title">Assign Leads</div>
+                                    <div class="quick-action-desc">Assign leads to team members</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="autoDistributeLeads()">
+                                    <i class="fas fa-random"></i>
+                                    <div class="quick-action-title">Auto Distribute</div>
+                                    <div class="quick-action-desc">Automatically distribute leads</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="showSection('call-records')">
+                                    <i class="fas fa-microphone"></i>
+                                    <div class="quick-action-title">Call Records</div>
+                                    <div class="quick-action-desc">View team call records</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="showSection('reports')">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <div class="quick-action-title">Generate Report</div>
+                                    <div class="quick-action-desc">Create performance reports</div>
+                                </a>
                             </div>
-                            <div class="filter-group">
-                                <label>Status</label>
-                                <select id="statusFilter">
-                                    <option value="">All Statuses</option>
-                                    <option value="assigned">Assigned</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="pending">Pending</option>
-                                </select>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Activity</h3>
+                            <button class="btn btn-secondary btn-sm" onclick="loadRecentActivity()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="recentActivity">
+                                <!-- Recent activity will be loaded here -->
                             </div>
-                            <div class="filter-group">
-                                <label>Date Range</label>
-                                <input type="date" id="dateFilter">
-                            </div>
-                            <div class="filter-group">
-                                <button class="btn btn-outline" onclick="applyFilters()">
-                                    <i class="fas fa-filter"></i> Apply Filters
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Leads Section -->
+                <section class="content-section" id="leads-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Manage Leads</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="exportLeads()">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="loadLeads()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
                                 </button>
                             </div>
                         </div>
-                    </div>
+                        <div class="card-body">
+                            <!-- Filters -->
+                            <div style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+                                <select id="statusFilter" onchange="filterLeads()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="">All Statuses</option>
+                                    <option value="New">New</option>
+                                    <option value="Interested">Interested</option>
+                                    <option value="Hot">Hot</option>
+                                    <option value="Follow-up">Follow-up</option>
+                                    <option value="Won">Won</option>
+                                    <option value="Lost">Lost</option>
+                                </select>
+                                <select id="employeeFilter" onchange="filterLeads()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="">All Employees</option>
+                                </select>
+                                <button class="btn btn-secondary btn-sm" onclick="clearFilters()">
+                                    <i class="fas fa-times"></i>
+                                    Clear
+                                </button>
+                            </div>
 
-                    <div class="table-container">
-                        <table class="table" id="assignmentsTable">
-                            <thead>
+                            <div id="leadsContainer">
+                                <!-- Leads will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Assignment Section -->
+                <section class="content-section" id="assignment-section">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <!-- Available Leads -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Available Leads</h3>
+                                <button class="btn btn-secondary btn-sm" onclick="selectAllLeads()">
+                                    <i class="fas fa-check-square"></i>
+                                    Select All
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="availableLeads">
+                                    <!-- Available leads will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Panel -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Assignment Options</h3>
+                            </div>
+                            <div class="card-body">
+                                <!-- Manual Assignment -->
+                                <div style="margin-bottom: 24px; padding: 16px; background: var(--fr-bg); border-radius: 8px;">
+                                    <h4 style="margin-bottom: 12px;">Manual Assignment</h4>
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <select id="assignToEmployee" style="flex: 1; padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                            <option value="">Select Employee</option>
+                                        </select>
+                                        <button class="btn btn-primary" onclick="assignSelectedLeads()">
+                                            <i class="fas fa-user-plus"></i>
+                                            Assign
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Auto Distribution -->
+                                <div style="margin-bottom: 24px; padding: 16px; background: var(--fr-bg); border-radius: 8px;">
+                                    <h4 style="margin-bottom: 12px;">Auto Distribution</h4>
+                                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                        <input type="number" id="leadsPerEmployee" placeholder="Leads per employee" min="1" style="flex: 1; padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                        <button class="btn btn-success" onclick="autoDistributeSelected()">
+                                            <i class="fas fa-random"></i>
+                                            Distribute
+                                        </button>
+                                    </div>
+                                    <p style="font-size: 12px; color: var(--fr-muted); margin: 0;">
+                                        Leave empty for round-robin distribution
+                                    </p>
+                                </div>
+
+                                <!-- Team Overview -->
+                                <div style="padding: 16px; background: var(--fr-bg); border-radius: 8px;">
+                                    <h4 style="margin-bottom: 12px;">Team Overview</h4>
+                                    <div id="teamOverview">
+                                        <!-- Team overview will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Team Section -->
+                <section class="content-section" id="team-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Team Management</h3>
+                            <button class="btn btn-primary btn-sm" onclick="loadTeamData()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="teamContainer">
+                                <!-- Team data will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Call Records Section -->
+                <section class="content-section" id="call-records-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Call Records</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="exportCallRecords()">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="loadCallRecords()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Filters -->
+                            <div style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+                                <select id="callEmployeeFilter" onchange="filterCallRecords()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="">All Employees</option>
+                                </select>
+                                <select id="callStatusFilter" onchange="filterCallRecords()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="">All Statuses</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="missed">Missed</option>
+                                    <option value="declined">Declined</option>
+                                </select>
+                                <input type="date" id="callDateFrom" onchange="filterCallRecords()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                <input type="date" id="callDateTo" onchange="filterCallRecords()" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                            </div>
+
+                            <div id="callRecordsContainer">
+                                <!-- Call records will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Section -->
+                <section class="content-section" id="reports-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Reports & Analytics</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport()">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="generateReport()">
+                                    <i class="fas fa-chart-bar"></i>
+                                    Generate
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Report Filters -->
+                            <div style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+                                <select id="reportType" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="performance">Performance Report</option>
+                                    <option value="leads">Leads Report</option>
+                                    <option value="calls">Call Analytics</option>
+                                </select>
+                                <input type="date" id="reportDateFrom" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                <input type="date" id="reportDateTo" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                <select id="reportEmployeeFilter" style="padding: 8px 12px; border: 1px solid var(--fr-border); border-radius: 6px;">
+                                    <option value="">All Employees</option>
+                                </select>
+                            </div>
+
+                            <div id="reportContainer">
+                                <div class="empty-state">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <h3>Generate a Report</h3>
+                                    <p>Select your filters and click "Generate" to view analytics</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Section -->
+                <section class="content-section" id="analytics-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Analytics Dashboard</h3>
+                            <button class="btn btn-primary btn-sm" onclick="loadAnalytics()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="analyticsContainer">
+                                <!-- Analytics will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Audio Player Modal -->
+    <div id="audioModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1002; align-items: center; justify-content: center;">
+        <div style="background: var(--fr-surface); border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--fr-border);">
+                <h3 style="margin: 0;">Call Recording</h3>
+                <button onclick="closeAudioModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--fr-muted); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">&times;</button>
+            </div>
+            <div style="padding: 24px;">
+                <div id="audioInfo" style="margin-bottom: 24px; padding: 16px; background: var(--fr-bg); border-radius: 8px; border: 1px solid var(--fr-border);">
+                    <!-- Audio info will be loaded here -->
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <audio id="audioPlayer" controls style="width: 100%; margin-bottom: 16px;">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+                <div style="padding: 16px; background: var(--fr-bg); border-radius: 8px; border: 1px solid var(--fr-border);">
+                    <h4 style="margin: 0 0 12px 0;">Call Notes</h4>
+                    <p id="callNotes" style="margin: 0; color: var(--fr-muted); line-height: 1.5;">No notes available for this call.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--fr-surface); padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 32px; margin-bottom: 16px; color: var(--fr-primary);"></i>
+            <p style="margin: 0; color: var(--fr-text);">Loading...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script>
+        // Global variables
+        let currentUser = null;
+        let selectedLeads = new Set();
+        let allLeads = [];
+        let allEmployees = [];
+        let callRecords = [];
+        let teamMembers = [];
+        let currentSection = 'dashboard';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                await checkAuth();
+                initializeNavigation();
+                initializeSidebar();
+                await loadInitialData();
+                showSection('dashboard');
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                showNotification('Failed to initialize application', 'error');
+            }
+        }
+
+        // Authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                const response = await axios.get('/api/auth/me');
+                currentUser = response.data;
+                
+                if (currentUser.role !== 'manager') {
+                    showNotification('Access denied. Manager role required.', 'error');
+                    setTimeout(() => window.location.href = '/', 2000);
+                    return;
+                }
+
+                updateUserProfile();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+            }
+        }
+
+        function updateUserProfile() {
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+            }
+        }
+
+        // Sidebar functionality
+        function initializeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            // Desktop sidebar toggle
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                const icon = sidebarToggle.querySelector('i');
+                icon.className = sidebar.classList.contains('collapsed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            });
+
+            // Mobile menu toggle
+            mobileMenuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('mobile-open');
+                sidebarOverlay.classList.toggle('active');
+            });
+
+            // Close mobile menu when clicking overlay
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('mobile-open');
+                sidebarOverlay.classList.remove('active');
+            });
+
+            // Close mobile menu when clicking nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        sidebar.classList.remove('mobile-open');
+                        sidebarOverlay.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        // Navigation
+        function initializeNavigation() {
+            const navItems = document.querySelectorAll('.nav-item[data-section]');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = item.dataset.section;
+                    if (section) {
+                        showSection(section);
+                    }
+                });
+            });
+        }
+
+        function showSection(sectionId) {
+            // Update current section
+            currentSection = sectionId;
+
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show target section
+            const targetSection = document.getElementById(`${sectionId}-section`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const activeNavItem = document.querySelector(`[data-section="${sectionId}"]`);
+            if (activeNavItem) {
+                activeNavItem.classList.add('active');
+            }
+
+            // Update page title and breadcrumb
+            updatePageHeader(sectionId);
+
+            // Load section-specific data
+            loadSectionData(sectionId);
+        }
+
+        function updatePageHeader(sectionId) {
+            const titles = {
+                'dashboard': 'Dashboard',
+                'leads': 'Manage Leads',
+                'assignment': 'Lead Assignment',
+                'team': 'Team Management',
+                'call-records': 'Call Records',
+                'reports': 'Reports',
+                'analytics': 'Analytics'
+            };
+
+            const title = titles[sectionId] || 'Manager Panel';
+            document.getElementById('pageTitle').textContent = title;
+            
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = `
+                <span>Manager Panel</span>
+                <span class="breadcrumb-separator">/</span>
+                <span>${title}</span>
+            `;
+        }
+
+        async function loadSectionData(sectionId) {
+            try {
+                switch(sectionId) {
+                    case 'dashboard':
+                        await loadDashboardData();
+                        break;
+                    case 'leads':
+                        await loadLeads();
+                        break;
+                    case 'assignment':
+                        await loadAssignmentData();
+                        break;
+                    case 'team':
+                        await loadTeamData();
+                        break;
+                    case 'call-records':
+                        await loadCallRecords();
+                        break;
+                    case 'reports':
+                        // Reports are loaded on demand
+                        break;
+                    case 'analytics':
+                        await loadAnalytics();
+                        break;
+                }
+            } catch (error) {
+                console.error(`Failed to load ${sectionId} data:`, error);
+                showNotification(`Failed to load ${sectionId} data`, 'error');
+            }
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            showLoading(true);
+            try {
+                await Promise.all([
+                    loadEmployees(),
+                    loadDashboardData()
+                ]);
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                showNotification('Failed to load initial data', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load employees
+        async function loadEmployees() {
+            try {
+                const response = await axios.get('/api/manager/employees');
+                allEmployees = response.data;
+                populateEmployeeSelects();
+                updateNavBadges();
+            } catch (error) {
+                console.error('Failed to load employees:', error);
+                showNotification('Failed to load team members', 'error');
+            }
+        }
+
+        function populateEmployeeSelects() {
+            const selects = [
+                'employeeFilter',
+                'assignToEmployee',
+                'callEmployeeFilter',
+                'reportEmployeeFilter'
+            ];
+            
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    // Clear existing options (except first one)
+                    while (select.children.length > 1) {
+                        select.removeChild(select.lastChild);
+                    }
+                    
+                    // Add employee options
+                    allEmployees.forEach(employee => {
+                        const option = document.createElement('option');
+                        option.value = employee._id;
+                        option.textContent = employee.name;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        function updateNavBadges() {
+            // Update badges with current counts
+            document.getElementById('leadsCount').textContent = allLeads.length;
+            document.getElementById('callsCount').textContent = callRecords.length;
+        }
+
+        // Dashboard functions
+        async function loadDashboardData() {
+            try {
+                const response = await axios.get('/api/manager/dashboard');
+                const data = response.data;
+                renderDashboardStats(data);
+                await loadRecentActivity();
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                showNotification('Failed to load dashboard data', 'error');
+            }
+        }
+
+        function renderDashboardStats(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon primary">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${data.stats.total}</div>
+                    <div class="stat-label">Total Leads</div>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>+12% from last month</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon warning">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${data.stats.hot}</div>
+                    <div class="stat-label">Hot Leads</div>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>+5% from last week</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon success">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${data.stats.won}</div>
+                    <div class="stat-label">Converted</div>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>${data.conversionRate}% rate</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon primary">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">₹${data.totalSales.toLocaleString()}</div>
+                    <div class="stat-label">Total Sales</div>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>This month</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon success">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${data.employees}</div>
+                    <div class="stat-label">Team Members</div>
+                    <div class="stat-trend">
+                        <i class="fas fa-check"></i>
+                        <span>Active team</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon warning">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${data.conversionRate}%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>Above average</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadRecentActivity() {
+            const container = document.getElementById('recentActivity');
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--fr-bg); border-radius: 8px;">
+                        <div style="width: 8px; height: 8px; background: var(--fr-green); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">New lead assigned to John Doe</div>
+                            <div style="font-size: 12px; color: var(--fr-muted);">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--fr-bg); border-radius: 8px;">
+                        <div style="width: 8px; height: 8px; background: var(--fr-primary); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">Call completed by Jane Smith</div>
+                            <div style="font-size: 12px; color: var(--fr-muted);">15 minutes ago</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--fr-bg); border-radius: 8px;">
+                        <div style="width: 8px; height: 8px; background: var(--fr-orange); border-radius: 50%;"></div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">Lead status updated to Hot</div>
+                            <div style="font-size: 12px; color: var(--fr-muted);">1 hour ago</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Leads functions
+        async function loadLeads() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/manager/leads');
+                allLeads = response.data;
+                renderLeads(allLeads);
+                updateNavBadges();
+            } catch (error) {
+                console.error('Failed to load leads:', error);
+                showNotification('Failed to load leads', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderLeads(leads) {
+            const container = document.getElementById('leadsContainer');
+            
+            if (leads.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>No Leads Found</h3>
+                        <p>No leads match your current filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Lead</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leads.map(lead => `
                                 <tr>
-                                    <th>Lead Name</th>
-                                    <th>Phone</th>
-                                    <th>Assigned To</th>
-                                    <th>Status</th>
-                                    <th>Assigned Date</th>
-                                    <th>Actions</th>
+                                    <td>
+                                        <div>
+                                            <div style="font-weight: 600;">${lead.name}</div>
+                                            ${lead.notes ? `<div style="font-size: 12px; color: var(--fr-muted);">${lead.notes.substring(0, 50)}${lead.notes.length > 50 ? '...' : ''}</div>` : ''}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>${lead.phone}</div>
+                                        <div style="font-size: 12px; color: var(--fr-muted);">${lead.email || 'No email'}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-${lead.status.toLowerCase().replace(/\s+/g, '-')}">${lead.status}</span>
+                                    </td>
+                                    <td>
+                                        ${lead.assignedTo ? lead.assignedTo.name : '<span style="color: var(--fr-muted);">Unassigned</span>'}
+                                    </td>
+                                    <td>
+                                        <div>${new Date(lead.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 12px; color: var(--fr-muted);">${new Date(lead.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="editLead('${lead._id}')" title="Edit Lead">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" onclick="viewLeadDetails('${lead._id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody id="assignmentsTableBody">
-                                <!-- Data will be populated dynamically -->
-                            </tbody>
-                        </table>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterLeads() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const employeeFilter = document.getElementById('employeeFilter').value;
+            
+            let filteredLeads = allLeads.filter(lead => {
+                if (statusFilter && lead.status !== statusFilter) return false;
+                if (employeeFilter && (!lead.assignedTo || lead.assignedTo._id !== employeeFilter)) return false;
+                return true;
+            });
+            
+            renderLeads(filteredLeads);
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('employeeFilter').value = '';
+            renderLeads(allLeads);
+        }
+
+        // Assignment functions
+        async function loadAssignmentData() {
+            try {
+                showLoading(true);
+                const [leadsResponse, teamResponse] = await Promise.all([
+                    axios.get('/api/manager/leads/for-assignment'),
+                    axios.get('/api/manager/team')
+                ]);
+                
+                renderAvailableLeads(leadsResponse.data);
+                renderTeamOverview(teamResponse.data);
+            } catch (error) {
+                console.error('Failed to load assignment data:', error);
+                showNotification('Failed to load assignment data', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderAvailableLeads(leads) {
+            const container = document.getElementById('availableLeads');
+            
+            if (leads.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>No Available Leads</h3>
+                        <p>All leads are currently assigned</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = leads.map(lead => `
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--fr-border); border-radius: 8px; margin-bottom: 8px;">
+                    <input type="checkbox" id="assign-lead-${lead._id}" onchange="toggleAssignmentSelection('${lead._id}')" style="width: 16px; height: 16px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600;">${lead.name}</div>
+                        <div style="font-size: 12px; color: var(--fr-muted);">${lead.phone} • ${lead.status}</div>
+                    </div>
+                    <span class="badge badge-${lead.status.toLowerCase().replace(/\s+/g, '-')}">${lead.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderTeamOverview(team) {
+            const container = document.getElementById('teamOverview');
+            
+            container.innerHTML = team.map(member => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--fr-border);">
+                    <span>${member.name}</span>
+                    <span style="font-weight: 600; color: var(--fr-primary);">${Math.floor(Math.random() * 20) + 5} leads</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleAssignmentSelection(leadId) {
+            const checkbox = document.getElementById(`assign-lead-${leadId}`);
+            if (checkbox.checked) {
+                selectedLeads.add(leadId);
+            } else {
+                selectedLeads.delete(leadId);
+            }
+        }
+
+        function selectAllLeads() {
+            const checkboxes = document.querySelectorAll('#availableLeads input[type="checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+                const leadId = checkbox.id.replace('assign-lead-', '');
+                if (checkbox.checked) {
+                    selectedLeads.add(leadId);
+                } else {
+                    selectedLeads.delete(leadId);
+                }
+            });
+        }
+
+        async function assignSelectedLeads() {
+            const employeeId = document.getElementById('assignToEmployee').value;
+            if (!employeeId) {
+                showNotification('Please select an employee', 'error');
+                return;
+            }
+
+            if (selectedLeads.size === 0) {
+                showNotification('Please select leads to assign', 'error');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                await axios.post('/api/manager/leads/assign', {
+                    leadIds: Array.from(selectedLeads),
+                    employeeId: employeeId
+                });
+                
+                showNotification('Leads assigned successfully', 'success');
+                selectedLeads.clear();
+                loadAssignmentData();
+            } catch (error) {
+                console.error('Failed to assign leads:', error);
+                showNotification('Failed to assign leads', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function autoDistributeSelected() {
+            const perEmployee = document.getElementById('leadsPerEmployee').value;
+            
+            try {
+                showLoading(true);
+                const response = await axios.post('/api/manager/leads/assign/auto', {
+                    leadIds: selectedLeads.size > 0 ? Array.from(selectedLeads) : undefined,
+                    perEmployee: perEmployee ? parseInt(perEmployee) : undefined
+                });
+                
+                showNotification(`${response.data.assignedCount} leads distributed successfully`, 'success');
+                selectedLeads.clear();
+                loadAssignmentData();
+            } catch (error) {
+                console.error('Failed to auto distribute leads:', error);
+                showNotification('Failed to auto distribute leads', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Team functions
+        async function loadTeamData() {
+            try {
+                showLoading(true);
+                const [teamResponse, performanceResponse] = await Promise.all([
+                    axios.get('/api/manager/team'),
+                    axios.get('/api/manager/team/performance')
+                ]);
+                
+                teamMembers = teamResponse.data;
+                renderTeamData(teamMembers, performanceResponse.data);
+            } catch (error) {
+                console.error('Failed to load team data:', error);
+                showNotification('Failed to load team data', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderTeamData(members, performance) {
+            const container = document.getElementById('teamContainer');
+            
+            if (members.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>No Team Members</h3>
+                        <p>No employees are assigned to your team</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <!-- Performance Overview -->
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon primary">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number">${performance.totalTeamMembers}</div>
+                        <div class="stat-label">Team Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon success">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number">${performance.conversionRate}%</div>
+                        <div class="stat-label">Team Conversion Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon warning">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-number">${performance.averageResponseTime}</div>
+                        <div class="stat-label">Avg Response Time</div>
                     </div>
                 </div>
 
-                <!-- Team Performance Tab -->
-                <div id="performance" class="tab-content" style="display: none;">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-chart-bar"></i> Team Performance Overview
-                        </h3>
-                        <button class="btn btn-success" onclick="exportPerformanceReport()">
-                            <i class="fas fa-download"></i> Export Report
-                        </button>
-                    </div>
+                <!-- Team Members Table -->
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                                <th>Performance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${members.map(member => `
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--fr-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
+                                                ${member.name.charAt(0)}
+                                            </div>
+                                            <span style="font-weight: 600;">${member.name}</span>
+                                        </div>
+                                    </td>
+                                    <td>${member.email}</td>
+                                    <td><span class="badge badge-new">${member.role}</span></td>
+                                    <td>${new Date(member.createdAt).toLocaleDateString()}</td>
+                                    <td>
+                                        <div style="font-weight: 600; color: var(--fr-primary);">${Math.floor(Math.random() * 30) + 70}%</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="viewEmployeeDetails('${member._id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" onclick="viewEmployeePerformance('${member._id}')" title="Performance">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
 
+        // Call Records functions
+        async function loadCallRecords() {
+            try {
+                showLoading(true);
+                const response = await axios.get('/api/manager/call-records');
+                callRecords = response.data;
+                renderCallRecords(callRecords);
+                updateNavBadges();
+            } catch (error) {
+                console.error('Failed to load call records:', error);
+                showNotification('Failed to load call records', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderCallRecords(records) {
+            const container = document.getElementById('callRecordsContainer');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-microphone"></i>
+                        <h3>No Call Records</h3>
+                        <p>No call records found for your team</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Lead</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${records.map(record => `
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--fr-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+                                                ${record.employee?.name?.charAt(0) || 'U'}
+                                            </div>
+                                            <span>${record.employee?.name || 'Unknown'}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 600;">${record.lead?.name || 'Unknown Lead'}</div>
+                                    </td>
+                                    <td>${record.lead?.phone || 'No phone'}</td>
+                                    <td>
+                                        <span class="badge badge-${record.callStatus === 'completed' ? 'won' : record.callStatus === 'missed' ? 'lost' : 'new'}">${record.callStatus}</span>
+                                    </td>
+                                    <td>${formatDuration(record.callDuration)}</td>
+                                    <td>
+                                        <div>${new Date(record.createdAt).toLocaleDateString()}</div>
+                                        <div style="font-size: 12px; color: var(--fr-muted);">${new Date(record.createdAt).toLocaleTimeString()}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            ${record.recordingUrl ? 
+                                                `<button class="btn btn-primary btn-sm" onclick="playCallRecording('${record._id}')" title="Play Recording">
+                                                    <i class="fas fa-play"></i>
+                                                </button>` : 
+                                                `<button class="btn btn-secondary btn-sm" disabled title="No Recording">
+                                                    <i class="fas fa-times"></i>
+                                                </button>`
+                                            }
+                                            <button class="btn btn-secondary btn-sm" onclick="viewCallDetails('${record._id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterCallRecords() {
+            const employeeFilter = document.getElementById('callEmployeeFilter').value;
+            const statusFilter = document.getElementById('callStatusFilter').value;
+            const dateFrom = document.getElementById('callDateFrom').value;
+            const dateTo = document.getElementById('callDateTo').value;
+            
+            let filteredRecords = callRecords.filter(record => {
+                if (employeeFilter && record.employee._id !== employeeFilter) return false;
+                if (statusFilter && record.callStatus !== statusFilter) return false;
+                if (dateFrom && new Date(record.createdAt) < new Date(dateFrom)) return false;
+                if (dateTo && new Date(record.createdAt) > new Date(dateTo + 'T23:59:59')) return false;
+                return true;
+            });
+            
+            renderCallRecords(filteredRecords);
+        }
+
+        async function playCallRecording(recordId) {
+            try {
+                const record = callRecords.find(r => r._id === recordId);
+                if (!record || !record.recordingUrl) {
+                    showNotification('Recording not available', 'error');
+                    return;
+                }
+
+                const modal = document.getElementById('audioModal');
+                const audioInfo = document.getElementById('audioInfo');
+                const audioPlayer = document.getElementById('audioPlayer');
+                const callNotes = document.getElementById('callNotes');
+
+                audioInfo.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">${record.lead?.name || 'Unknown Lead'}</div>
+                        <div style="font-size: 14px; color: var(--fr-muted);">Called by ${record.employee?.name || 'Unknown'} on ${new Date(record.createdAt).toLocaleString()}</div>
+                    </div>
+                `;
+
+                audioPlayer.src = record.recordingUrl;
+                callNotes.textContent = record.notes || 'No notes available for this call.';
+                
+                modal.style.display = 'flex';
+            } catch (error) {
+                console.error('Failed to play recording:', error);
+                showNotification('Failed to play recording', 'error');
+            }
+        }
+
+        function closeAudioModal() {
+            const modal = document.getElementById('audioModal');
+            const audioPlayer = document.getElementById('audioPlayer');
+            
+            audioPlayer.pause();
+            audioPlayer.src = '';
+            modal.style.display = 'none';
+        }
+
+        // Analytics functions
+        async function loadAnalytics() {
+            const container = document.getElementById('analyticsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Advanced analytics features coming soon</p>
+                </div>
+            `;
+        }
+
+        // Reports functions
+        async function generateReport() {
+            const reportType = document.getElementById('reportType').value;
+            const dateFrom = document.getElementById('reportDateFrom').value;
+            const dateTo = document.getElementById('reportDateTo').value;
+            const employeeId = document.getElementById('reportEmployeeFilter').value;
+
+            try {
+                showLoading(true);
+                const params = new URLSearchParams();
+                if (dateFrom) params.append('startDate', dateFrom);
+                if (dateTo) params.append('endDate', dateTo);
+                if (employeeId) params.append('employeeId', employeeId);
+
+                let endpoint = '/api/manager/reports/performance';
+                if (reportType === 'leads') {
+                    endpoint = '/api/manager/leads/analytics';
+                } else if (reportType === 'calls') {
+                    endpoint = '/api/manager/call-records/analytics';
+                }
+
+                const response = await axios.get(`${endpoint}?${params}`);
+                renderReport(response.data, reportType);
+            } catch (error) {
+                console.error('Failed to generate report:', error);
+                showNotification('Failed to generate report', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderReport(data, reportType) {
+            const container = document.getElementById('reportContainer');
+            
+            if (reportType === 'performance') {
+                container.innerHTML = `
+                    <div class="stats-grid" style="margin-bottom: 24px;">
+                        <div class="stat-card">
+                            <div class="stat-number">${data.totalLeads}</div>
+                            <div class="stat-label">Total Leads</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">₹${data.totalSales.toLocaleString()}</div>
+                            <div class="stat-label">Total Sales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${data.conversionRate}%</div>
+                            <div class="stat-label">Conversion Rate</div>
+                        </div>
+                    </div>
+                    
                     <div class="table-container">
-                        <table class="table" id="performanceTable">
+                        <table class="table">
                             <thead>
                                 <tr>
                                     <th>Employee</th>
-                                    <th>Leads Assigned</th>
-                                    <th>Leads Completed</th>
-                                    <th>Success Rate</th>
-                                    <th>Avg Response Time</th>
-                                    <th>Actions</th>
+                                    <th>Leads Generated</th>
+                                    <th>Leads Converted</th>
+                                    <th>Conversion Rate</th>
+                                    <th>Revenue Generated</th>
                                 </tr>
                             </thead>
-                            <tbody id="performanceTableBody">
-                                <!-- Data will be populated dynamically -->
+                            <tbody>
+                                ${data.teamPerformance.map(perf => `
+                                    <tr>
+                                        <td>${perf.employeeName}</td>
+                                        <td>${perf.leadsGenerated}</td>
+                                        <td>${perf.leadsConverted}</td>
+                                        <td>${perf.conversionRate}%</td>
+                                        <td>₹${perf.revenueGenerated.toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                
-
-                <!-- My Leads Tab -->
-                <div id="myLeads" class="tab-content" style="display: none;">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-fire"></i> My Hot Leads
-                        </h3>
-                        <button class="btn btn-outline" onclick="loadMyLeads()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                    <div class="filters-section">
-                        <div class="filters-grid">
-                            <div class="filter-group">
-                                <label>Search</label>
-                                <input type="text" id="myLeadsSearch" placeholder="Search leads..." oninput="renderMyLeadsTable()" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="table" id="myLeadsTable">
-                            <thead>
-                                <tr>
-                                    <th>Lead</th>
-                                    <th>Phone</th>
-                                    <th>Assigned To</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="myLeadsTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Section -->
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h3 class="chart-title">Lead Assignment Trends</h3>
-                    <div>
-                        <button class="btn btn-outline" onclick="refreshChart()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <canvas id="leadChart" width="400" height="200"></canvas>
-            </div>
-        </main>
-    </div>
-
-
-
-    <script src="../assets/admin.js"></script>
-    <script>
-        // Global variables
-        let currentTab = 'assignments';
-        let assignmentsData = [];
-        let performanceData = [];
-        
-        
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardData();
-            initializeChart();
-        });
-
-        // Tab switching functionality
-        function showTab(tabName) {
-            // Hide all tab contents
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.style.display = 'none');
-            
-            // Remove active class from all tab buttons
-            const tabButtons = document.querySelectorAll('.tab-btn');
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Show selected tab content
-            document.getElementById(tabName).style.display = 'block';
-            
-            // Add active class to clicked button
-            event.target.classList.add('active');
-            
-            currentTab = tabName;
-            
-            // Load data for the selected tab
-            switch(tabName) {
-                case 'assignments':
-                    loadAssignmentsData();
-                    break;
-                case 'performance':
-                    loadPerformanceData();
-                    break;
-                
-                case 'myLeads':
-                    loadMyLeads();
-                    break;
-            }
-        }
-
-        // Load dashboard data
-        async function loadDashboardData() {
-            try {
-                await Promise.all([
-                    loadAssignmentsData(),
-                    loadPerformanceData(),
-                    loadMyLeads()
-                ]);
-                
-                updateDashboardStats();
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-            }
-        }
-
-        // Load assignments data
-        async function loadAssignmentsData() {
-            try {
-                const response = await fetch('/api/manager/leads/assigned', {
-                    headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
-                });
-                
-                if (response.ok) {
-                    assignmentsData = await response.json();
-                } else {
-                    assignmentsData = [];
-                }
-                
-                renderAssignmentsTable();
-            } catch (error) {
-                console.error('Error loading assignments:', error);
-                assignmentsData = [];
-                renderAssignmentsTable();
-            }
-        }
-
-        // Load performance data
-        async function loadPerformanceData() {
-            try {
-                const response = await fetch('/api/manager/team/performance', {
-                    headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const perf = await response.json();
-                    // Map callsByEmployee to table-friendly format if available
-                    if (perf && perf.callsByEmployee) {
-                        performanceData = Object.keys(perf.callsByEmployee).map(name => {
-                            const d = perf.callsByEmployee[name];
-                            return {
-                                id: name,
-                                employeeName: name,
-                                leadsAssigned: d.totalCalls,
-                                leadsCompleted: d.completedCalls,
-                                successRate: d.successRate,
-                                avgResponseTime: (d.avgDuration||0) + 's'
-                            };
-                        });
-                    } else {
-                        performanceData = [];
-                    }
-                } else {
-                    performanceData = [];
-                }
-                
-                renderPerformanceTable();
-            } catch (error) {
-                console.error('Error loading performance:', error);
-                performanceData = [];
-                renderPerformanceTable();
-            }
-        }
-
-        
-
-        function applyFilters() {
-            filteredRecords = callRecords.filter(record => {
-                const searchLower = searchTerm.toLowerCase();
-                return (
-                    (record.lead?.name || '').toLowerCase().includes(searchLower) ||
-                    (record.lead?.phone || '').toLowerCase().includes(searchLower) ||
-                    (record.employee?.name || '').toLowerCase().includes(searchLower) ||
-                    (record.callStatus || '').toLowerCase().includes(searchLower)
-                );
-            });
-            currentPage = 1;
-            renderCallRecords();
-        }
-
-        function renderCallRecords() {
-            const grid = document.getElementById('recordsGrid');
-            const total = filteredRecords.length;
-            
-            if (!total) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-phone-slash"></i>
-                        </div>
-                        <div class="empty-title">No Call Records Found</div>
-                        <div class="empty-description">
-                            ${searchTerm ? 'Try adjusting your search criteria.' : 'No call records have been uploaded yet.'}
-                        </div>
-                    </div>
                 `;
-                document.getElementById('paginationContainer').style.display = 'none';
-                return;
             }
-            
-            const start = (currentPage - 1) * pageSize;
-            const end = start + pageSize;
-            const pageRecords = filteredRecords.slice(start, end);
-            
-            grid.innerHTML = pageRecords.map(record => `
-                <div class="record-card">
-                    <div class="record-header">
-                        <div class="record-info">
-                            <div class="record-avatar">
-                                ${(record.lead?.name || 'U').charAt(0).toUpperCase()}
-                            </div>
-                            <div class="record-details">
-                                <h4>${record.lead?.name || 'Unknown Lead'}</h4>
-                                <p>${record.lead?.phone || 'No phone'} • ${record.employee?.name || 'Unknown Employee'}</p>
-                            </div>
-                        </div>
-                        <span class="record-status status-${record.callStatus}">${record.callStatus}</span>
-                    </div>
-                    
-                    <div class="record-body">
-                        <div class="record-metrics">
-                            <div class="metric-item">
-                                <div class="metric-value">${fmtDuration(record.callDuration)}</div>
-                                <div class="metric-label">Duration</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="metric-value">${fmtDate(record.callStartTime).split(',')[0]}</div>
-                                <div class="metric-label">Date</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="metric-value">₹${record.callCost || 0}</div>
-                                <div class="metric-label">Cost</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="metric-value">${record.outcome || 'N/A'}</div>
-                                <div class="metric-label">Outcome</div>
-                            </div>
-                        </div>
-                        
-                        ${record.recordingFile || record.recordingUrl ? `
-                        <div class="audio-section">
-                            <button class="play-btn" onclick="playPauseAudio('${record._id}')" data-record-id="${record._id}">
-                                <i class="fas fa-play"></i> Play Recording
-                            </button>
-                        </div>
-                        ` : ''}
-                        
-                        <div class="record-actions">
-                            <button class="action-btn view" onclick="viewCallDetails('${record._id}')">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            ${record.recordingFile || record.recordingUrl ? `
-                            <button class="action-btn listen" onclick="playInModal('${record._id}')">
-                                <i class="fas fa-headphones"></i> Listen
-                            </button>
-                            ` : ''}
-                            <button class="action-btn delete" onclick="deleteCallRecord('${record._id}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            
-            updatePagination(total);
-        }
-
-        function updatePagination(total) {
-            const container = document.getElementById('paginationContainer');
-            const pages = Math.max(1, Math.ceil(total / pageSize));
-            const showingStart = total ? (currentPage - 1) * pageSize + 1 : 0;
-            const showingEnd = Math.min(currentPage * pageSize, total);
-            
-            document.getElementById('count').textContent = `${showingStart}-${showingEnd}`;
-            document.getElementById('total').textContent = total;
-            document.getElementById('prev').disabled = currentPage <= 1;
-            document.getElementById('next').disabled = currentPage >= pages;
-            
-            container.style.display = 'flex';
-        }
-
-        function playPauseAudio(recordId) {
-            const button = document.querySelector(`[data-record-id="${recordId}"]`);
-            const record = callRecords.find(r => r._id === recordId);
-            
-            if (!record || (!record.recordingFile && !record.recordingUrl)) {
-                alert('No recording available');
-                return;
-            }
-            
-            if (currentPlayingAudio && currentPlayingAudio !== recordId) {
-                // Stop other playing audio
-                const otherButton = document.querySelector(`[data-record-id="${currentPlayingAudio}"]`);
-                if (otherButton) {
-                    otherButton.innerHTML = '<i class="fas fa-play"></i> Play Recording';
-                    otherButton.classList.remove('playing');
-                }
-            }
-            
-            if (button.classList.contains('playing')) {
-                // Stop playing
-                button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
-                button.classList.remove('playing');
-                currentPlayingAudio = null;
-            } else {
-                // Start playing
-                const audioUrl = record.recordingFile || record.recordingUrl;
-                const audio = new Audio(audioUrl);
-                
-                audio.addEventListener('ended', () => {
-                    button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
-                    button.classList.remove('playing');
-                    currentPlayingAudio = null;
-                });
-                
-                audio.addEventListener('error', () => {
-                    alert('Error playing audio file');
-                    button.innerHTML = '<i class="fas fa-play"></i> Play Recording';
-                    button.classList.remove('playing');
-                    currentPlayingAudio = null;
-                });
-                
-                audio.play();
-                button.innerHTML = '<i class="fas fa-pause"></i> Pause';
-                button.classList.add('playing');
-                currentPlayingAudio = recordId;
-            }
-        }
-
-        async function viewCallDetails(recordId) {
-            try {
-                const record = callRecords.find(r => r._id === recordId);
-                if (!record) {
-                    alert('Call record not found');
-                    return;
-                }
-                
-                const modal = document.getElementById('callDetailsModal');
-                const content = document.getElementById('callDetailsContent');
-                
-                content.innerHTML = `
-                    <div class="detail-grid">
-                        <div class="detail-section">
-                            <h4><i class="fas fa-user"></i> Lead Information</h4>
-                            <div class="detail-item">
-                                <span class="detail-label">Name:</span>
-                                <span class="detail-value">${record.lead?.name || 'Unknown'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Phone:</span>
-                                <span class="detail-value">${record.lead?.phone || '-'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Employee:</span>
-                                <span class="detail-value">${record.employee?.name || 'Unknown'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Status:</span>
-                                <span class="detail-value">
-                                    <span class="record-status status-${record.callStatus}">${record.callStatus}</span>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4><i class="fas fa-chart-line"></i> Call Metrics</h4>
-                            <div class="detail-item">
-                                <span class="detail-label">Duration:</span>
-                                <span class="detail-value">${fmtDuration(record.callDuration)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Start Time:</span>
-                                <span class="detail-value">${fmtDate(record.callStartTime)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Outcome:</span>
-                                <span class="detail-value">${record.outcome || 'N/A'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Cost:</span>
-                                <span class="detail-value">₹${record.callCost || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${record.recordingFile || record.recordingUrl ? `
-                    <div class="audio-section">
-                        <h4><i class="fas fa-headphones"></i> Call Recording</h4>
-                        <audio class="enhanced-audio-player" controls preload="none">
-                            <source src="${record.recordingFile || record.recordingUrl}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <div class="audio-controls">
-                            <div class="speed-control">
-                                <label>Playback Speed:</label>
-                                <select onchange="changePlaybackSpeed(this.value)">
-                                    <option value="0.5">0.5x</option>
-                                    <option value="0.75">0.75x</option>
-                                    <option value="1" selected>1x</option>
-                                    <option value="1.25">1.25x</option>
-                                    <option value="1.5">1.5x</option>
-                                    <option value="2">2x</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    ${record.notes ? `
-                    <div class="notes-section">
-                        <h4><i class="fas fa-sticky-note"></i> Call Notes</h4>
-                        <div class="notes-content">${record.notes}</div>
-                    </div>
-                    ` : ''}
-                    
-                    ${record.followUpNotes ? `
-                    <div class="notes-section">
-                        <h4><i class="fas fa-calendar-check"></i> Follow-up Notes</h4>
-                        <div class="notes-content">${record.followUpNotes}</div>
-                    </div>
-                    ` : ''}
-                `;
-                
-                modal.style.display = 'block';
-            } catch (error) {
-                console.error('Error loading call details:', error);
-                alert('Error loading call details');
-            }
-        }
-
-        function playInModal(recordId) {
-            viewCallDetails(recordId);
-        }
-
-        // Manager-specific functions
-        async function updateDashboardStats() {
-            try {
-                const res = await fetch('/api/manager/dashboard', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
-                if (!res.ok) return;
-                const d = await res.json();
-                document.getElementById('totalLeads').textContent = d.stats?.total ?? 0;
-                document.getElementById('assignedLeads').textContent = d.stats?.interested ?? 0;
-                document.getElementById('pendingLeads').textContent = d.stats?.followUp ?? 0;
-                document.getElementById('conversionRate').textContent = (d.conversionRate || 0) + '%';
-            } catch (e) {
-                console.error('dashboard stats error', e);
-            }
-        }
-
-        // Initialize chart
-        function initializeChart() {
-            const ctx = document.getElementById('leadChart').getContext('2d');
-            
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [{
-                        label: 'Leads Assigned',
-                        data: [12, 19, 3, 5, 2, 3],
-                        borderColor: '#5E64FF',
-                        backgroundColor: 'rgba(94, 100, 255, 0.1)',
-                        tension: 0.4
-                    }, {
-                        label: 'Leads Completed',
-                        data: [8, 15, 2, 4, 1, 2],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
         }
 
         // Utility functions
-        function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString();
+        function formatDuration(seconds) {
+            if (!seconds) return '0s';
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${remainingSeconds}s`;
         }
 
-        function getAuthToken() {
-            // Implement your authentication token retrieval logic
-            return localStorage.getItem('authToken') || '';
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
         }
 
-        function toggleSidebar() {
-            const sb = document.querySelector('.admin-sidebar');
-            sb && sb.classList.toggle('open');
-        }
-
-        function logout(e) {
-            e && e.preventDefault();
-            try {
-                localStorage.removeItem('token');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('role');
-            } catch (_){ }
-            window.location.href = '/login.html';
-        }
-
-        // Action functions
-        function assignNewLeads() {
-            alert('Assign New Leads functionality - to be implemented');
-        }
-
-        function applyFilters() {
-            // Implement filter logic
-            console.log('Applying filters...');
-        }
-
-        function exportPerformanceReport() {
-            alert('Export Performance Report functionality - to be implemented');
-        }
-
-        function createNewCampaign() {
-            alert('Create New Campaign functionality - to be implemented');
-        }
-
-        function viewAssignment(id) {
-            alert(`View Assignment ${id} - to be implemented`);
-        }
-
-        function editAssignment(id) {
-            alert(`Edit Assignment ${id} - to be implemented`);
-        }
-
-        function deleteAssignment(id) {
-            if (confirm('Are you sure you want to delete this assignment?')) {
-                assignmentsData = assignmentsData.filter(a => a.id !== id);
-                renderAssignmentsTable();
-                updateDashboardStats();
-            }
-        }
-
-        function viewPerformance(id) {
-            alert(`View Performance ${id} - to be implemented`);
-        }
-
-        function viewCampaign(id) {
-            alert(`View Campaign ${id} - to be implemented`);
-        }
-
-        function editCampaign(id) {
-            alert(`Edit Campaign ${id} - to be implemented`);
-        }
-
-        function refreshChart() {
-            // Implement chart refresh logic
-            console.log('Refreshing chart...');
-        }
-
-        // Render assignments table
-        function renderAssignmentsTable() {
-            const tbody = document.getElementById('assignmentsTableBody');
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--fr-muted); margin-left: auto;">&times;</button>
+            `;
             
-            if (!assignmentsData.length) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6">
-                            <div class="empty-state">
-                                <div class="empty-icon">
-                                    <i class="fas fa-inbox"></i>
-                                </div>
-                                <div class="empty-title">No Assignments Found</div>
-                                <div class="empty-description">No lead assignments have been created yet.</div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
+            document.body.appendChild(notification);
             
-            tbody.innerHTML = assignmentsData.map(assignment => `
-                <tr>
-                    <td>
-                        <strong>${assignment.leadName}</strong>
-                        <br><small class="text-muted">${assignment.leadEmail || 'No email'}</small>
-                    </td>
-                    <td>${assignment.leadPhone}</td>
-                    <td>${assignment.assignedTo}</td>
-                    <td>
-                        <span class="status-badge status-${assignment.status}">
-                            ${assignment.status.replace('_', ' ')}
-                        </span>
-                    </td>
-                    <td>${formatDate(assignment.assignedDate)}</td>
-                    <td>
-                        <button class="action-btn view" onclick="viewAssignment('${assignment.id}')">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                        <button class="action-btn edit" onclick="editAssignment('${assignment.id}')">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete" onclick="deleteAssignment('${assignment.id}')">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        // Render performance table
-        function renderPerformanceTable() {
-            const tbody = document.getElementById('performanceTableBody');
-            
-            if (!performanceData.length) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6">
-                            <div class="empty-state">
-                                <div class="empty-icon">
-                                    <i class="fas fa-chart-bar"></i>
-                                </div>
-                                <div class="empty-title">No Performance Data</div>
-                                <div class="empty-description">No performance data available yet.</div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            tbody.innerHTML = performanceData.map(perf => `
-                <tr>
-                    <td><strong>${perf.employeeName}</strong></td>
-                    <td>${perf.leadsAssigned}</td>
-                    <td>${perf.leadsCompleted}</td>
-                    <td>
-                        <span class="status-badge ${perf.successRate >= 80 ? 'status-completed' : perf.successRate >= 60 ? 'status-in_progress' : 'status-pending'}">
-                            ${perf.successRate}%
-                        </span>
-                    </td>
-                    <td>${perf.avgResponseTime}</td>
-                    <td>
-                        <button class="action-btn view" onclick="viewPerformance('${perf.id}')">
-                            <i class="fas fa-chart-line"></i> Details
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        
-
-        // Mock data generators
-        function generateMockAssignments() {
-            return [
-                {
-                    id: '1',
-                    leadName: 'John Smith',
-                    leadEmail: 'john@example.com',
-                    leadPhone: '+1-555-0123',
-                    assignedTo: 'Sarah Johnson',
-                    status: 'assigned',
-                    assignedDate: '2024-01-15'
-                },
-                {
-                    id: '2',
-                    leadName: 'Emily Davis',
-                    leadEmail: 'emily@example.com',
-                    leadPhone: '+1-555-0124',
-                    assignedTo: 'Mike Wilson',
-                    status: 'in_progress',
-                    assignedDate: '2024-01-14'
-                },
-                {
-                    id: '3',
-                    leadName: 'Robert Brown',
-                    leadEmail: 'robert@example.com',
-                    leadPhone: '+1-555-0125',
-                    assignedTo: 'Sarah Johnson',
-                    status: 'completed',
-                    assignedDate: '2024-01-13'
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
                 }
-            ];
+            }, 5000);
         }
 
-        function generateMockPerformance() {
-            return [
-                {
-                    id: '1',
-                    employeeName: 'Sarah Johnson',
-                    leadsAssigned: 15,
-                    leadsCompleted: 12,
-                    successRate: 80,
-                    avgResponseTime: '2.5 hours'
-                },
-                {
-                    id: '2',
-                    employeeName: 'Mike Wilson',
-                    leadsAssigned: 12,
-                    leadsCompleted: 8,
-                    successRate: 67,
-                    avgResponseTime: '4.2 hours'
-                },
-                {
-                    id: '3',
-                    employeeName: 'David Lee',
-                    leadsAssigned: 18,
-                    leadsCompleted: 15,
-                    successRate: 83,
-                    avgResponseTime: '1.8 hours'
-                }
-            ];
+        // Refresh functions
+        function refreshCurrentSection() {
+            loadSectionData(currentSection);
         }
 
-        
-
-        // My Leads functionality
-        let myLeadsData = [];
-
-        function showMyLeads() {
-            showTab('myLeads');
-            loadMyLeadsData();
-        }
-
-        async function loadMyLeadsData() {
+        async function autoDistributeLeads() {
             try {
-                const response = await fetch('/api/manager/leads/status/Hot', {
-                    headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                showLoading(true);
+                const response = await axios.post('/api/manager/leads/assign/auto', {});
+                showNotification(`${response.data.assignedCount} leads distributed successfully`, 'success');
+                refreshCurrentSection();
+            } catch (error) {
+                console.error('Failed to auto distribute leads:', error);
+                showNotification('Failed to auto distribute leads', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Export functions
+        async function exportLeads() {
+            try {
+                const response = await axios.get('/api/manager/export/leads', {
+                    responseType: 'blob'
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to load hot leads');
-                }
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'leads.csv');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
                 
-                myLeadsData = await response.json();
-                renderMyLeadsTable();
+                showNotification('Leads exported successfully', 'success');
             } catch (error) {
-                console.error('Error loading hot leads:', error);
-                alert('Failed to load hot leads: ' + error.message);
+                console.error('Failed to export leads:', error);
+                showNotification('Failed to export leads', 'error');
             }
         }
 
-        function renderMyLeadsTable() {
-            const searchTerm = document.getElementById('myLeadsSearch')?.value.toLowerCase() || '';
-            const filteredLeads = myLeadsData.filter(lead => 
-                lead.name.toLowerCase().includes(searchTerm) ||
-                lead.phone?.toLowerCase().includes(searchTerm) ||
-                lead.email?.toLowerCase().includes(searchTerm) ||
-                lead.assignedTo?.name?.toLowerCase().includes(searchTerm)
-            );
-
-            const tbody = document.getElementById('myLeadsTableBody');
-            if (!tbody) return;
-
-            tbody.innerHTML = filteredLeads.map(lead => `
-                <tr>
-                    <td>
-                        <div class="lead-info">
-                            <div class="lead-name">${lead.name}</div>
-                            <div class="lead-email">${lead.email || 'No email'}</div>
-                        </div>
-                    </td>
-                    <td>${lead.phone || 'No phone'}</td>
-                    <td>${lead.assignedTo?.name || 'Unassigned'}</td>
-                    <td>
-                        <select class="status-select" onchange="updateLeadStatus('${lead._id}', this.value)">
-                            <option value="Hot" ${lead.status === 'Hot' ? 'selected' : ''}>Hot</option>
-                            <option value="Won" ${lead.status === 'Won' ? 'selected' : ''}>Won</option>
-                            <option value="Lost" ${lead.status === 'Lost' ? 'selected' : ''}>Lost</option>
-                            <option value="Follow-up" ${lead.status === 'Follow-up' ? 'selected' : ''}>Follow-up</option>
-                        </select>
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn btn-sm btn-outline" onclick="viewLeadDetails('${lead._id}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+        async function exportCallRecords() {
+            showNotification('Call records export feature coming soon', 'info');
         }
 
-        async function updateLeadStatus(leadId, newStatus) {
+        async function exportReport() {
             try {
-                const response = await fetch(`/api/manager/leads/${leadId}/status`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
-                    body: JSON.stringify({ status: newStatus })
+                const reportType = document.getElementById('reportType').value;
+                const dateFrom = document.getElementById('reportDateFrom').value;
+                const dateTo = document.getElementById('reportDateTo').value;
+                const employeeId = document.getElementById('reportEmployeeFilter').value;
+
+                const params = new URLSearchParams();
+                if (dateFrom) params.append('startDate', dateFrom);
+                if (dateTo) params.append('endDate', dateTo);
+                if (employeeId) params.append('employeeId', employeeId);
+
+                const response = await axios.get(`/api/manager/export/reports?${params}`, {
+                    responseType: 'blob'
                 });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update lead status');
-                }
-
-                // Update local data
-                const lead = myLeadsData.find(l => l._id === leadId);
-                if (lead) {
-                    lead.status = newStatus;
-                }
-
-                // If status changed from Hot, remove from the list
-                if (newStatus !== 'Hot') {
-                    myLeadsData = myLeadsData.filter(l => l._id !== leadId);
-                    renderMyLeadsTable();
-                }
-
-                alert('Lead status updated successfully!');
+                
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'performance_report.csv');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                
+                showNotification('Report exported successfully', 'success');
             } catch (error) {
-                console.error('Error updating lead status:', error);
-                alert('Failed to update lead status: ' + error.message);
+                console.error('Failed to export report:', error);
+                showNotification('Failed to export report', 'error');
             }
+        }
+
+        // Placeholder functions for future implementation
+        function editLead(leadId) {
+            showNotification('Edit lead feature coming soon', 'info');
         }
 
         function viewLeadDetails(leadId) {
-            const lead = myLeadsData.find(l => l._id === leadId);
-            if (lead) {
-                alert(`Lead Details:\nName: ${lead.name}\nPhone: ${lead.phone || 'N/A'}\nEmail: ${lead.email || 'N/A'}\nStatus: ${lead.status}\nNotes: ${lead.notes || 'No notes'}`);
-            }
+            showNotification('View lead details feature coming soon', 'info');
         }
 
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            loadDashboardData();
-            initializeChart();
-        });
+        function viewEmployeeDetails(employeeId) {
+            showNotification('View employee details feature coming soon', 'info');
+        }
+
+        function viewEmployeePerformance(employeeId) {
+            showNotification('Employee performance view coming soon', 'info');
+        }
+
+        function viewCallDetails(recordId) {
+            showNotification('View call details feature coming soon', 'info');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('audioModal');
+            if (event.target === modal) {
+                closeAudioModal();
+            }
+        }
     </script>
 </body>
 </html>

@@ -17,6 +17,19 @@ router.use(auth);
 router.use(roles(['admin']));
 
 // ===== USER MANAGEMENT =====
+// Get all users
+router.get('/users', async (req, res) => {
+    try {
+        const users = await User.find({})
+            .populate('manager', 'name email')
+            .select('name email role manager createdAt')
+            .sort({ createdAt: -1 });
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Get all managers
 router.get('/managers', async (req, res) => {
     try {
@@ -1758,6 +1771,22 @@ router.get('/pipelines/:id/leads', PipelineController.getPipelineLeads);
 
 // Get pipeline insights
 router.get('/pipelines/insights', PipelineController.getPipelineInsights);
+
+// ===== CALL LOGS MANAGEMENT =====
+// Get all call logs
+router.get('/call-logs', async (req, res) => {
+    try {
+        const callLogs = await CallLog.find({})
+            .populate('lead', 'name phone email')
+            .populate('employee', 'name email')
+            .populate('simCard', 'simNumber carrier')
+            .sort({ createdAt: -1 })
+            .limit(1000); // Limit to prevent performance issues
+        res.json(callLogs);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
 
 // ===== SIM MANAGEMENT =====
 // Get SIM cards status

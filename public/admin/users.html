@@ -14,8 +14,9 @@
 				<a href="/admin/overview.html">Overview</a>
 				<a href="/admin/users.html" class="active">Users</a>
 				<a href="/admin/leads.html">Leads</a>
-				<a href="/admin/analytics.html">Analytics</a>
-				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/call-records.html">Call Records</a>
+				<a href="/admin/settings.html">Settings</a>
+				<!-- <a href="/admin/mailbox.html">Mailbox</a> -->
 			</nav>
 		</aside>
 		<main class="admin-main">
@@ -24,6 +25,7 @@
 				<div class="toolbar">
 					<button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
 					<button class="btn" id="refresh">Refresh</button>
+					<button class="btn btn-outline" id="themeToggle" title="Toggle Theme">Theme</button>
 					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
@@ -86,6 +88,17 @@
 			} catch(_){ }
 			window.location.href = '/login.html';
 		}
+        // Theme toggle
+        (function(){
+            const btn = document.getElementById('themeToggle');
+            if(btn){
+                btn.addEventListener('click', ()=>{
+                    const cur = localStorage.getItem('uiTheme') || 'light';
+                    const next = cur==='light' ? 'semi' : (cur==='semi' ? 'dark' : 'light');
+                    Admin.setTheme(next);
+                });
+            }
+        })();
 		function rowUser(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
 		function rowEmp(u){ return `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td>${u.manager?u.manager.name:'-'}</td><td>${Admin.fmtDate(u.createdAt)}</td></tr>` }
 		async function load(){
@@ -113,7 +126,7 @@
 			if(!res.ok) return; const data = await res.json();
 			document.getElementById('ce_manager').innerHTML = '<option value="">-- None --</option>' + data.map(m=>`<option value="${m._id}">${m.name}</option>`).join('');
 		}
-		if(Admin.getToken()){ load(); populateManagers(); }
+		if(Admin.getToken()){ Admin.applyTheme(); load(); populateManagers(); }
 	</script>
 </body>
 </html>

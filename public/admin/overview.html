@@ -5,7 +5,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Admin • Overview</title>
 	<link rel="stylesheet" href="../assets/frappe.css" />
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 	<div class="admin-shell">
@@ -16,8 +15,8 @@
 				<a href="/admin/users.html">Users</a>
 				<a href="/admin/leads.html">Leads</a>
 				<a href="/admin/call-records.html">Call Records</a>
-				<a href="/admin/analytics.html">Analytics</a>
-				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+				<!-- <a href="/admin/mailbox.html">Mailbox</a> -->
 			</nav>
 		</aside>
 		<main class="admin-main">
@@ -26,23 +25,16 @@
 				<div class="toolbar">
 					<button class="btn btn-outline" onclick="toggleSidebar()">Toggle Sidebar</button>
 					<button class="btn" id="refreshBtn">Refresh</button>
+					<button class="btn btn-outline" id="themeToggle" title="Toggle Theme">Theme</button>
 					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
-			<div class="grid cols-4" id="metrics">
+			<div class="grid cols-4" id="metrics" style="align-items:stretch">
 				<div class="card"><div>Total Users</div><h3 id="mUsers">-</h3></div>
 				<div class="card"><div>Total Leads</div><h3 id="mLeads">-</h3></div>
 				<div class="card"><div>Total Calls</div><h3 id="mCalls">-</h3></div>
-				<div class="card"><div>Active SIMs</div><h3 id="mSims">-</h3></div>
 			</div>
-			<div class="grid cols-2" style="margin-top:16px">
-				<div class="card">
-					<canvas id="callsChart" height="260"></canvas>
-				</div>
-				<div class="card">
-					<canvas id="leadsTrendChart" height="260"></canvas>
-				</div>
-			</div>
+			<!-- Charts removed per requirements for a cleaner UI without charts -->
 		</main>
 	</div>
 	<script src="../assets/admin.js"></script>
@@ -60,6 +52,27 @@
 			} catch(_){ }
 			window.location.href = '/login.html';
 		}
+
+		// Theme management (light / semi / dark)
+		function initializeTheme(){
+			const saved = localStorage.getItem('uiTheme') || 'light';
+			setTheme(saved);
+			const tBtn = document.getElementById('themeToggle');
+			if(tBtn){ tBtn.addEventListener('click', toggleTheme); }
+		}
+		function setTheme(theme){
+			const html = document.documentElement;
+			html.classList.remove('theme-semi','theme-dark');
+			if(theme==='semi') html.classList.add('theme-semi');
+			if(theme==='dark') html.classList.add('theme-dark');
+			localStorage.setItem('uiTheme', theme);
+		}
+		function toggleTheme(){
+			const cur = localStorage.getItem('uiTheme') || 'light';
+			const next = cur==='light' ? 'semi' : (cur==='semi' ? 'dark' : 'light');
+			setTheme(next);
+		}
+
 		async function loadDashboard(){
 			const res = await fetch('/api/admin/performance/dashboard',{ headers: Admin.authHeaders() });
 			if(!res.ok) return;
@@ -69,14 +82,8 @@
 			document.getElementById('mCalls').textContent = d.totalCalls||0;
 			document.getElementById('mSims').textContent = d.activeSims||0;
 		}
-		function charts(){
-			const ctx1 = document.getElementById('callsChart').getContext('2d');
-			new Chart(ctx1,{ type:'bar', data:{ labels:['Completed','Missed','Declined','Wrong'], datasets:[{label:'Calls',data:[890,210,150,100], backgroundColor:'#5E64FF', borderRadius:8}]}, options:{plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false}});
-			const ctx2 = document.getElementById('leadsTrendChart').getContext('2d');
-			new Chart(ctx2,{ type:'line', data:{ labels:['Jan','Feb','Mar','Apr','May','Jun'], datasets:[{label:'Leads', data:[50,60,45,80,70,90], borderColor:'#28a745', backgroundColor:'rgba(40,167,69,.12)', tension:.4, fill:true}]}, options:{plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false}});
-		}
 		document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
-		if(Admin.getToken()){ loadDashboard(); charts(); }
+		if(Admin.getToken()){ initializeTheme(); loadDashboard(); }
 	</script>
 </body>
 </html>

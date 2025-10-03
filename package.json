@@ -22,9 +22,11 @@
     "express": "^4.21.2",
     "express-async-errors": "^3.1.1",
     "jsonwebtoken": "^9.0.2",
+    "imapflow": "^1.0.164",
     "mongoose": "^8.17.1",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "nodemailer": "^6.9.15",
     "streamifier": "^0.1.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0"

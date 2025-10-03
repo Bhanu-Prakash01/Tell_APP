@@ -716,7 +716,7 @@ router.get('/call-records', async (req, res) => {
         const callRecords = await CallLog.find({ employee: { $in: employeeIds } })
             .populate('lead', 'name phone email status sector region')
             .populate('employee', 'name email role')
-            .populate('simCard', 'simNumber carrier')
+            // .populate('simCard', 'simNumber carrier')
             .sort({ createdAt: -1 });
         
         res.json(callRecords);

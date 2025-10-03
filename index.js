@@ -18,6 +18,7 @@ const employeeRoutes = require('./routes/employee');
 const leadRoutes = require('./routes/leads');
 const importExportRoutes = require('./routes/importExport');
 const salesPipelineRoutes = require('./routes/salesPipeline');
+const mailRoutes = require('./routes/mail');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/sales-pipelines', salesPipelineRoutes);
+app.use('/api/admin/mail', mailRoutes);
 
 // Serve static HTML files from public folder
 const path = require('path');
@@ -48,7 +50,16 @@ app.use((err, req, res, next) => {
     const isProd = process.env.NODE_ENV === 'production';
     const safeHeaders = { ...req.headers };
     if (safeHeaders.authorization) safeHeaders.authorization = '<redacted>';
-    const payloadPreview = typeof req.body === 'object' ? JSON.stringify(req.body).slice(0, 2000) : String(req.body).slice(0, 2000);
+    const payloadPreview = (()=>{
+      try{
+        if (req.body && typeof req.body === 'object'){
+          const clone = { ...req.body };
+          ['password','pass','smtpPass','imapPass'].forEach(k=>{ if (clone[k]) clone[k] = '<redacted>'; });
+          return JSON.stringify(clone).slice(0,2000);
+        }
+        return String(req.body).slice(0,2000);
+      }catch(_){ return '<unserializable>' }
+    })();
     console.error('⚠️  Express Error:', {
       method: req.method,
       url: req.originalUrl,

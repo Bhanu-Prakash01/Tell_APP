@@ -113,8 +113,8 @@
 				<a href="/admin/users.html">Users</a>
 				<a href="/admin/leads.html" class="active">Leads</a>
 				<a href="/admin/call-records.html">Call Records</a>
-				<a href="/admin/analytics.html">Analytics</a>
-				<a href="/admin/user-performance.html">User Performance</a>
+				<a href="/admin/settings.html">Settings</a>
+				<!-- <a href="/admin/mailbox.html">Mailbox</a> -->
 			</nav>
 		</aside>
 		<main class="admin-main">
@@ -144,6 +144,7 @@
 					<label class="btn" for="leadCsv">Import CSV</label>
 					<input type="file" id="leadCsv" accept=".csv" style="display:none" />
 					<button class="btn btn-delete" id="deleteAllLeads" style="background: #dc3545; color: white;">Delete All Leads</button>
+					<button class="btn btn-outline" id="themeToggle" title="Toggle Theme">Theme</button>
 					<a class="btn btn-outline" href="/login.html" onclick="logout(event)">Logout</a>
 				</div>
 			</div>
@@ -379,6 +380,17 @@
 	<script src="../assets/admin.js"></script>
 	<script>
 		Admin.navActivate('/admin/leads.html');
+        // Theme toggle
+        (function(){
+            const btn = document.getElementById('themeToggle');
+            if(btn){
+                btn.addEventListener('click', ()=>{
+                    const cur = localStorage.getItem('uiTheme') || 'light';
+                    const next = cur==='light' ? 'semi' : (cur==='semi' ? 'dark' : 'light');
+                    Admin.setTheme(next);
+                });
+            }
+        })();
 		function toggleSidebar(){
 			const sb = document.querySelector('.admin-sidebar');
 			sb && sb.classList.toggle('open');

@@ -8,6 +8,7 @@ const CallLog = require('../models/CallLog');
 const auth = require('../middleware/auth');
 const roles = require('../middleware/roles');
 const csvStringify = require('csv-stringify'); // Add this line
+const { assignLeadsToEmployee } = require('../controllers/managerController');
 
 // test creds for mamanger email: m1@m1 password: m1
 
@@ -301,11 +302,11 @@ router.get('/leads/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const managerId = req.user._id;
-        
+
         // Get all employees under this manager
         const employees = await User.find({ manager: managerId }).select('_id');
         const employeeIds = employees.map(emp => emp._id);
-        
+
         const lead = await Lead.findOne({
             _id: id,
             $or: [
@@ -315,12 +316,18 @@ router.get('/leads/:id', async (req, res) => {
         })
         .populate('assignedTo', 'name email')
         .populate('createdBy', 'name email');
-        
+
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
-        
-        res.json(lead);
+
+        // Add assignment history to the response
+        const assignmentHistory = lead.getAssignmentHistory();
+
+        res.json({
+            ...lead.toObject(),
+            assignmentHistory
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error', details: err.message });
     }
@@ -902,20 +909,20 @@ router.get('/dashboard', async (req, res) => {
 router.post('/leads/assign', async (req, res) => {
     try {
         const { leadIds, employeeId } = req.body;
-        
+
         // Verify employee is under this manager
         const employee = await User.findOne({ _id: employeeId, manager: req.user._id });
         if (!employee) {
             return res.status(403).json({ error: 'Employee not found or not under your management' });
         }
-        
-        // Update leads
-        await Lead.updateMany(
-            { _id: { $in: leadIds } },
-            { $set: { assignedTo: employeeId } }
-        );
-        
-        res.json({ message: 'Leads assigned successfully' });
+
+        // Use helper function for proper assignment with status transition and historical tracking
+        const results = await assignLeadsToEmployee(leadIds, employeeId, req.user._id);
+
+        res.json({
+            message: `Leads assignment completed. Assigned: ${results.assigned.length}, Skipped: ${results.skipped.length}, Errors: ${results.errors.length}`,
+            results
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error', details: err.message });
     }
@@ -976,11 +983,19 @@ router.post('/leads/assign/auto', async (req, res) => {
                 while (count < per && idx < allowedLeads.length) {
                     const lead = allowedLeads[idx++];
                     // Skip if already assigned to same employee
-                    if (lead.assignedTo && String(lead.assignedTo) === String(emp._id)) { skipped.push(lead._id); continue; }
-                    lead.assignedTo = emp._id;
-                    await lead.save();
-                    assigned.push({ leadId: lead._id, employeeId: emp._id });
-                    count++;
+                    if (lead.assignedTo && String(lead.assignedTo) === String(emp._id)) {
+                        skipped.push(lead._id);
+                        continue;
+                    }
+
+                    // Use helper function for proper assignment with status transition and historical tracking
+                    const results = await assignLeadsToEmployee([lead._id], emp._id, req.user._id);
+                    if (results.assigned.length > 0) {
+                        assigned.push({ leadId: lead._id, employeeId: emp._id });
+                        count++;
+                    } else if (results.errors.length > 0) {
+                        skipped.push(lead._id);
+                    }
                 }
                 if (idx >= allowedLeads.length) break;
             }
@@ -989,10 +1004,18 @@ router.post('/leads/assign/auto', async (req, res) => {
             for (let i = 0; i < allowedLeads.length; i++) {
                 const lead = allowedLeads[i];
                 const employee = team[i % team.length];
-                if (lead.assignedTo && String(lead.assignedTo) === String(employee._id)) { skipped.push(lead._id); continue; }
-                lead.assignedTo = employee._id;
-                await lead.save();
-                assigned.push({ leadId: lead._id, employeeId: employee._id });
+                if (lead.assignedTo && String(lead.assignedTo) === String(employee._id)) {
+                    skipped.push(lead._id);
+                    continue;
+                }
+
+                // Use helper function for proper assignment with status transition and historical tracking
+                const results = await assignLeadsToEmployee([lead._id], employee._id, req.user._id);
+                if (results.assigned.length > 0) {
+                    assigned.push({ leadId: lead._id, employeeId: employee._id });
+                } else if (results.errors.length > 0) {
+                    skipped.push(lead._id);
+                }
             }
         }
 
@@ -1019,10 +1042,18 @@ router.post('/leads/assign/manual-map', async (req, res) => {
             let assigned = 0; let skipped = 0;
             for (const lead of leads) {
                 const isAuth = lead.createdBy?.toString() === req.user._id.toString() || !lead.assignedTo || teamIds.has(String(lead.assignedTo));
-                if (!isAuth) { skipped++; continue; }
-                lead.assignedTo = a.employeeId;
-                await lead.save();
-                assigned++;
+                if (!isAuth) {
+                    skipped++;
+                    continue;
+                }
+
+                // Use helper function for proper assignment with status transition and historical tracking
+                const results = await assignLeadsToEmployee([lead._id], a.employeeId, req.user._id);
+                if (results.assigned.length > 0) {
+                    assigned++;
+                } else if (results.errors.length > 0) {
+                    skipped++;
+                }
             }
             totalAssigned += assigned; totalSkipped += skipped;
             results.push({ employeeId: a.employeeId, assigned, skipped });
@@ -1529,7 +1560,7 @@ async function getRecentActivity(employeeIds) {
         .populate('lead', 'name status')
         .sort({ createdAt: -1 })
         .limit(10);
-        
+
         return recentLogs.map(log => ({
             id: log._id,
             employee: log.employee?.name || 'Unknown',
@@ -1545,5 +1576,30 @@ async function getRecentActivity(employeeIds) {
         return [];
     }
 }
+
+// ===== CALL TRACKING ROUTES =====
+// Get daily call statistics for team
+router.get('/call-tracking/daily', (req, res) => {
+    const managerCtrl = require('../controllers/managerController');
+    managerCtrl.getDailyCallStats(req, res);
+});
+
+// Get team call history with filters
+router.get('/call-tracking/history', (req, res) => {
+    const managerCtrl = require('../controllers/managerController');
+    managerCtrl.getTeamCallHistory(req, res);
+});
+
+// Get call tracking summary for dashboard
+router.get('/call-tracking/summary', (req, res) => {
+    const managerCtrl = require('../controllers/managerController');
+    managerCtrl.getCallTrackingSummary(req, res);
+});
+
+// Get employee call counts
+router.get('/employee-call-counts', (req, res) => {
+    const managerCtrl = require('../controllers/managerController');
+    managerCtrl.getEmployeeCallCounts(req, res);
+});
 
 module.exports = router;

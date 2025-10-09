@@ -9,10 +9,18 @@ exports.getMyLeads = async (req, res) => {
     // req.user is the full user doc from auth middleware
     const userId = req.user._id;
     const leads = await Lead.find({ assignedTo: userId })
-      .select('name email phone status notes followUpDate createdAt createdBy')
-      .populate('createdBy', 'name email');
+      .select('name email phone status callStatus notes followUpDate createdAt createdBy previousAssignments')
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
 
-    res.json(leads);
+    // Add assignment history for each lead
+    const leadsWithHistory = leads.map(lead => {
+      const leadObj = lead.toObject();
+      leadObj.assignmentHistory = lead.getAssignmentHistory();
+      return leadObj;
+    });
+
+    res.json(leadsWithHistory);
   } catch (err) {
     console.error('getMyLeads error:', err);
     res.status(500).json({ error: 'Failed to fetch leads', details: err.message });
@@ -228,11 +236,6 @@ exports.addCallLog = async (req, res) => {
     const populatedLog = await CallLog.findById(log._id)
       .populate('lead', 'name phone email status sector region')
       .populate('employee', 'name email');
-    
-    // Populate simCard only if it exists
-    if (log.simCard) {
-      await populatedLog.populate('simCard', 'simNumber carrier');
-    }
 
     res.status(201).json({ message: 'Call log saved', log: populatedLog });
   } catch (err) {
@@ -252,5 +255,159 @@ exports.getMyCallLogs = async (req, res) => {
   } catch (err) {
     console.error('getMyCallLogs error:', err);
     res.status(500).json({ error: 'Failed to fetch call logs', details: err.message });
+  }
+};
+
+// GET /api/employee/lead-status/:leadId
+// Check if a lead is still assigned to the employee and get current status
+exports.checkLeadAssignment = async (req, res) => {
+  try {
+    const { leadId } = req.params;
+    const userId = req.user._id;
+
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    // Check if lead is still assigned to this employee
+    if (!lead.assignedTo || String(lead.assignedTo) !== String(userId)) {
+      return res.json({
+        assigned: false,
+        message: 'This lead has been reassigned to another employee',
+        currentAssignee: lead.assignedTo,
+        callStatus: lead.callStatus,
+        status: lead.status
+      });
+    }
+
+    res.json({
+      assigned: true,
+      callStatus: lead.callStatus,
+      status: lead.status,
+      message: 'Lead is still assigned to you'
+    });
+  } catch (err) {
+    console.error('checkLeadAssignment error:', err);
+    res.status(500).json({ error: 'Failed to check lead assignment', details: err.message });
+  }
+};
+
+// GET /api/employee/todays-calls
+// Get all calls made by the employee on the current date
+exports.getTodaysCalls = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    // Get today's call logs for this employee
+    const todaysCalls = await CallLog.find({
+      employee: userId,
+      createdAt: {
+        $gte: startOfDay,
+        $lt: endOfDay
+      }
+    })
+    .populate('lead', 'name phone email status sector region')
+    .select('lead callStatus notes callDuration outcome followUpRequired followUpDate recordingUrl callStartTime callEndTime createdAt')
+    .sort({ createdAt: -1 });
+
+    // Calculate summary statistics
+    const totalCalls = todaysCalls.length;
+    const completedCalls = todaysCalls.filter(call => call.callStatus === 'completed').length;
+    const totalDuration = todaysCalls.reduce((sum, call) => sum + (call.callDuration || 0), 0);
+    const averageDuration = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0;
+
+    // Group calls by status for summary
+    const callsByStatus = todaysCalls.reduce((acc, call) => {
+      acc[call.callStatus] = (acc[call.callStatus] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Group calls by outcome for summary
+    const callsByOutcome = todaysCalls.reduce((acc, call) => {
+      if (call.outcome) {
+        acc[call.outcome] = (acc[call.outcome] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    res.json({
+      calls: todaysCalls,
+      summary: {
+        totalCalls,
+        completedCalls,
+        totalDuration,
+        averageDuration,
+        callsByStatus,
+        callsByOutcome,
+        date: today.toISOString().split('T')[0] // YYYY-MM-DD format
+      }
+    });
+  } catch (err) {
+    console.error('getTodaysCalls error:', err);
+    res.status(500).json({ error: 'Failed to fetch today\'s calls', details: err.message });
+  }
+};
+
+// GET /api/employee/todays-completed-calls
+// Get only completed calls made by the employee on the current date
+exports.getTodaysCompletedCalls = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    // Get today's completed call logs for this employee only
+    const completedCalls = await CallLog.find({
+      employee: userId,
+      callStatus: 'completed',
+      createdAt: {
+        $gte: startOfDay,
+        $lt: endOfDay
+      }
+    })
+    .populate('lead', 'name phone email status sector region')
+    .select('lead callStatus notes callDuration outcome followUpRequired followUpDate recordingUrl callStartTime callEndTime createdAt')
+    .sort({ createdAt: -1 });
+
+    // Calculate summary statistics for completed calls only
+    const totalCompletedCalls = completedCalls.length;
+    const totalDuration = completedCalls.reduce((sum, call) => sum + (call.callDuration || 0), 0);
+    const averageDuration = totalCompletedCalls > 0 ? Math.round(totalDuration / totalCompletedCalls) : 0;
+
+    // Group completed calls by outcome for summary
+    const callsByOutcome = completedCalls.reduce((acc, call) => {
+      if (call.outcome) {
+        acc[call.outcome] = (acc[call.outcome] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // Calculate success metrics
+    const successfulOutcomes = ['Positive', 'Interested', 'Hot Lead', 'Converted'];
+    const successfulCalls = completedCalls.filter(call =>
+      successfulOutcomes.includes(call.outcome)
+    ).length;
+    const successRate = totalCompletedCalls > 0 ? Math.round((successfulCalls / totalCompletedCalls) * 100) : 0;
+
+    res.json({
+      calls: completedCalls,
+      summary: {
+        totalCompletedCalls,
+        totalDuration,
+        averageDuration,
+        callsByOutcome,
+        successfulCalls,
+        successRate,
+        date: today.toISOString().split('T')[0] // YYYY-MM-DD format
+      }
+    });
+  } catch (err) {
+    console.error('getTodaysCompletedCalls error:', err);
+    res.status(500).json({ error: 'Failed to fetch today\'s completed calls', details: err.message });
   }
 };

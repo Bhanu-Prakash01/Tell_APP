@@ -246,6 +246,8 @@ CallLogSchema.index({ callStatus: 1 });
 CallLogSchema.index({ outcome: 1 });
 CallLogSchema.index({ callStartTime: 1 });
 CallLogSchema.index({ followUpRequired: 1, followUpDate: 1 });
+CallLogSchema.index({ employee: 1, callStatus: 1, createdAt: -1 }); // For daily call statistics
+CallLogSchema.index({ createdAt: 1, employee: 1 }); // For date range queries
 
 // Virtual for call efficiency score
 CallLogSchema.virtual('efficiencyScore').get(function() {

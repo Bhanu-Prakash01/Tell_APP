@@ -872,6 +872,58 @@ tr.clickable.expanded::after {
   transform: translateY(-2px);
 }
 
+/* Status Badges */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-missed {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-declined {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-not_lifted {
+  background: rgba(107, 114, 128, 0.2);
+  color: var(--text-muted);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.status-Pending {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.status-In Progress {
+  background: rgba(6, 182, 212, 0.2);
+  color: var(--accent);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.status-Not Required {
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--secondary);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
 /* Custom Scrollbar */
 * {
   scrollbar-width: thin;
@@ -932,6 +984,11 @@ tr.clickable.expanded::after {
         <li class="nav-item">
           <a href="#" class="nav-link" onclick="showSection('lead-assign')">
             <span>Lead Employees</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link" onclick="showSection('call-tracking')">
+            <span>Call Tracking</span>
           </a>
         </li>
       </ul>
@@ -1130,6 +1187,92 @@ tr.clickable.expanded::after {
         </div>
         <div class="card-content">
           <div id="leadAssignmentsContainer" class="loading">Loading assignments...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call Tracking Section -->
+    <section id="call-tracking" class="section">
+      <div class="page-header">
+        <h1 class="page-title">Call Tracking</h1>
+        <p class="page-subtitle">Monitor daily call statistics and team performance</p>
+      </div>
+
+      <!-- Call Tracking Controls -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Call Tracking Dashboard</h2>
+        </div>
+        <div class="card-content">
+          <div class="form-grid">
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="trackingDate">Select Date</label>
+                <input type="date" id="trackingDate" class="form-input" value="">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="trackingEmployee">Filter by Employee</label>
+                <select id="trackingEmployee" class="form-select">
+                  <option value="">All Employees</option>
+                </select>
+              </div>
+              <div class="btn-group">
+                <button id="loadCallStatsBtn" class="btn btn-primary">Load Statistics</button>
+                <button id="refreshCallStatsBtn" class="btn btn-outline">Refresh</button>
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="callStatusFilter">Filter by Call Status</label>
+                <select id="callStatusFilter" class="form-select">
+                  <option value="">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="missed">Missed</option>
+                  <option value="declined">Declined</option>
+                  <option value="not_lifted">Not Lifted</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="callOutcomeFilter">Filter by Outcome</label>
+                <select id="callOutcomeFilter" class="form-select">
+                  <option value="">All Outcomes</option>
+                  <option value="Positive">Positive</option>
+                  <option value="Neutral">Neutral</option>
+                  <option value="Negative">Negative</option>
+                  <option value="Follow-up Required">Follow-up Required</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Statistics Cards -->
+      <div class="employee-grid" id="dailyStatsCards">
+        <div class="loading">Select date and click "Load Statistics" to view call data</div>
+      </div>
+
+      <!-- Call History Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Call History</h2>
+        </div>
+        <div class="card-content">
+          <div class="table-container">
+            <table id="callHistoryTable">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Lead</th>
+                  <th>Call Status</th>
+                  <th>Outcome</th>
+                  <th>Duration</th>
+                  <th>Date/Time</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -1652,7 +1795,184 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
   await Promise.all([loadManagers(), loadEmployees(), loadLeads()]);
   await Promise.all([loadManagersForAssignment(), loadEmployeesForAssignment(), loadAssignments()]);
   initSearch();
+  initCallTracking();
 })();
+
+// ===== CALL TRACKING FUNCTIONALITY =====
+async function initCallTracking() {
+  const trackingDate = document.getElementById('trackingDate');
+  const trackingEmployee = document.getElementById('trackingEmployee');
+  const callStatusFilter = document.getElementById('callStatusFilter');
+  const callOutcomeFilter = document.getElementById('callOutcomeFilter');
+
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  trackingDate.value = today;
+
+  // Load employees for filter dropdown
+  await loadEmployeesForCallTracking();
+
+  // Load initial call statistics
+  await loadCallStatistics();
+}
+
+async function loadEmployeesForCallTracking() {
+  try {
+    const res = await fetch('/api/admin/employees', { headers: {...getAuthHeader()} });
+    if (!res.ok) throw new Error('Failed to load employees');
+
+    const employees = await res.json();
+    const select = document.getElementById('trackingEmployee');
+
+    select.innerHTML = '<option value="">All Employees</option>';
+    employees.forEach(emp => {
+      select.innerHTML += `<option value="${emp._id}">${emp.name} (${emp.email})</option>`;
+    });
+  } catch (err) {
+    console.error('Error loading employees for call tracking:', err);
+  }
+}
+
+async function loadCallStatistics() {
+  const date = document.getElementById('trackingDate').value;
+  const employeeId = document.getElementById('trackingEmployee').value;
+
+  if (!date) {
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({ date });
+    if (employeeId) params.append('employeeId', employeeId);
+
+    const res = await fetch(`/api/manager/call-tracking/daily?${params}`, {
+      headers: {...getAuthHeader()}
+    });
+
+    if (!res.ok) throw new Error('Failed to load call statistics');
+
+    const data = await res.json();
+    renderDailyStats(data);
+    renderCallHistory(data.dailyStats);
+  } catch (err) {
+    console.error('Error loading call statistics:', err);
+    document.getElementById('dailyStatsCards').innerHTML =
+      '<div class="empty-state" style="color: var(--danger);">Error loading call statistics</div>';
+  }
+}
+
+function renderDailyStats(data) {
+  const container = document.getElementById('dailyStatsCards');
+
+  if (!data.dailyStats || data.dailyStats.length === 0) {
+    container.innerHTML = '<div class="empty-state">No call data found for selected date</div>';
+    return;
+  }
+
+  // Team Summary Card
+  const teamSummary = data.teamSummary;
+  const summaryCard = `
+    <div class="employee-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border: 2px solid var(--primary);">
+      <div class="employee-card-name" style="font-size: 18px; margin-bottom: 16px;">Team Summary</div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+        <div>
+          <div style="font-size: 12px; color: var(--text-secondary);">Total Calls</div>
+          <div style="font-size: 20px; font-weight: 700; color: var(--primary);">${teamSummary.totalCalls}</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--text-secondary);">Success Rate</div>
+          <div style="font-size: 20px; font-weight: 700; color: var(--success);">${teamSummary.averageSuccessRate}%</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--text-secondary);">Total Duration</div>
+          <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);">${Math.floor(teamSummary.totalDuration / 60)}m ${teamSummary.totalDuration % 60}s</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--text-secondary);">Top Performer</div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--accent);">${teamSummary.topPerformer.employee?.name || 'N/A'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Individual Employee Cards
+  const employeeCards = data.dailyStats.map(emp => `
+    <div class="employee-card">
+      <div class="employee-card-name">${escapeHtml(emp.employee.name)}</div>
+      <div class="employee-card-email">${escapeHtml(emp.employee.email)}</div>
+      <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary);">Calls</div>
+          <div style="font-size: 16px; font-weight: 600;">${emp.totalCalls}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary);">Success</div>
+          <div style="font-size: 16px; font-weight: 600; color: var(--success);">${emp.successRate}%</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary);">Duration</div>
+          <div style="font-size: 14px; font-weight: 500;">${Math.floor(emp.totalDuration / 60)}m</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary);">Avg/Call</div>
+          <div style="font-size: 14px; font-weight: 500;">${emp.averageDuration}s</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  container.innerHTML = summaryCard + employeeCards;
+}
+
+function renderCallHistory(dailyStats) {
+  const tbody = document.querySelector('#callHistoryTable tbody');
+  tbody.innerHTML = '';
+
+  if (!dailyStats || dailyStats.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No calls found</td></tr>';
+    return;
+  }
+
+  // Collect all recent calls from all employees
+  const allCalls = [];
+  dailyStats.forEach(emp => {
+    if (emp.recentCalls && emp.recentCalls.length > 0) {
+      emp.recentCalls.forEach(call => {
+        allCalls.push({
+          employeeName: emp.employee.name,
+          ...call
+        });
+      });
+    }
+  });
+
+  // Sort by date (newest first)
+  allCalls.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (allCalls.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No recent calls</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allCalls.map(call => `
+    <tr>
+      <td>${escapeHtml(call.employeeName)}</td>
+      <td>${escapeHtml(call.leadName)}</td>
+      <td><span class="status-badge status-${call.callStatus}">${call.callStatus}</span></td>
+      <td>${escapeHtml(call.outcome || 'N/A')}</td>
+      <td>${call.duration ? `${call.duration}s` : 'N/A'}</td>
+      <td>${new Date(call.createdAt).toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
+
+// Event listeners for call tracking
+document.getElementById('loadCallStatsBtn').addEventListener('click', loadCallStatistics);
+document.getElementById('refreshCallStatsBtn').addEventListener('click', loadCallStatistics);
+
+// Auto-load when filters change
+document.getElementById('trackingDate').addEventListener('change', loadCallStatistics);
+document.getElementById('trackingEmployee').addEventListener('change', loadCallStatistics);
 </script>
 
 </body>

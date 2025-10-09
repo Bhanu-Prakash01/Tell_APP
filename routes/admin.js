@@ -391,6 +391,11 @@ router.post('/leads', async (req, res) => {
             createdBy: req.user.id
         });
 
+        // If lead is being assigned to an employee, set callStatus to "Pending"
+        if (assignedTo) {
+            lead.callStatus = 'Pending';
+        }
+
         await lead.save();
 
         const populatedLead = await Lead.findById(lead._id)
@@ -446,8 +451,19 @@ router.put('/leads/:id', async (req, res) => {
         lead.status = status;
         lead.sector = sector;
         lead.region = region;
+        // Track previous assignment for historical data
+        if (lead.assignedTo && String(lead.assignedTo) !== String(assignedTo)) {
+            if (!lead.previousAssignments) lead.previousAssignments = [];
+            lead.previousAssignments.push({
+                employee: lead.assignedTo,
+                assignedAt: new Date(),
+                status: lead.status
+            });
+        }
+
         lead.notes = notes;
         lead.assignedTo = assignedTo;
+        lead.callStatus = 'Pending'; // Transition from completed to pending
         lead.followUpDate = followUpDate ? new Date(followUpDate) : undefined;
         lead.sellingPrice = sellingPrice ? parseFloat(sellingPrice) : undefined;
         lead.lossReason = lossReason;
@@ -857,16 +873,30 @@ router.post('/leads/auto-assign', async (req, res) => {
 
         for (const lead of availableLeads) {
             try {
+                // Track previous assignment for historical data
+                if (lead.assignedTo && String(lead.assignedTo) !== String(personId)) {
+                    if (!lead.previousAssignments) lead.previousAssignments = [];
+                    lead.previousAssignments.push({
+                        employee: lead.assignedTo,
+                        assignedAt: new Date(),
+                        status: lead.status
+                    });
+                }
+
                 // Update the lead
                 lead.assignedTo = personId;
+                lead.callStatus = 'Pending'; // Transition from completed to pending
                 lead.assignedDate = new Date();
-                
+
                 // If assigning to employee, also set the manager as creator
                 if (assignType === 'employee' && person.manager) {
                     lead.createdBy = person.manager;
                 } else if (assignType === 'manager') {
                     lead.createdBy = personId;
                 }
+
+                // Set callStatus to "Pending" when lead is allocated
+                lead.callStatus = 'Pending';
 
                 await lead.save();
                 assignedCount++;

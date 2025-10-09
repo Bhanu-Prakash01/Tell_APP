@@ -743,6 +743,7 @@ exports.getEmployeeCallCounts = async (req, res) => {
 };
 
 module.exports = {
+  assignLeadsToEmployee,
   getManagerLeads: exports.getManagerLeads,
   getLeadsByStatus: exports.getLeadsByStatus,
   getManagerDashboard: exports.getManagerDashboard,

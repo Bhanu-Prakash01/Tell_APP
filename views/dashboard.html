@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Telecalling Application</title>
+    <link rel="stylesheet" href="/css/frappe.css">
+    <style>
+        .dashboard-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .chart-container {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .activity-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--frappe-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .activity-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--frappe-border);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 500;
+            color: var(--frappe-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-meta {
+            font-size: 0.85rem;
+            color: var(--frappe-text-muted);
+        }
+
+        .activity-time {
+            font-size: 0.8rem;
+            color: var(--frappe-text-muted);
+            white-space: nowrap;
+            margin-left: 1rem;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        .loading-chart {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--frappe-text-muted);
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 4px;
+            padding: 0.75rem;
+            box-shadow: var(--frappe-shadow);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .chart-tooltip.show {
+            opacity: 1;
+        }
+
+        .users-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .section-header {
+            background: var(--frappe-gray-50);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--frappe-border);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .view-all-link {
+            color: var(--frappe-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .view-all-link:hover {
+            text-decoration: underline;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--frappe-text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            background: var(--frappe-primary);
+            color: var(--frappe-white);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: var(--frappe-primary-dark);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .chart-grid,
+            .chart-grid-4 {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .activity-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .activity-time {
+                margin-left: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="nav-brand">Telecalling Admin</a>
+                <ul class="nav-menu">
+                    <li><a href="/admin/dashboard" class="nav-link active">Dashboard</a></li>
+                    <li><a href="/admin/leads" class="nav-link">Leads</a></li>
+                    <li><a href="/admin/lead-assignment" class="nav-link">Auto Assignment</a></li>
+                    <li><a href="/admin/user-management" class="nav-link">Users</a></li>
+                    <li><button class="btn btn-secondary" data-action="logout">Logout</button></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Dashboard Overview</h1>
+                <div class="dashboard-actions">
+                    <button class="btn btn-secondary" onclick="adminApp.loadDashboardData()">
+                        <span class="loading" style="margin-right: 0.5rem;"></span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value" id="totalUsers">-</span>
+                    <span class="stat-label">Total Users</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="totalLeads">-</span>
+                    <span class="stat-label">Total Leads</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="activeLeads">-</span>
+                    <span class="stat-label">Active Leads</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="completedLeads">-</span>
+                    <span class="stat-label">Completed Leads</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="pendingLeads">-</span>
+                    <span class="stat-label">Pending Leads</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="totalCompletedCalls">-</span>
+                    <span class="stat-label">Completed Calls</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="totalCallTime">-</span>
+                    <span class="stat-label">Total Call Time</span>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="chart-grid-4">
+                <!-- Lead Status Distribution Chart -->
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h3 style="margin: 0; color: var(--frappe-text);">Lead Status Distribution</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.exportChartData('statusChart')">
+                            Export
+                        </button>
+                    </div>
+                    <div id="statusChart" style="height: 250px; position: relative;">
+                        <div class="loading-chart">
+                            <div class="loading"></div>
+                            <span>Loading chart...</span>
+                        </div>
+                    </div>
+                    <div id="statusChartLegend" class="chart-legend"></div>
+                </div>
+
+                <!-- Lead Assignment Chart -->
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h3 style="margin: 0; color: var(--frappe-text);">Leads by Assignment</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.exportChartData('assignmentChart')">
+                            Export
+                        </button>
+                    </div>
+                    <div id="assignmentChart" style="height: 250px; position: relative;">
+                        <div class="loading-chart">
+                            <div class="loading"></div>
+                            <span>Loading chart...</span>
+                        </div>
+                    </div>
+                    <div id="assignmentChartLegend" class="chart-legend"></div>
+                </div>
+
+                <!-- Daily Lead Creation Trend -->
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h3 style="margin: 0; color: var(--frappe-text);">Daily Lead Creation</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.exportChartData('trendChart')">
+                            Export
+                        </button>
+                    </div>
+                    <div id="trendChart" style="height: 250px; position: relative;">
+                        <div class="loading-chart">
+                            <div class="loading"></div>
+                            <span>Loading chart...</span>
+                        </div>
+                    </div>
+                    <div id="trendChartLegend" class="chart-legend"></div>
+                </div>
+
+                <!-- Sector-wise Lead Distribution -->
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <h3 style="margin: 0; color: var(--frappe-text);">Sector Distribution</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.exportChartData('sectorChart')">
+                            Export
+                        </button>
+                    </div>
+                    <div id="sectorChart" style="height: 250px; position: relative;">
+                        <div class="loading-chart">
+                            <div class="loading"></div>
+                            <span>Loading chart...</span>
+                        </div>
+                    </div>
+                    <div id="sectorChartLegend" class="chart-legend"></div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Section -->
+            <div class="activity-section">
+                <div class="section-header">
+                    <h2 class="section-title">Recent Activity</h2>
+                    <div class="dashboard-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.refreshActivity()">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="activity-list" id="activityList">
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-title">Loading recent activity...</div>
+                            <div class="activity-meta">
+                                <div class="loading"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call Time Analytics Section -->
+            <div class="activity-section">
+                <div class="section-header">
+                    <h2 class="section-title">Call Time Analytics</h2>
+                    <div class="dashboard-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="adminApp.loadCallTimeStats()">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="activity-list" id="callTimeStatsList">
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-title">Loading call time statistics...</div>
+                            <div class="activity-meta">
+                                <div class="loading"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Users Section -->
+            <div class="users-section">
+                <div class="section-header">
+                    <h2 class="section-title">Recent Users</h2>
+                    <a href="/admin/user-management" class="view-all-link">View All</a>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4">
+                                    <div class="empty-state">
+                                        <div class="loading"></div>
+                                        <p>Loading users...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" style="display: none;">
+        <div class="spinner">
+            <div class="loading"></div>
+            <span>Loading dashboard...</span>
+        </div>
+    </div>
+
+    <!-- Frappe Charts Library (if available) -->
+    <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.2/dist/frappe-charts.min.iife.js"></script>
+    <script src="/js/admin.js"></script>
+
+    <script>
+        // Dashboard-specific functionality
+        function initializeDashboard() {
+            // Auto-refresh dashboard every 30 seconds
+            setInterval(() => {
+                if (window.adminApp && window.adminApp.loadDashboardData) {
+                    window.adminApp.loadDashboardData();
+                }
+            }, 30 * 1000);
+
+            // Add smooth animations to stat cards
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.stat-card').forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
+
+                observer.observe(card);
+            });
+        }
+
+        // Wait for adminApp to be available
+        function checkAdminApp() {
+            if (typeof window.adminApp !== 'undefined') {
+                initializeDashboard();
+            } else {
+                setTimeout(checkAdminApp, 100);
+            }
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAdminApp);
+        } else {
+            checkAdminApp();
+        }
+    </script>
+</body>
+</html>

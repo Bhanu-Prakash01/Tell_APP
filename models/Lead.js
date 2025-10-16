@@ -1,124 +1,184 @@
 const mongoose = require('mongoose');
 
 const leadSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    phone: { type: String, required: true },
-    email: { type: String },
-    status: { type: String, default: 'New' }, // New, Interested, Hot, Follow-up, Won, Lost, Dead
-    callStatus: { type: String, enum: ['Pending', 'In Progress', 'Completed', 'Not Required'], default: 'Pending' }, // Call status for allocated leads
-    notes: { type: String },
-    recordingUrl: { type: String }, // URL of uploaded audio
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // employee assigned
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // manager/admin who created
-    followUpDate: { type: Date }, // Date for follow-up when status is "Follow-up"
-    // New fields for manager functionality
-    sellingPrice: { type: Number }, // Price when lead is won
-    lossReason: { type: String }, // Reason when lead is lost
-    reassignmentDate: { type: Date }, // Date when lead should be reassigned (for lost leads)
-    // Dead lead tracking
-    deadLeadReason: { type: String, enum: ['Wrong Number', 'Switched Off', 'Not Interested', 'Other'] },
-    deadLeadDate: { type: Date },
-    lastCallAttempt: { type: Date },
-    callAttempts: { type: Number, default: 0 },
-    // New fields for analytics
-    sector: { type: String, enum: ['Technology', 'Healthcare', 'Finance', 'Education', 'Retail', 'Manufacturing', 'Real Estate', 'Other'], default: 'Other' },
-    region: { type: String, enum: [
-        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 
-        'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 
-        'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 
-        'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 
-        'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 
-        'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir', 
-        'Ladakh', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 
-        'Lakshadweep', 'Puducherry', 'Andaman and Nicobar Islands'
-    ], default: 'Maharashtra' },
-    previousAssignments: [{ 
-        employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        assignedAt: { type: Date, default: Date.now },
-        status: { type: String }
-    }],
-    pipeline: { type: mongoose.Schema.Types.ObjectId, ref: 'SalesPipeline' },
-    createdAt: { type: Date, default: Date.now }
+  name: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true
+  },
+
+  website: {
+     type: String,
+     trim: true,
+     lowercase: true
+   },
+
+   description: {
+     type: String,
+     trim: true
+   },
+
+   location: {
+     type: String,
+     trim: true
+   },
+
+  sector: {
+    type: String,
+    trim: true
+  },
+
+  status: {
+    type: String,
+    enum: ["New", "Interested", "Not Interested", "Hot", "Pending", "Completed"],
+    default: 'New',
+    trim: true
+  },
+
+  notes: {
+    type: String
+  },
+
+  assignedTo: {
+    type: String,
+    default: 'Unassigned',
+    trim: true
+  },
+
+  assignedDate: {
+    type: Date,
+    default: null
+  },
+
+  callTime: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        // Validate call time format: "HH:MM" or duration like "5m 30s"
+        if (!v) return true; // Optional field
+        const timeFormat = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        const durationFormat = /^(\d+h\s*)?(\d+m\s*)?(\d+s\s*)*$/;
+        return timeFormat.test(v) || durationFormat.test(v);
+      },
+      message: 'Call time must be in format "HH:MM" or duration like "5m 30s"'
+    }
+  },
+
+  lastUpdatedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
-leadSchema.index({ assignedTo: 1, callStatus: 1 });
-leadSchema.index({ assignedTo: 1, status: 1 });
-leadSchema.index({ callStatus: 1, createdAt: -1 });
-leadSchema.index({ assignedTo: 1, createdAt: -1 });
+// Indexes for better performance
+leadSchema.index({ phone: 1 });
+leadSchema.index({ assignedTo: 1 });
+leadSchema.index({ status: 1 });
+leadSchema.index({ createdAt: -1 });
 
-// Pre-save middleware to set callStatus to "Pending" when lead is allocated
-leadSchema.pre('save', function(next) {
-    // If lead is being assigned to an employee and callStatus is still default, set it to "Pending"
-    if (this.assignedTo && this.callStatus === 'Pending') {
-        // callStatus is already "Pending" by default, which is what we want
-        // This ensures that whenever a lead is allocated, it starts with "Pending" status
-    }
-    next();
+// Virtual for lead summary
+leadSchema.virtual('summary').get(function() {
+  return {
+    id: this._id,
+    name: this.name,
+    phone: this.phone,
+    status: this.status,
+    assignedTo: this.assignedTo,
+    createdAt: this.createdAt
+  };
 });
 
-// Method to allocate lead to employee
-leadSchema.methods.allocateToEmployee = function(employeeId) {
-    // Track previous assignment for historical data
-    if (this.assignedTo && String(this.assignedTo) !== String(employeeId)) {
-        if (!this.previousAssignments) this.previousAssignments = [];
-        this.previousAssignments.push({
-            employee: this.assignedTo,
-            assignedAt: new Date(),
-            status: this.status
-        });
-    }
-
-    this.assignedTo = employeeId;
-    this.callStatus = 'Pending'; // Automatically set to Pending when allocated
-    return this.save();
+// Static method to find leads by status
+leadSchema.statics.findByStatus = function(status) {
+  return this.find({ status });
 };
 
-// Method to reassign lead with proper status transition and historical tracking
-leadSchema.methods.reassignToEmployee = function(employeeId, reassignedBy) {
-    // Track previous assignment for historical data
-    if (this.assignedTo && String(this.assignedTo) !== String(employeeId)) {
-        if (!this.previousAssignments) this.previousAssignments = [];
-        this.previousAssignments.push({
-            employee: this.assignedTo,
-            assignedAt: new Date(),
-            status: this.status,
-            reassignedBy: reassignedBy
-        });
-    }
-
-    this.assignedTo = employeeId;
-    this.callStatus = 'Pending'; // Transition from completed to pending
-    return this.save();
+// Static method to find leads by assigned user
+leadSchema.statics.findByAssignedTo = function(assignedTo) {
+  return this.find({ assignedTo });
 };
 
-// Method to get assignment history
-leadSchema.methods.getAssignmentHistory = function() {
-    if (!this.previousAssignments || this.previousAssignments.length === 0) {
-        return [];
-    }
+// Static method to find unassigned leads
+leadSchema.statics.findUnassigned = function() {
+  return this.find({ assignedTo: 'Unassigned' });
+};
 
-    return [
-        {
-            employee: this.assignedTo,
-            assignedAt: this.updatedAt || this.createdAt,
-            status: this.status,
-            isCurrent: true
+// Instance method to assign lead to user
+leadSchema.methods.assignTo = function(userName) {
+  this.assignedTo = userName;
+  this.assignedDate = new Date();
+  return this.save();
+};
+
+// Instance method to update lead status
+leadSchema.methods.updateStatus = function(newStatus) {
+  this.status = newStatus;
+  this.lastUpdatedAt = new Date();
+  return this.save();
+};
+
+// Instance method to add notes
+leadSchema.methods.addNotes = function(notes) {
+  const currentNotes = this.notes || '';
+  this.notes = currentNotes + '\n\n' + new Date().toISOString() + ': ' + notes;
+  this.lastUpdatedAt = new Date();
+  return this.save();
+};
+
+// Instance method to update lead with call time
+leadSchema.methods.updateWithCall = function(status, notes, callTime) {
+  if (status) this.status = status;
+  if (notes && notes.trim()) {
+    const currentNotes = this.notes || '';
+    const timestamp = new Date().toISOString();
+    this.notes = currentNotes + `\n\n[${timestamp}] ${this.assignedTo}: ${notes.trim()}`;
+  }
+  if (callTime) this.callTime = callTime;
+  this.lastUpdatedAt = new Date();
+  return this.save();
+};
+
+// Static method to get call time statistics for employees
+leadSchema.statics.getCallTimeStats = function() {
+  return this.aggregate([
+    {
+      $match: {
+        callTime: { $exists: true, $ne: null, $ne: '' },
+        assignedTo: { $ne: 'Unassigned' }
+      }
+    },
+    {
+      $group: {
+        _id: '$assignedTo',
+        totalLeads: { $sum: 1 },
+        totalCallTime: { $sum: { $cond: ['$callTime', 1, 0] } },
+        completedLeads: {
+          $sum: { $cond: ['$status', { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] }, 0] }
         },
-        ...this.previousAssignments.map(assignment => ({
-            ...assignment,
-            isCurrent: false
-        }))
-    ].sort((a, b) => new Date(b.assignedAt) - new Date(a.assignedAt));
+        avgCallTime: { $avg: { $cond: ['$callTime', 1, 0] } }
+      }
+    },
+    {
+      $sort: { totalLeads: -1 }
+    }
+  ]);
 };
 
-// Method to update call status
-leadSchema.methods.updateCallStatus = function(newStatus) {
-    if (['Pending', 'In Progress', 'Completed', 'Not Required'].includes(newStatus)) {
-        this.callStatus = newStatus;
-        return this.save();
-    }
-    throw new Error('Invalid call status');
+// Static method to find leads by call status
+leadSchema.statics.findByCallStatus = function(hasCallTime) {
+  const condition = hasCallTime ? { $exists: true, $ne: null, $ne: '' } : { $in: [null, ''] };
+  return this.find({ callTime: condition });
 };
 
 module.exports = mongoose.model('Lead', leadSchema);

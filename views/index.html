@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telecalling Web Application</title>
+    <link rel="stylesheet" href="/css/frappe.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--frappe-primary) 0%, var(--frappe-primary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .welcome-container {
+            background: var(--frappe-white);
+            border-radius: 16px;
+            box-shadow: var(--frappe-shadow-lg);
+            padding: 4rem;
+            width: 100%;
+            max-width: 600px;
+            margin: 2rem;
+            text-align: center;
+        }
+
+        .welcome-logo {
+            width: 120px;
+            height: 120px;
+            background: var(--frappe-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--frappe-white);
+        }
+
+        .welcome-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--frappe-text);
+            margin: 0 0 1rem 0;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            color: var(--frappe-text-muted);
+            margin: 0 0 2rem 0;
+            line-height: 1.6;
+        }
+
+        .welcome-description {
+            font-size: 1rem;
+            color: var(--frappe-text-muted);
+            margin: 2rem 0;
+            line-height: 1.7;
+        }
+
+        .admin-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            background: var(--frappe-primary);
+            color: var(--frappe-white);
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 1rem;
+        }
+
+        .admin-button:hover {
+            background: var(--frappe-primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(36, 144, 239, 0.3);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .feature-card {
+            background: var(--frappe-bg-light);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--frappe-border);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-description {
+            font-size: 0.9rem;
+            color: var(--frappe-text-muted);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .welcome-title {
+                font-size: 2rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <div class="welcome-logo">
+            TC
+        </div>
+
+        <h1 class="welcome-title">Telecalling Web Application</h1>
+        <p class="welcome-subtitle">Professional telecalling management system for modern businesses</p>
+
+        <div class="welcome-description">
+            Manage your leads, track campaigns, and streamline your telecalling operations with our comprehensive web-based solution.
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📞</div>
+                <div class="feature-title">Lead Management</div>
+                <div class="feature-description">Efficiently manage and track your leads with advanced filtering and assignment features.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Analytics Dashboard</div>
+                <div class="feature-description">Get insights into your telecalling performance with comprehensive analytics and reporting.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <div class="feature-title">User Management</div>
+                <div class="feature-description">Manage users, roles, and permissions with a robust administration system.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <div class="feature-title">Campaign Tracking</div>
+                <div class="feature-description">Monitor campaign performance and optimize your telecalling strategies.</div>
+            </div>
+        </div>
+
+        <a href="/admin/login" class="admin-button">
+            Access Admin Panel
+        </a>
+    </div>
+</body>
+</html>

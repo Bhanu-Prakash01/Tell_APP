@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Telecalling Application</title>
+    <link rel="stylesheet" href="/css/frappe.css">
+    <style>
+        .users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .users-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .users-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .users-table-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .table-header {
+            background: var(--frappe-gray-50);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--frappe-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .table-stats {
+            display: flex;
+            gap: 1rem;
+            color: var(--frappe-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--frappe-border);
+        }
+
+        .users-table th {
+            background-color: var(--frappe-gray-50);
+            font-weight: 600;
+            color: var(--frappe-text);
+        }
+
+        .users-table tbody tr:hover {
+            background-color: var(--frappe-gray-50);
+        }
+
+        .users-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(19, 194, 150, 0.1);
+            color: var(--frappe-success);
+        }
+
+        .status-inactive {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--frappe-danger);
+        }
+
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .role-admin {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--frappe-danger);
+        }
+
+        .role-manager {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--frappe-warning);
+        }
+
+        .role-employee {
+            background: rgba(36, 144, 239, 0.1);
+            color: var(--frappe-primary);
+        }
+
+        .role-user {
+            background: rgba(19, 194, 150, 0.1);
+            color: var(--frappe-success);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--frappe-text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .filters-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .modal-dialog {
+            max-width: 600px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-grid .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .strength-weak { color: var(--frappe-danger); }
+        .strength-medium { color: var(--frappe-warning); }
+        .strength-strong { color: var(--frappe-success); }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+        }
+
+        .pagination-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            color: var(--frappe-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--frappe-border);
+            background: var(--frappe-white);
+            color: var(--frappe-text);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            min-width: 2.5rem;
+            text-align: center;
+        }
+
+        .pagination-btn:hover:not(.disabled) {
+            background: var(--frappe-gray-100);
+            border-color: var(--frappe-primary);
+        }
+
+        .pagination-btn.active {
+            background: var(--frappe-primary);
+            color: var(--frappe-white);
+            border-color: var(--frappe-primary);
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--frappe-gray-50);
+        }
+
+        .pagination-btn.prev-next {
+            font-weight: 500;
+        }
+
+        .pagination-ellipsis {
+            padding: 0.5rem;
+            color: var(--frappe-text-muted);
+        }
+
+        .page-size-selector {
+            margin-left: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-size-selector select {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--frappe-border);
+            border-radius: 4px;
+            background: var(--frappe-white);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .users-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .users-actions {
+                justify-content: space-between;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .table-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .user-actions {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="nav-brand">Telecalling Admin</a>
+                <ul class="nav-menu">
+                    <li><a href="/admin/dashboard" class="nav-link">Dashboard</a></li>
+                    <li><a href="/admin/leads" class="nav-link">Leads</a></li>
+                    <li><a href="/admin/lead-assignment" class="nav-link">Auto Assignment</a></li>
+                    <li><a href="/admin/user-management" class="nav-link active">Users</a></li>
+                    <li><button class="btn btn-secondary" data-action="logout">Logout</button></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Users Header -->
+            <div class="users-header">
+                <h1 class="users-title">User Management</h1>
+                <div class="users-actions">
+                    <button class="btn btn-success" id="addUserBtn">
+                        ➕ Add User
+                    </button>
+                    <button class="btn btn-primary" onclick="adminApp.loadUserManagementData()">
+                        <span class="loading" style="margin-right: 0.5rem;"></span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <form id="userFilters">
+                    <div class="filters-grid">
+                        <div>
+                            <label for="roleFilter" class="form-label">Role</label>
+                            <select id="roleFilter" name="role" class="form-control">
+                                <option value="">All Roles</option>
+                                <option value="Admin">Admin</option>
+                                <!-- <option value="manager">Manager</option> -->
+                                <option value="Employee">Employee</option>
+                                <!-- <option value="user">User</option> -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="statusFilter" class="form-label">Status</label>
+                            <select id="statusFilter" name="isActive" class="form-control">
+                                <option value="">All Status</option>
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="searchFilter" class="form-label">Search</label>
+                            <input type="text" id="searchFilter" name="search" class="form-control" placeholder="Search by name or email">
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                🔍 Filter
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearUserFilters()">
+                                🗑️ Clear
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Users Table -->
+            <div class="users-table-section">
+                <div class="table-header">
+                    <h2 class="table-title">All Users</h2>
+                    <div class="table-stats">
+                        <span id="totalUsers">0 Total</span>
+                        <span id="activeUsers">0 Active</span>
+                        <span id="inactiveUsers">0 Inactive</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="users-table" id="usersManagementTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <div class="loading"></div>
+                                        <p>Loading users...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="usersPagination">
+                    <div class="pagination-info">
+                        <span id="usersPaginationInfo">Showing 0-0 of 0 users</span>
+                        <div class="page-size-selector">
+                            <label for="usersPageSize">Show:</label>
+                            <select id="usersPageSize" onchange="changeUsersPageSize()">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pagination-controls" id="usersPaginationControls">
+                        <!-- Pagination buttons will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New User</h3>
+                <button class="modal-close" onclick="hideModal('addUserModal')">×</button>
+            </div>
+            <form id="addUserForm">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="addName" class="form-label">Full Name *</label>
+                            <input type="text" id="addName" name="name" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addEmail" class="form-label">Email Address *</label>
+                            <input type="email" id="addEmail" name="email" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addRole" class="form-label">Role *</label>
+                            <select id="addRole" name="role" class="form-control" required>
+                                <option value="">Select Role</option>
+                                <option value="Admin">Admin</option>
+                                <!-- <option value="manager">Manager</option> -->
+                                <option value="Employee">Employee</option>
+                                <!-- <option value="user">User</option> -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addPassword" class="form-label">Password *</label>
+                            <input type="password" id="addPassword" name="password" class="form-control" required minlength="6">
+                            <div id="passwordStrength" class="password-strength" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="addDepartment" class="form-label">Department</label>
+                        <input type="text" id="addDepartment" name="department" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit User</h3>
+                <button class="modal-close" onclick="hideModal('editUserModal')">×</button>
+            </div>
+            <form id="editUserForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editUserId" name="id">
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editName" class="form-label">Full Name *</label>
+                            <input type="text" id="editName" name="name" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editEmail" class="form-label">Email Address *</label>
+                            <input type="email" id="editEmail" name="email" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editRole" class="form-label">Role *</label>
+                            <select id="editRole" name="role" class="form-control" required>
+                                <option value="">Select Role</option>
+                                <option value="Admin">Admin</option>
+                                <!-- <option value="Manager">Manager</option> -->
+                                <option value="Employee">Employee</option>
+                                <!-- <option value="User">User</option> -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editDepartment" class="form-label">Department</label>
+                            <input type="text" id="editDepartment" name="department" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editPassword" class="form-label">New Password (leave empty to keep current)</label>
+                            <input type="password" id="editPassword" name="password" class="form-control" minlength="6">
+                            <div id="editPasswordStrength" class="password-strength" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Account Status</label>
+                        <div class="form-row">
+                            <label class="form-label" style="margin-bottom: 0;">
+                                <input type="checkbox" id="editIsActive" name="isActive" value="true">
+                                Active Account
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteUserModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Delete User</h3>
+                <button class="modal-close" onclick="hideModal('deleteUserModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this user? This action cannot be undone.</p>
+                <div id="deleteUserInfo" style="margin-top: 1rem; padding: 1rem; background: var(--frappe-gray-50); border-radius: 6px;">
+                    <!-- User info will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('deleteUserModal')">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDeleteUser()">Delete User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" style="display: none;">
+        <div class="spinner">
+            <div class="loading"></div>
+            <span>Loading users...</span>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+    <script>
+        let userToDelete = null;
+
+        // User Management pagination state
+        let usersPaginationState = {
+            currentPage: 1,
+            pageSize: 25,
+            totalItems: 0,
+            totalPages: 0,
+            allUsers: []
+        };
+
+        // User Management page-specific functionality
+        function initializeUserManagementPage() {
+            // Initialize user modals
+            initUserModals();
+
+            // Initialize form handlers
+            initFormHandlers();
+
+            // Load initial data
+            if (window.adminApp && window.adminApp.loadUserManagementData) {
+                window.adminApp.loadUserManagementData();
+            }
+        }
+
+        function initUserModals() {
+            // Add user modal
+            const addUserBtn = document.getElementById('addUserBtn');
+            if (addUserBtn && window.adminApp && window.adminApp.showModal) {
+                addUserBtn.addEventListener('click', () => {
+                    window.adminApp.showModal('addUserModal');
+                });
+            }
+        }
+
+        function initFormHandlers() {
+            // Add user form
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', handleAddUser);
+            }
+
+            // Edit user form
+            const editUserForm = document.getElementById('editUserForm');
+            if (editUserForm) {
+                editUserForm.addEventListener('submit', handleEditUser);
+            }
+
+            // Password strength checker
+            const passwordInput = document.getElementById('addPassword');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', checkPasswordStrength);
+            }
+
+            // Edit password strength checker
+            const editPasswordInput = document.getElementById('editPassword');
+            if (editPasswordInput) {
+                editPasswordInput.addEventListener('input', checkEditPasswordStrength);
+            }
+
+            // Filter form
+            const userFilters = document.getElementById('userFilters');
+            if (userFilters) {
+                userFilters.addEventListener('submit', handleUserFilters);
+            }
+        }
+
+        async function handleAddUser(e) {
+            e.preventDefault();
+
+            if (!window.adminApp) return;
+
+            if (!window.adminApp.validateForm(e.target)) return;
+
+            try {
+                const formData = new FormData(e.target);
+                const userData = Object.fromEntries(formData.entries());
+
+                await window.adminApp.apiRequest('/users', {
+                    method: 'POST',
+                    body: JSON.stringify(userData),
+                });
+
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('User created successfully', 'success');
+                }
+                if (window.hideModal) {
+                    hideModal('addUserModal');
+                }
+                e.target.reset();
+                if (window.adminApp.loadUserManagementData) {
+                    window.adminApp.loadUserManagementData();
+                }
+
+            } catch (error) {
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('Failed to create user', 'error');
+                }
+            }
+        }
+
+        async function handleEditUser(e) {
+            e.preventDefault();
+
+            if (!window.adminApp) return;
+
+            if (!window.adminApp.validateForm(e.target)) return;
+
+            try {
+                const formData = new FormData(e.target);
+                const userData = Object.fromEntries(formData.entries());
+                const userId = userData.id;
+                const password = userData.password;
+
+                delete userData.id; // Remove ID from body
+
+                // If password is provided, update it separately
+                if (password && password.trim()) {
+                    await window.adminApp.apiRequest(`/users/${userId}/password`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ password: password }),
+                    });
+                    delete userData.password; // Remove password from main update
+                } else {
+                    delete userData.password; // Remove empty password field
+                }
+
+                // Update other user data if there are changes
+                if (Object.keys(userData).length > 0) {
+                    await window.adminApp.apiRequest(`/users/${userId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(userData),
+                    });
+                }
+
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('User updated successfully', 'success');
+                }
+                if (window.hideModal) {
+                    hideModal('editUserModal');
+                }
+                if (window.adminApp.loadUserManagementData) {
+                    window.adminApp.loadUserManagementData();
+                }
+
+            } catch (error) {
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('Failed to update user', 'error');
+                }
+            }
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('addPassword').value;
+            const strengthIndicator = document.getElementById('passwordStrength');
+
+            if (password.length === 0) {
+                if (strengthIndicator) {
+                    strengthIndicator.style.display = 'none';
+                }
+                return;
+            }
+
+            let strength = 0;
+            let feedback = '';
+
+            if (password.length >= 8) strength += 1;
+            if (/[A-Z]/.test(password)) strength += 1;
+            if (/[a-z]/.test(password)) strength += 1;
+            if (/[0-9]/.test(password)) strength += 1;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+            switch (strength) {
+                case 0:
+                case 1:
+                    feedback = 'Weak password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-weak';
+                    }
+                    break;
+                case 2:
+                case 3:
+                    feedback = 'Medium strength password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-medium';
+                    }
+                    break;
+                case 4:
+                case 5:
+                    feedback = 'Strong password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-strong';
+                    }
+                    break;
+            }
+
+            if (strengthIndicator) {
+                strengthIndicator.textContent = feedback;
+                strengthIndicator.style.display = 'block';
+            }
+        }
+
+        function checkEditPasswordStrength() {
+            const password = document.getElementById('editPassword').value;
+            const strengthIndicator = document.getElementById('editPasswordStrength');
+
+            if (password.length === 0) {
+                if (strengthIndicator) {
+                    strengthIndicator.style.display = 'none';
+                }
+                return;
+            }
+
+            let strength = 0;
+            let feedback = '';
+
+            if (password.length >= 8) strength += 1;
+            if (/[A-Z]/.test(password)) strength += 1;
+            if (/[a-z]/.test(password)) strength += 1;
+            if (/[0-9]/.test(password)) strength += 1;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+            switch (strength) {
+                case 0:
+                case 1:
+                    feedback = 'Weak password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-weak';
+                    }
+                    break;
+                case 2:
+                case 3:
+                    feedback = 'Medium strength password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-medium';
+                    }
+                    break;
+                case 4:
+                case 5:
+                    feedback = 'Strong password';
+                    if (strengthIndicator) {
+                        strengthIndicator.className = 'password-strength strength-strong';
+                    }
+                    break;
+            }
+
+            if (strengthIndicator) {
+                strengthIndicator.textContent = feedback;
+                strengthIndicator.style.display = 'block';
+            }
+        }
+
+        function handleUserFilters(e) {
+            e.preventDefault();
+
+            if (!window.adminApp) return;
+
+            const formData = new FormData(e.target);
+            const filters = Object.fromEntries(formData.entries());
+
+            // Remove empty values
+            Object.keys(filters).forEach(key => {
+                if (!filters[key]) delete filters[key];
+            });
+
+            loadUsersWithFilters(filters);
+        }
+
+        function clearUserFilters() {
+            const userFilters = document.getElementById('userFilters');
+            if (userFilters) {
+                userFilters.reset();
+            }
+            if (window.adminApp && window.adminApp.loadUserManagementData) {
+                window.adminApp.loadUserManagementData();
+            }
+        }
+
+        async function loadUsersWithFilters(filters) {
+            if (!window.adminApp) return;
+
+            try {
+                const queryParams = new URLSearchParams(filters).toString();
+                const users = await window.adminApp.apiRequest(`/users?${queryParams}`);
+
+                if (window.adminApp && window.adminApp.renderUsersManagementTable) {
+                    window.adminApp.renderUsersManagementTable(users);
+                }
+                if (typeof updateUserStats === 'function') {
+                    updateUserStats(users);
+                }
+            } catch (error) {
+                console.error('Error loading filtered users:', error);
+            }
+        }
+
+        function setupUserManagementOverrides() {
+            if (!window.adminApp) return;
+
+            // Override the renderUsersManagementTable function
+            const originalRenderUsersManagementTable = window.adminApp.renderUsersManagementTable;
+            window.adminApp.renderUsersManagementTable = function(users) {
+                // Store all users for pagination
+                usersPaginationState.allUsers = users;
+                usersPaginationState.totalItems = users.length;
+                usersPaginationState.totalPages = Math.ceil(users.length / usersPaginationState.pageSize);
+
+                // Render current page data
+                this.renderPaginatedUsersTable(users);
+
+                // Update stats and pagination info
+                updateUserStats(users);
+                this.updateUsersPaginationInfo();
+                this.updateUsersPaginationControls();
+            };
+
+            // New method for paginated table rendering
+            window.adminApp.renderPaginatedUsersTable = function(allUsers) {
+                // Handle API response format - extract users array from response
+                let usersArray = [];
+                if (Array.isArray(allUsers)) {
+                    usersArray = allUsers;
+                } else if (allUsers && allUsers.data && Array.isArray(allUsers.data.users)) {
+                    usersArray = allUsers.data.users;
+                } else if (allUsers && allUsers.data && Array.isArray(allUsers.data)) {
+                    usersArray = allUsers.data;
+                }
+
+                // Update pagination state
+                usersPaginationState.allUsers = usersArray;
+                usersPaginationState.totalItems = usersArray.length;
+                usersPaginationState.totalPages = Math.ceil(usersArray.length / usersPaginationState.pageSize);
+
+                const startIndex = (usersPaginationState.currentPage - 1) * usersPaginationState.pageSize;
+                const endIndex = startIndex + usersPaginationState.pageSize;
+                const currentPageUsers = usersArray.slice(startIndex, endIndex);
+
+                const usersTable = document.querySelector('#usersManagementTable');
+                if (!usersTable) return;
+
+                const tbody = usersTable.querySelector('tbody');
+                if (!tbody) return;
+
+                if (currentPageUsers.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">👥</div>
+                                    <p>No users found</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = currentPageUsers.map(user => `
+                    <tr>
+                        <td>${user.name || 'N/A'}</td>
+                        <td>${user.email || 'N/A'}</td>
+                        <td><span class="role-badge ${getRoleBadgeClass(user.role)}">${user.role || 'User'}</span></td>
+                        <td><span class="status-badge ${getStatusBadgeClass(user.isActive)}">${user.isActive ? 'Active' : 'Inactive'}</span></td>
+                        <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-sm btn-primary" onclick="adminApp.editUser('${user._id}')">Edit</button>
+                                <button class="btn btn-sm btn-warning" onclick="adminApp.changeUserPassword('${user._id}')">Change Password</button>
+                                <button class="btn btn-sm btn-danger" onclick="adminApp.deleteUser('${user._id}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            };
+
+            window.adminApp.updateUsersPaginationInfo = function() {
+                // Ensure pagination state has valid values
+                if (!usersPaginationState.totalItems || usersPaginationState.totalItems === 0) {
+                    const paginationInfo = document.getElementById('usersPaginationInfo');
+                    if (paginationInfo) {
+                        paginationInfo.textContent = 'No users to display';
+                    }
+                    return;
+                }
+
+                const startItem = (usersPaginationState.currentPage - 1) * usersPaginationState.pageSize + 1;
+                const endItem = Math.min(usersPaginationState.currentPage * usersPaginationState.pageSize, usersPaginationState.totalItems);
+
+                const paginationInfo = document.getElementById('usersPaginationInfo');
+                if (paginationInfo) {
+                    paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${usersPaginationState.totalItems} users`;
+                }
+            };
+
+            window.adminApp.updateUsersPaginationControls = function() {
+                const paginationControls = document.getElementById('usersPaginationControls');
+                if (!paginationControls) return;
+
+                // Don't show pagination controls if no data
+                if (!usersPaginationState.totalItems || usersPaginationState.totalItems === 0) {
+                    paginationControls.innerHTML = '';
+                    return;
+                }
+
+                let controlsHTML = '';
+
+                if (usersPaginationState.totalPages > 1) {
+                    // Previous button
+                    controlsHTML += `<button class="pagination-btn prev-next" onclick="changeUsersPage(${usersPaginationState.currentPage - 1})" ${usersPaginationState.currentPage === 1 ? 'disabled' : ''}>← Previous</button>`;
+
+                    // Page number buttons
+                    const startPage = Math.max(1, usersPaginationState.currentPage - 2);
+                    const endPage = Math.min(usersPaginationState.totalPages, usersPaginationState.currentPage + 2);
+
+                    // First page if not in range
+                    if (startPage > 1) {
+                        controlsHTML += `<button class="pagination-btn" onclick="changeUsersPage(1)">1</button>`;
+                        if (startPage > 2) {
+                            controlsHTML += `<span class="pagination-ellipsis">...</span>`;
+                        }
+                    }
+
+                    // Page range
+                    for (let i = startPage; i <= endPage; i++) {
+                        controlsHTML += `<button class="pagination-btn ${i === usersPaginationState.currentPage ? 'active' : ''}" onclick="changeUsersPage(${i})">${i}</button>`;
+                    }
+
+                    // Last page if not in range
+                    if (endPage < usersPaginationState.totalPages) {
+                        if (endPage < usersPaginationState.totalPages - 1) {
+                            controlsHTML += `<span class="pagination-ellipsis">...</span>`;
+                        }
+                        controlsHTML += `<button class="pagination-btn" onclick="changeUsersPage(${usersPaginationState.totalPages})">${usersPaginationState.totalPages}</button>`;
+                    }
+
+                    // Next button
+                    controlsHTML += `<button class="pagination-btn prev-next" onclick="changeUsersPage(${usersPaginationState.currentPage + 1})" ${usersPaginationState.currentPage === usersPaginationState.totalPages ? 'disabled' : ''}>Next →</button>`;
+                }
+
+                paginationControls.innerHTML = controlsHTML;
+            };
+
+            // Override the editUser function
+            const originalEditUser = window.adminApp.editUser;
+            window.adminApp.editUser = function(userId) {
+                originalEditUser.call(this, userId);
+            };
+
+            // Override the populateEditUserForm function
+            const originalPopulateEditUserForm = window.adminApp.populateEditUserForm;
+            window.adminApp.populateEditUserForm = function(user) {
+                originalPopulateEditUserForm.call(this, user);
+
+                // Set additional fields
+                const editDepartment = document.getElementById('editDepartment');
+                const editIsActive = document.getElementById('editIsActive');
+
+                if (editDepartment) editDepartment.value = user.department || '';
+                if (editIsActive) editIsActive.checked = user.isActive || false;
+            };
+
+            // Delete user functionality
+            window.adminApp.deleteUser = function(userId) {
+                // Find user details for confirmation
+                const users = Array.from(document.querySelectorAll('#usersManagementTable tbody tr'))
+                    .map(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 2) {
+                            return {
+                                id: userId,
+                                name: cells[0].textContent,
+                                email: cells[1].textContent
+                            };
+                        }
+                        return null;
+                    })
+                    .filter(user => user && user.id === userId)[0];
+
+                const deleteUserInfo = document.getElementById('deleteUserInfo');
+                if (users && deleteUserInfo) {
+                    deleteUserInfo.innerHTML = `
+                        <strong>Name:</strong> ${users.name}<br>
+                        <strong>Email:</strong> ${users.email}
+                    `;
+                }
+
+                userToDelete = userId;
+                if (window.adminApp.showModal) {
+                    window.adminApp.showModal('deleteUserModal');
+                }
+            };
+        }
+
+        function updateUserStats(users) {
+            // Handle API response format - extract users array from response
+            let usersArray = [];
+            if (Array.isArray(users)) {
+                usersArray = users;
+            } else if (users && users.data && Array.isArray(users.data.users)) {
+                usersArray = users.data.users;
+            } else if (users && users.data && Array.isArray(users.data)) {
+                usersArray = users.data;
+            }
+
+            const totalUsers = usersArray.length;
+            const activeUsers = usersArray.filter(user => user.isActive).length;
+            const inactiveUsers = totalUsers - activeUsers;
+
+            const totalUsersElement = document.getElementById('totalUsers');
+            const activeUsersElement = document.getElementById('activeUsers');
+            const inactiveUsersElement = document.getElementById('inactiveUsers');
+
+            if (totalUsersElement) totalUsersElement.textContent = `${totalUsers} Total`;
+            if (activeUsersElement) activeUsersElement.textContent = `${activeUsers} Active`;
+            if (inactiveUsersElement) inactiveUsersElement.textContent = `${inactiveUsers} Inactive`;
+        }
+
+        async function confirmDeleteUser() {
+            if (!userToDelete || !window.adminApp) return;
+
+            try {
+                await window.adminApp.apiRequest(`/users/${userToDelete}`, {
+                    method: 'DELETE',
+                });
+
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('User deleted successfully', 'success');
+                }
+                if (window.hideModal) {
+                    hideModal('deleteUserModal');
+                }
+                userToDelete = null;
+                if (window.adminApp.loadUserManagementData) {
+                    window.adminApp.loadUserManagementData();
+                }
+
+            } catch (error) {
+                if (window.adminApp.showToast) {
+                    window.adminApp.showToast('Failed to delete user', 'error');
+                }
+            }
+        }
+
+        // Helper function to get role badge class
+        function getRoleBadgeClass(role) {
+            const roleMap = {
+                'admin': 'role-admin',
+                'manager': 'role-manager',
+                'employee': 'role-employee',
+                'user': 'role-user'
+            };
+            return roleMap[role?.toLowerCase()] || 'role-user';
+        }
+
+        // Helper function to get status badge class
+        function getStatusBadgeClass(isActive) {
+            return isActive ? 'status-active' : 'status-inactive';
+        }
+
+        // Enhanced table rendering with proper badge classes
+        function setupEnhancedTableRendering() {
+            if (!window.adminApp) return;
+
+            // Override the renderUsersManagementTable function to handle API response format
+            const originalRenderUsersManagementTable = window.adminApp.renderUsersManagementTable;
+            window.adminApp.renderUsersManagementTable = function(users) {
+                const usersTable = document.querySelector('#usersManagementTable');
+                if (!usersTable) return;
+
+                const tbody = usersTable.querySelector('tbody');
+                if (!tbody) return;
+
+                // Handle API response format - extract users array from response
+                let usersArray = [];
+                if (Array.isArray(users)) {
+                    usersArray = users;
+                } else if (users && users.data && Array.isArray(users.data.users)) {
+                    usersArray = users.data.users;
+                } else if (users && users.data && Array.isArray(users.data)) {
+                    usersArray = users.data;
+                }
+
+                if (usersArray.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">👥</div>
+                                    <p>No users found</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = usersArray.map(user => `
+                    <tr>
+                        <td>${user.name || 'N/A'}</td>
+                        <td>${user.email || 'N/A'}</td>
+                        <td><span class="role-badge ${getRoleBadgeClass(user.role)}">${user.role || 'User'}</span></td>
+                        <td><span class="status-badge ${getStatusBadgeClass(user.isActive)}">${user.isActive ? 'Active' : 'Inactive'}</span></td>
+                        <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="btn btn-sm btn-primary" onclick="adminApp.editUser('${user._id}')">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="adminApp.deleteUser('${user._id}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                if (typeof updateUserStats === 'function') {
+                    updateUserStats(usersArray);
+                }
+            };
+        }
+
+        // Wait for adminApp to be available
+        function checkAdminApp() {
+            if (typeof window.adminApp !== 'undefined') {
+                initializeUserManagementPage();
+                setupUserManagementOverrides();
+                setupEnhancedTableRendering();
+            } else {
+                setTimeout(checkAdminApp, 100);
+            }
+        }
+
+        // Pagination functions for users
+        function changeUsersPage(page) {
+            if (page < 1 || page > usersPaginationState.totalPages) return;
+
+            usersPaginationState.currentPage = page;
+
+            // Re-render table with new page data
+            if (window.adminApp && window.adminApp.renderPaginatedUsersTable) {
+                window.adminApp.renderPaginatedUsersTable(usersPaginationState.allUsers);
+                window.adminApp.updateUsersPaginationInfo();
+                window.adminApp.updateUsersPaginationControls();
+            }
+        }
+
+        function changeUsersPageSize() {
+            const pageSizeSelect = document.getElementById('usersPageSize');
+            const newPageSize = parseInt(pageSizeSelect.value);
+
+            usersPaginationState.pageSize = newPageSize;
+            usersPaginationState.currentPage = 1; // Reset to first page
+            usersPaginationState.totalPages = Math.ceil(usersPaginationState.totalItems / newPageSize);
+
+            // Re-render table with new page size
+            if (window.adminApp && window.adminApp.renderPaginatedUsersTable) {
+                window.adminApp.renderPaginatedUsersTable(usersPaginationState.allUsers);
+                window.adminApp.updateUsersPaginationInfo();
+                window.adminApp.updateUsersPaginationControls();
+            }
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAdminApp);
+        } else {
+            checkAdminApp();
+        }
+    </script>
+</body>
+</html>

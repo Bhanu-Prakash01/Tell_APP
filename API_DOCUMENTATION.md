@@ -1,899 +1,517 @@
-# 📚 TeleCRM API Documentation
+# Employee Entity Management API Documentation
 
-## 🚀 Overview
+## Overview
+This document provides comprehensive curl request examples for managing Employee entities in the Telecalling Application, including authentication, CRUD operations, lead assignment integration, and file upload functionality.
 
-TeleCRM is a comprehensive SIM-Based Calling CRM System with modern UI, theme switching, and powerful analytics. This document provides detailed information about all available API endpoints, authentication, and usage examples.
+## Base URL
+```
+http://localhost:3000/api/v1
+```
 
-## 🔐 Authentication
+## Authentication
 
-All protected routes require JWT authentication. Include the token in the Authorization header:
+### 1. Employee Login
+**Endpoint:** `POST /api/v1/employee/login`
+
+Obtain authentication token for employee operations:
 
 ```bash
-Authorization: Bearer <your-jwt-token>
-```
-
-## 📋 API Endpoints
-
-### 🔑 Authentication Routes (`/api/auth`)
-
-#### POST `/api/auth/register`
-Create a new user account.
-
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "securepassword123",
-  "role": "employee"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "User registered successfully",
-  "user": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "employee"
-  }
-}
-```
-
-#### POST `/api/auth/login`
-Authenticate user and receive JWT token.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "securepassword123"
-}
-```
-
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "employee"
-  },
-  "role": "employee"
-}
-```
-
-### 👑 Admin Routes (`/api/admin`)
-
-*Requires admin role*
-
-#### GET `/api/admin/managers`
-Get all managers in the system.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Manager Name",
-    "email": "manager@example.com",
-    "role": "manager",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-]
-```
-
-#### POST `/api/admin/managers`
-Create a new manager.
-
-**Request Body:**
-```json
-{
-  "name": "New Manager",
-  "email": "newmanager@example.com",
-  "password": "securepassword123"
-}
-```
-
-#### GET `/api/admin/employees`
-Get all employees with manager information.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Employee Name",
+curl -X POST http://localhost:3000/api/v1/employee/login \
+  -H "Content-Type: application/json" \
+  -d '{
     "email": "employee@example.com",
-    "role": "employee",
-    "manager": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-      "name": "Manager Name",
-      "email": "manager@example.com"
-    },
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-]
+    "password": "password123"
+  }'
 ```
-
-#### POST `/api/admin/employees`
-Create a new employee.
-
-**Request Body:**
-```json
-{
-  "name": "New Employee",
-  "email": "newemployee@example.com",
-  "password": "securepassword123",
-  "managerId": "60f7b3b3b3b3b3b3b3b3b3b4"
-}
-```
-
-#### GET `/api/admin/leads`
-Get all leads in the system.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Lead Name",
-    "phone": "+1234567890",
-    "email": "lead@example.com",
-    "status": "New",
-    "sector": "Technology",
-    "region": "North",
-    "assignedTo": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-      "name": "Employee Name",
-      "email": "employee@example.com"
-    },
-    "createdBy": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b5",
-      "name": "Manager Name",
-      "email": "manager@example.com"
-    },
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-]
-```
-
-#### GET `/api/admin/leads/analytics`
-Get comprehensive lead analytics.
 
 **Response:**
 ```json
 {
-  "statusDistribution": {
-    "New": 25,
-    "Interested": 30,
-    "Hot": 15,
-    "Follow-up": 20,
-    "Won": 10,
-    "Lost": 5
-  },
-  "sectorDistribution": {
-    "Technology": 40,
-    "Healthcare": 25,
-    "Finance": 20,
-    "Education": 15
-  },
-  "regionDistribution": {
-    "North": 35,
-    "South": 25,
-    "East": 20,
-    "West": 20
-  },
-  "hotLeadsBySector": {
-    "Technology": 8,
-    "Healthcare": 3,
-    "Finance": 2,
-    "Education": 2
-  },
-  "interestedLeadsBySector": {
-    "Technology": 12,
-    "Healthcare": 8,
-    "Finance": 6,
-    "Education": 4
-  },
-  "monthlyLeadTrend": {
-    "January 2024": 45,
-    "February 2024": 52,
-    "March 2024": 48
-  },
-  "totalLeads": 105
-}
-```
-
-#### GET `/api/admin/campaigns`
-Get all campaigns.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Q1 Sales Campaign",
-    "description": "First quarter sales push",
-    "startDate": "2024-01-01T00:00:00.000Z",
-    "endDate": "2024-03-31T23:59:59.000Z",
-    "targetAudience": "hot",
-    "campaignType": "phone",
-    "status": "Active",
-    "metrics": {
-      "reach": 1000,
-      "impressions": 850,
-      "clicks": 120,
-      "conversions": 25
-    },
-    "createdBy": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-      "name": "Manager Name",
-      "email": "manager@example.com"
-    }
-  }
-]
-```
-
-#### GET `/api/admin/sims`
-Get all SIM cards.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "simNumber": "+91-9876543210",
-    "carrier": "Airtel",
-    "status": "Active",
-    "balance": 150,
-    "dataBalance": 1024,
-    "validity": "2024-12-31T23:59:59.000Z",
-    "assignedTo": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-      "name": "Employee Name",
-      "email": "employee@example.com"
-    },
-    "totalCalls": 45,
-    "totalMinutes": 180,
-    "lastUsed": "2024-01-15T10:30:00.000Z"
-  }
-]
-```
-
-#### GET `/api/admin/calls/analytics`
-Get call analytics.
-
-**Response:**
-```json
-{
-  "totalCalls": 1250,
-  "successfulCalls": 890,
-  "missedCalls": 210,
-  "rejectedCalls": 150,
-  "averageCallDuration": 180,
-  "callsByHour": {
-    "9": 45,
-    "10": 67,
-    "11": 89,
-    "12": 78
-  },
-  "callsByDay": {
-    "Monday": 180,
-    "Tuesday": 195,
-    "Wednesday": 210
-  },
-  "topPerformers": [
-    {
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "employee": {
+      "id": "507f1f77bcf86cd799439011",
       "name": "John Doe",
-      "calls": 89,
-      "successRate": 85
-    }
-  ]
-}
-```
-
-#### GET `/api/admin/performance/dashboard`
-Get overall performance metrics.
-
-**Response:**
-```json
-{
-  "totalUsers": 25,
-  "totalLeads": 105,
-  "totalCalls": 1250,
-  "activeSims": 18,
-  "conversionRate": 9.5,
-  "callSuccessRate": 71.2,
-  "monthlyGrowth": 12.5
-}
-```
-
-#### GET `/api/admin/stats/overview`
-Get comprehensive system statistics.
-
-**Response:**
-```json
-{
-  "userStats": {
-    "total": 25,
-    "admins": 2,
-    "managers": 5,
-    "employees": 18
-  },
-  "leadStats": {
-    "total": 105,
-    "byStatus": {
-      "New": 25,
-      "Interested": 30,
-      "Hot": 15
+      "email": "employee@example.com",
+      "role": "Employee",
+      "isActive": true
     },
-    "bySector": {
-      "Technology": 40,
-      "Healthcare": 25,
-      "Finance": 20
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "stats": {
+      "todayLeads": 5,
+      "totalLeads": 150,
+      "statusBreakdown": {
+        "New": 10,
+        "Interested": 120,
+        "Not Interested": 20
+      }
     }
-  },
-  "campaignStats": {
-    "total": 8,
-    "active": 3,
-    "completed": 4,
-    "byType": {
-      "phone": 5,
-      "email": 2,
-      "social": 1
+  }
+}
+```
+
+### 2. Admin Login
+**Endpoint:** `POST /api/v1/auth/login`
+
+Obtain admin token for user/employee management:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
+```
+
+## Employee CRUD Operations
+
+### 1. Create Employee (Admin Only)
+**Endpoint:** `POST /api/v1/admin/users`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane.smith@company.com",
+    "password": "password123",
+    "role": "Employee",
+    "isActive": true
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": {
+    "user": {
+      "id": "507f1f77bcf86cd799439012",
+      "name": "Jane Smith",
+      "email": "jane.smith@company.com",
+      "role": "Employee",
+      "isActive": true
     }
-  },
-  "simStats": {
-    "total": 20,
-    "active": 18,
-    "assigned": 15,
-    "byCarrier": {
-      "Airtel": 8,
-      "Jio": 7,
-      "Vodafone": 5
+  }
+}
+```
+
+### 2. Get All Employees (Admin Only)
+**Endpoint:** `GET /api/v1/admin/users`
+
+```bash
+curl -X GET "http://localhost:3000/api/v1/admin/users?page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "id": "507f1f77bcf86cd799439011",
+        "name": "John Doe",
+        "email": "employee@example.com",
+        "role": "Employee",
+        "isActive": true,
+        "createdAt": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 25,
+      "pages": 3
     }
-  },
-  "callStats": {
-    "total": 1250,
-    "successful": 890,
-    "averageDuration": 180
   }
 }
 ```
 
-### 👨‍💼 Manager Routes (`/api/manager`)
+### 3. Get Employee by ID
+**Endpoint:** `GET /api/v1/admin/users/{id}`
 
-*Requires manager role*
-
-#### GET `/api/manager/team`
-Get team members under the manager.
-
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Employee Name",
-    "email": "employee@example.com",
-    "role": "employee",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-]
+```bash
+curl -X GET http://localhost:3000/api/v1/admin/users/507f1f77bcf86cd799439011 \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
-#### GET `/api/manager/team/performance`
-Get team performance summary.
+### 4. Update Employee
+**Endpoint:** `PUT /api/v1/admin/users/{id}`
+
+```bash
+curl -X PUT http://localhost:3000/api/v1/admin/users/507f1f77bcf86cd799439011 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "name": "John Doe Updated",
+    "isActive": true
+  }'
+```
+
+### 4.1. Change Employee Password
+**Endpoint:** `PUT /api/v1/admin/users/{id}/password`
+
+```bash
+curl -X PUT http://localhost:3000/api/v1/admin/users/507f1f77bcf86cd799439011/password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "password": "newSecurePassword123"
+  }'
+```
 
 **Response:**
 ```json
 {
-  "totalTeamMembers": 5,
-  "totalLeads": 45,
-  "leadsByStatus": {
-    "new": 10,
-    "interested": 15,
-    "hot": 8,
-    "followUp": 7,
-    "won": 3,
-    "lost": 2
-  },
-  "conversionRate": 6.7,
-  "averageResponseTime": "2.5 hours",
-  "teamEfficiency": 87.5
+  "success": true,
+  "message": "Password changed successfully"
 }
 ```
 
-#### GET `/api/manager/leads`
-Get leads under manager's team.
+**Validation:**
+- Password must be at least 6 characters long
+- Password is automatically hashed before storage
+- Only admin users can change employee passwords
 
-**Response:**
-```json
-[
-  {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "name": "Lead Name",
-    "phone": "+1234567890",
-    "email": "lead@example.com",
-    "status": "New",
-    "sector": "Technology",
-    "region": "North",
-    "assignedTo": {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-      "name": "Employee Name",
-      "email": "employee@example.com"
-    },
-    "followUpDate": "2024-01-20T00:00:00.000Z"
-  }
-]
+### 5. Toggle Employee Status (Activate/Deactivate)
+**Endpoint:** `PATCH /api/v1/admin/users/{id}/toggle-status`
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/admin/users/507f1f77bcf86cd799439011/toggle-status \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
-
-#### POST `/api/manager/leads`
-Create a new lead.
-
-**Request Body:**
-```json
-{
-  "name": "New Lead",
-  "phone": "+1234567890",
-  "email": "newlead@example.com",
-  "sector": "Technology",
-  "region": "North",
-  "notes": "Interested in our services"
-}
-```
-
-#### PUT `/api/manager/leads/:id`
-Update lead status and assignment.
-
-**Request Body:**
-```json
-{
-  "status": "Hot",
-  "assignedTo": "60f7b3b3b3b3b3b3b3b3b3b4",
-  "notes": "Lead shows high interest"
-}
-```
-
-#### GET `/api/manager/dashboard`
-Get manager dashboard data.
 
 **Response:**
 ```json
 {
-  "stats": {
-    "total": 45,
-    "new": 10,
-    "interested": 15,
-    "hot": 8,
-    "followUp": 7,
-    "won": 3,
-    "lost": 2
-  },
-  "totalSales": 15000,
-  "hotLeadsNeedingReassignment": 2,
-  "lostLeadsNeedingReassignment": 1,
-  "employees": 5,
-  "conversionRate": 6.7
-}
-```
-
-### 👷 Employee Routes (`/api/employee`)
-
-*Requires employee role*
-
-#### GET `/api/employee/profile`
-Get employee profile information.
-
-**Response:**
-```json
-{
-  "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-  "name": "Employee Name",
-  "email": "employee@example.com",
-  "role": "employee",
-  "manager": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-    "name": "Manager Name",
-    "email": "manager@example.com"
-  },
-  "createdAt": "2024-01-15T10:30:00.000Z"
-}
-```
-
-#### GET `/api/employee/leads`
-Get leads assigned to the employee.
-
-**Query Parameters:**
-- `status`: Filter by lead status
-- `sector`: Filter by sector
-- `region`: Filter by region
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 20)
-
-**Response:**
-```json
-{
-  "leads": [
-    {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "name": "Lead Name",
-      "phone": "+1234567890",
-      "email": "lead@example.com",
-      "status": "New",
-      "sector": "Technology",
-      "region": "North",
-      "notes": "Interested in our services",
-      "followUpDate": "2024-01-20T00:00:00.000Z"
+  "success": true,
+  "message": "User deactivated successfully",
+  "data": {
+    "user": {
+      "id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "isActive": false
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 15,
-    "pages": 1
   }
 }
 ```
 
-#### GET `/api/employee/leads/:leadId`
-Get specific lead details.
+### 6. Delete Employee (Admin Only)
+**Endpoint:** `DELETE /api/v1/admin/users/{id}`
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/admin/users/507f1f77bcf86cd799439011 \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## Employee-Specific Operations
+
+### 1. Get Employee Profile
+**Endpoint:** `GET /api/v1/employee/profile`
+
+```bash
+curl -X GET http://localhost:3000/api/v1/employee/profile \
+  -H "Authorization: Bearer YOUR_EMPLOYEE_TOKEN"
+```
+
+### 2. Get Today's Leads for Employee
+**Endpoint:** `GET /api/v1/employee/leads/today`
+
+```bash
+curl -X GET http://localhost:3000/api/v1/employee/leads/today \
+  -H "Authorization: Bearer YOUR_EMPLOYEE_TOKEN"
+```
 
 **Response:**
 ```json
 {
-  "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-  "name": "Lead Name",
-  "phone": "+1234567890",
-  "email": "lead@example.com",
-  "status": "New",
-  "sector": "Technology",
-  "region": "North",
-  "notes": "Interested in our services",
-  "followUpDate": "2024-01-20T00:00:00.000Z",
-  "assignedTo": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-    "name": "Employee Name",
-    "email": "employee@example.com"
-  }
-}
-```
-
-#### PUT `/api/employee/update-lead`
-Update lead notes, status, and follow-up date.
-
-**Request Body:**
-```json
-{
-  "leadId": "60f7b3b3b3b3b3b3b3b3b3b3",
-  "note": "Called lead, showed interest in premium plan",
-  "status": "Interested",
-  "followUpDate": "2024-01-25T00:00:00.000Z"
-}
-```
-
-#### POST `/api/employee/call-log`
-Add a new call log entry.
-
-**Request Body:**
-```json
-{
-  "leadId": "60f7b3b3b3b3b3b3b3b3b3b3",
-  "callStatus": "completed",
-  "notes": "Lead was very interested in our services",
-  "callDuration": 300,
-  "outcome": "Interested",
-  "followUpRequired": true,
-  "followUpDate": "2024-01-25T00:00:00.000Z"
-}
-```
-
-#### GET `/api/employee/my-call-logs`
-Get call logs for the employee.
-
-**Query Parameters:**
-- `leadId`: Filter by specific lead
-- `callStatus`: Filter by call status
-- `startDate`: Filter from date
-- `endDate`: Filter until date
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 20)
-
-**Response:**
-```json
-{
-  "logs": [
-    {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "lead": {
-        "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-        "name": "Lead Name",
+  "success": true,
+  "data": {
+    "leads": [
+      {
+        "id": "507f1f77bcf86cd799439013",
+        "name": "Alice Johnson",
         "phone": "+1234567890",
-        "email": "lead@example.com"
-      },
-      "callStatus": "completed",
-      "notes": "Lead was very interested",
-      "callDuration": 300,
-      "outcome": "Interested",
-      "followUpRequired": true,
-      "followUpDate": "2024-01-25T00:00:00.000Z",
-      "createdAt": "2024-01-15T10:30:00.000Z"
+        "status": "New",
+        "assignedTo": "John Doe",
+        "assignedDate": "2024-01-15T08:00:00.000Z"
+      }
+    ],
+    "summary": {
+      "total": 5,
+      "statusBreakdown": {
+        "New": 3,
+        "Interested": 2
+      }
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 25,
-    "pages": 2
   }
 }
 ```
 
-#### POST `/api/employee/upload-call-log`
-Upload call recording (audio file).
+### 3. Update Lead Status (Employee Only)
+**Endpoint:** `PUT /api/v1/employee/leads/update/{id}`
 
-**Request Body:** `multipart/form-data`
-- `recording`: Audio file (MP3, WAV, etc.)
-- `leadId`: Lead ID to link the recording
-
-**Response:**
-```json
-{
-  "message": "Call log uploaded successfully",
-  "url": "https://res.cloudinary.com/.../recording.mp3"
-}
-```
-
-#### GET `/api/employee/performance`
-Get employee performance metrics.
-
-**Query Parameters:**
-- `period`: Performance period (week, month, quarter, year)
-
-**Response:**
-```json
-{
-  "totalLeads": 15,
-  "leadsByStatus": {
-    "New": 5,
-    "Interested": 6,
-    "Hot": 2,
-    "Follow-up": 2
-  },
-  "totalCalls": 45,
-  "callSuccessRate": 78,
-  "averageCallDuration": 180,
-  "conversionRate": 13.3,
-  "monthlyGrowth": 8.5,
-  "period": "month"
-}
-```
-
-#### GET `/api/employee/dashboard`
-Get employee dashboard summary.
-
-**Response:**
-```json
-{
-  "stats": {
-    "totalLeads": 15,
-    "newLeads": 5,
-    "hotLeads": 2,
-    "followUpLeads": 2,
-    "overdueFollowUps": 1
-  },
-  "recentActivity": [
-    {
-      "type": "lead_assigned",
-      "description": "New lead assigned: John Doe",
-      "timestamp": "2024-01-15T10:30:00.000Z"
-    }
-  ],
-  "upcomingTasks": [
-    {
-      "leadId": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "leadName": "John Doe",
-      "taskType": "Follow-up Call",
-      "dueDate": "2024-01-20T00:00:00.000Z"
-    }
-  ]
-}
-```
-
-#### GET `/api/employee/leads/search`
-Search leads by various criteria.
-
-**Query Parameters:**
-- `q`: Search query (name, phone, email)
-- `status`: Filter by status
-- `sector`: Filter by sector
-- `region`: Filter by region
-- `hasFollowUp`: Filter leads with/without follow-up dates
-
-**Response:**
-```json
-{
-  "leads": [
-    {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "name": "John Doe",
-      "phone": "+1234567890",
-      "email": "john@example.com",
-      "status": "Interested",
-      "sector": "Technology",
-      "region": "North"
-    }
-  ],
-  "total": 1
-}
-```
-
-## 🎨 UI Features
-
-### Theme Switching
-Both admin and manager dashboards support three themes:
-- **Light**: Clean, professional appearance
-- **Semi-Dark**: Balanced dark theme
-- **Dark**: Full dark mode for extended use
-
-### Modern Design
-- Responsive grid layouts
-- Interactive charts and graphs
-- Smooth animations and transitions
-- Professional color schemes
-- Mobile-friendly interfaces
-
-## 📊 Analytics & Charts
-
-### Lead Analytics
-- Status distribution by sector and region
-- Hot vs. Interested lead comparisons
-- Monthly lead creation trends
-- Sector-region matrix analysis
-
-### Call Analytics
-- Call success rates by employee
-- Call duration patterns
-- Hourly and daily call distributions
-- Top performer identification
-
-### Performance Metrics
-- Team efficiency scores
-- Individual performance tracking
-- Conversion rate analysis
-- Monthly growth tracking
-
-## 🔧 Installation & Setup
-
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB database
-- Modern web browser
-
-### Installation Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Tele_Calling
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Environment Setup**
-   Create a `.env` file:
-   ```env
-   MONGO_URI=mongodb://localhost:27017/telecrm
-   JWT_SECRET=your-super-secret-jwt-key
-   PORT=5000
-   ```
-
-4. **Start the server**
-   ```bash
-   npm start
-   # or for development
-   npm run dev
-   ```
-
-5. **Access the application**
-   - Admin Dashboard: `http://localhost:5000/admin.html`
-   - Manager Dashboard: `http://localhost:5000/manager.html`
-   - Employee Dashboard: `http://localhost:5000/employee.html`
-   - API Documentation: `http://localhost:5000/api-docs`
-
-## 🚀 API Usage Examples
-
-### Using cURL
-
-#### Login
 ```bash
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X PUT http://localhost:3000/api/v1/employee/leads/update/507f1f77bcf86cd799439013 \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"password123"}'
+  -H "Authorization: Bearer YOUR_EMPLOYEE_TOKEN" \
+  -d '{
+    "status": "Interested",
+    "notes": "Customer showed interest in our premium plan"
+  }'
 ```
 
-#### Get Leads (with authentication)
+## Lead Assignment Integration
+
+### 1. Get All Employees for Assignment (Admin)
+**Endpoint:** `GET /api/v1/admin/employees`
+
 ```bash
-curl -X GET http://localhost:5000/api/admin/leads \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET http://localhost:3000/api/v1/admin/employees \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
-#### Create Lead
+### 2. Update Lead Information (Admin)
+**Endpoint:** `PUT /api/v1/admin/leads/{id}`
+
 ```bash
-curl -X POST http://localhost:5000/api/admin/leads \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+curl -X PUT http://localhost:3000/api/v1/admin/leads/507f1f77bcf86cd799439013 \
   -H "Content-Type: application/json" \
-  -d '{"name":"New Lead","phone":"+1234567890","email":"lead@example.com","sector":"Technology","region":"North"}'
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "status": "Interested",
+    "notes": "Customer showed strong interest in premium package",
+    "phone": "+1234567890",
+    "email": "updated@example.com"
+  }'
 ```
 
-### Using JavaScript/Fetch
-
-#### Login
-```javascript
-const response = await fetch('/api/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: 'admin@example.com',
-    password: 'password123'
-  })
-});
-
-const data = await response.json();
-localStorage.setItem('token', data.token);
-```
-
-#### Get Leads
-```javascript
-const response = await fetch('/api/admin/leads', {
-  headers: { 
-    'Authorization': `Bearer ${localStorage.getItem('token')}` 
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lead updated successfully",
+  "data": {
+    "id": "507f1f77bcf86cd799439013",
+    "name": "John Doe",
+    "phone": "+1234567890",
+    "email": "updated@example.com",
+    "status": "Interested",
+    "notes": "Customer showed strong interest in premium package",
+    "assignedTo": "Jane Smith",
+    "updatedAt": "2024-01-15T14:30:00.000Z"
   }
-});
-
-const leads = await response.json();
+}
 ```
 
-## 🔒 Security Features
+**Allowed Update Fields:**
+- `status`: "New", "Interested", "Not Interested", "Hot"
+- `notes`: Text up to 1000 characters
+- `name`: Lead name
+- `phone`: Phone number
+- `email`: Email address
+- `company`: Company name
+- `location`: Location/region
+- `sector`: Business sector
 
-- JWT-based authentication
-- Role-based access control
-- Password hashing with bcrypt
-- Input validation and sanitization
-- CORS protection
-- Rate limiting (can be added)
+### 3. Assign Leads to Employee (Admin)
+**Endpoint:** `POST /api/v1/admin/leads/assign`
 
-## 📱 Mobile Support
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/leads/assign \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "leadIds": [
+      "507f1f77bcf86cd799439013",
+      "507f1f77bcf86cd799439014"
+    ],
+    "employeeId": "507f1f77bcf86cd799439011"
+  }'
+```
 
-- Responsive design for all screen sizes
-- Touch-friendly interfaces
-- Mobile-optimized navigation
-- Progressive Web App features
+### 3. Get Employee Assignments (Admin)
+**Endpoint:** `GET /api/v1/admin/lead-assignments`
 
-## 🚀 Future Enhancements
+```bash
+curl -X GET "http://localhost:3000/api/v1/admin/lead-assignments?employee=John&page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
 
-- Real-time notifications with WebSockets
-- Advanced reporting and analytics
-- Integration with external CRM systems
-- Mobile app development
-- AI-powered lead scoring
-- Advanced call analytics
-- Multi-tenant support
+## File Upload Integration (CSV Import)
 
-## 📞 Support
+### 1. Bulk Upload Leads (Admin) - Fixed Race Condition Issue
+**Endpoint:** `POST /api/v1/admin/leads/bulk-upload`
 
-For technical support or questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the API documentation at `/api-docs`
+**Note:** This endpoint has been fixed to prevent the double upload issue caused by race conditions and event listener conflicts.
 
----
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/leads/bulk-upload \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "excel=@leads.csv"
+```
 
-**TeleCRM - Transforming the way you manage customer relationships through intelligent calling solutions.**
+**File Format:** CSV file with headers (name, phone, email, company, etc.)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "150 leads uploaded successfully",
+  "data": {
+    "uploadedCount": 150,
+    "fileInfo": {
+      "originalName": "leads.csv",
+      "size": 24576,
+      "mimetype": "text/csv"
+    },
+    "summary": {
+      "parsedLeads": 150,
+      "duplicates": 5,
+      "errors": 2
+    }
+  }
+}
+```
+
+### 2. Upload and Assign Leads to Specific Employee
+**Endpoint:** `POST /api/v1/admin/leads/upload-assign/{employeeId}`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/leads/upload-assign/507f1f77bcf86cd799439011 \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "excel=@employee_leads.csv"
+```
+
+### 3. Preview CSV File Before Import
+**Endpoint:** `POST /api/v1/admin/leads/preview`
+
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/leads/preview \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "excel=@leads_preview.csv"
+```
+
+## Error Handling Examples
+
+### 1. Authentication Error
+```bash
+curl -X GET http://localhost:3000/api/v1/admin/users \
+  -H "Authorization: Bearer INVALID_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "message": "Invalid token",
+  "error": "Authentication failed"
+}
+```
+
+### 2. File Upload Error (Invalid File Type)
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/leads/bulk-upload \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "excel=@document.pdf"
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "message": "File validation failed",
+  "error": "Invalid file type. Only CSV files are allowed"
+}
+```
+
+### 3. Validation Error (Missing Required Fields)
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "email": "invalid-email"
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": "Name is required"
+}
+```
+
+## Best Practices
+
+### 1. Token Management
+- Store tokens securely after login
+- Include tokens in Authorization header for all protected endpoints
+- Handle token expiration gracefully
+
+### 2. File Upload Optimization
+- Use CSV files for bulk lead imports
+- Ensure CSV files are properly formatted with headers
+- Handle large files (>5MB) with progress tracking
+- The recent fix prevents race conditions during concurrent uploads
+
+### 3. Error Handling
+- Always check response success status
+- Implement retry logic for network failures
+- Log errors for debugging purposes
+
+### 4. Performance Considerations
+- Use pagination for large datasets
+- Implement proper filtering for employee/lead queries
+- Monitor API rate limits
+
+## Recent Fixes Applied
+
+### Upload Race Condition Fix
+The CSV upload functionality has been enhanced to prevent double uploads:
+
+- **Added upload state management** with `isUploading` flag
+- **Fixed event listener conflicts** between click and drag-and-drop
+- **Implemented proper error handling** for concurrent upload attempts
+- **Enhanced user feedback** during upload process
+
+These fixes ensure that CSV files are processed exactly once per user action, eliminating duplicate entries and maintaining data integrity.
+
+## Testing Examples
+
+### 1. Complete Workflow Test
+```bash
+# 1. Login as Admin
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"admin123"}' | \
+  jq -r '.data.token')
+
+# 2. Create Employee
+EMPLOYEE_ID=$(curl -s -X POST http://localhost:3000/api/v1/admin/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test Employee","email":"test@example.com","password":"test123","role":"Employee"}' | \
+  jq -r '.data.user.id')
+
+# 3. Upload CSV File
+curl -X POST http://localhost:3000/api/v1/admin/leads/bulk-upload \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "excel=@test_leads.csv"
+
+# 4. Assign Leads to Employee
+curl -X POST http://localhost:3000/api/v1/admin/leads/assign \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"leadIds\":[\"LEAD_ID_1\",\"LEAD_ID_2\"],\"employeeId\":\"$EMPLOYEE_ID\"}"
+```
+
+This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features.

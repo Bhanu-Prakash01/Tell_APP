@@ -1,76 +1,111 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const auth = require('../middleware/auth');
+const multer = require('multer');
 
-// ========================
-// REGISTER  
-// ========================
-router.post('/register', async (req, res) => {
-    const { name, email, password, role } = req.body;
+// Import controllers (will be created in next step)
+const {
+  register,
+  login,
+  logout,
+  refreshToken,
+  getProfile,
+  updateProfile,
+  changePassword,
+  forgotPassword,
+  resetPassword
+} = require('../controllers/authController');
 
-    try {
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).json({ error: 'User already exists' });
+// Import middleware
+const { authenticateToken, optionalAuth, requireAdmin, requireEmployee, requireAnyRole } = require('../middleware/auth');
 
-        // Create new user (password will be hashed by pre-save hook)
-        const newUser = new User({
-            name,
-            email,
-            password, // Will be hashed by pre-save hook
-            role // 'admin', 'manager', or 'employee'
-        });
-
-        await newUser.save();
-
-        res.json({ message: 'User registered successfully' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+// Configure multer for document uploads (addressProof and signedOfferLetter)
+const documentStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/documents/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop());
+  }
 });
 
-// ========================
-// LOGIN
-// ========================
-router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+const documentFilter = (req, file, cb) => {
+  const allowedTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'
+  ];
 
-    try {
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ error: 'User not found' });
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF and DOCX files are allowed for documents'), false);
+  }
+};
 
-        const isMatch = await user.matchPassword(password);
-        if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({ token, role: user.role });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+const uploadDocuments = multer({
+  storage: documentStorage,
+  fileFilter: documentFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5242880, // 5MB default for documents
+    files: 2 // Maximum 2 files (addressProof and signedOfferLetter)
+  }
 });
 
-// ========================
-// GET CURRENT USER
-// ========================
-router.get('/me', auth, async (req, res) => {
+// Public routes
+router.post('/register', uploadDocuments.fields([
+  { name: 'addressProof', maxCount: 1 },
+  { name: 'signedOfferLetter', maxCount: 1 }
+]), register);
+router.post('/login', login);
+router.post('/refresh-token', refreshToken);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+
+// Debug route - only in development
+if (process.env.NODE_ENV === 'development') {
+  router.get('/debug-users', async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json(user);
-    } catch (err) {
-        console.error('Get current user error:', err);
-        res.status(500).json({ error: 'Server error' });
+      const User = require('../models/User');
+      const users = await User.find({}, 'name email role isActive createdAt');
+      res.json({
+        success: true,
+        count: users.length,
+        users: users.map(user => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: user.createdAt
+        }))
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching users',
+        error: error.message
+      });
     }
+  });
+}
+
+// Protected routes
+router.get('/profile', authenticateToken, getProfile);
+router.put('/profile', authenticateToken, updateProfile);
+router.post('/change-password', authenticateToken, changePassword);
+router.post('/logout', optionalAuth, logout);
+
+// Admin only routes
+router.get('/admin/users', authenticateToken, requireAdmin, (req, res) => {
+  // Placeholder for admin user management
+  res.json({ success: true, message: 'Admin users endpoint' });
+});
+
+// Employee only routes
+router.get('/employee/dashboard', authenticateToken, requireEmployee, (req, res) => {
+  // Placeholder for employee dashboard
+  res.json({ success: true, message: 'Employee dashboard endpoint' });
 });
 
 module.exports = router;

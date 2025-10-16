@@ -3,286 +3,410 @@ const mongoose = require('mongoose');
 const campaignSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    trim: true
+    required: [true, 'Campaign name is required'],
+    trim: true,
+    maxlength: [100, 'Campaign name cannot exceed 100 characters']
   },
+
   description: {
     type: String,
-    trim: true
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  startDate: {
-    type: Date,
-    required: true
-  },
-  endDate: {
-    type: Date,
-    required: true
-  },
-  targetAudience: {
+
+  // Campaign details
+  type: {
     type: String,
-    required: true,
-    enum: ['all', 'new', 'hot', 'follow-up', 'custom']
-  },
-  customFilters: {
-    status: [String],
-    dateRange: {
-      start: Date,
-      end: Date
+    enum: {
+      values: ['sales', 'support', 'survey', 'promotional', 'retention', 'lead_generation', 'other'],
+      message: 'Invalid campaign type'
     },
-    assignedEmployee: String
+    required: [true, 'Campaign type is required']
   },
-  campaignType: {
-    type: String,
-    required: true,
-    enum: ['email', 'sms', 'social', 'phone', 'multi']
-  },
-  budget: {
-    type: Number,
-    min: 0
-  },
+
   status: {
     type: String,
-    default: 'Draft',
-    enum: ['Draft', 'Active', 'Paused', 'Completed', 'Cancelled']
+    enum: {
+      values: ['planning', 'active', 'paused', 'completed', 'cancelled'],
+      message: 'Invalid campaign status'
+    },
+    default: 'planning'
   },
-  abTesting: {
-    enabled: {
+
+  priority: {
+    type: String,
+    enum: {
+      values: ['low', 'medium', 'high', 'critical'],
+      message: 'Priority must be low, medium, high, or critical'
+    },
+    default: 'medium'
+  },
+
+  // Timeline
+  startDate: {
+    type: Date,
+    required: [true, 'Start date is required']
+  },
+
+  endDate: {
+    type: Date,
+    required: [true, 'End date is required']
+  },
+
+  // Target and scope
+  targetAudience: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Target audience description cannot exceed 200 characters']
+  },
+
+  targetCount: {
+    type: Number,
+    min: [0, 'Target count cannot be negative'],
+    default: 0
+  },
+
+  // Assignment and management
+  manager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Campaign manager is required']
+  },
+
+  assignedAgents: [{
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+    targetLeads: {
+      type: Number,
+      min: [0, 'Target leads cannot be negative'],
+      default: 0
+    },
+    completedLeads: {
+      type: Number,
+      default: 0,
+      min: [0, 'Completed leads cannot be negative']
+    }
+  }],
+
+  // Customer targeting criteria
+  customerCriteria: {
+    categories: [{
+      type: String,
+      enum: ['vip', 'premium', 'regular', 'new', 'inactive']
+    }],
+    locations: [String],
+    ageRange: {
+      min: {
+        type: Number,
+        min: [0, 'Minimum age cannot be negative']
+      },
+      max: {
+        type: Number,
+        min: [0, 'Maximum age cannot be negative']
+      }
+    },
+    leadScore: {
+      min: {
+        type: Number,
+        min: [0, 'Minimum lead score cannot be negative'],
+        max: [100, 'Minimum lead score cannot exceed 100']
+      },
+      max: {
+        type: Number,
+        min: [0, 'Maximum lead score cannot be negative'],
+        max: [100, 'Maximum lead score cannot exceed 100']
+      }
+    },
+    tags: [String],
+    excludeRecentContacts: {
       type: Boolean,
       default: false
     },
-    variantAName: String,
-    variantBName: String,
-    testDuration: {
+    daysSinceLastContact: {
       type: Number,
-      min: 1,
-      max: 30,
-      default: 7
-    },
-    startDate: Date,
-    endDate: Date,
-    results: {
-      variantA: {
-        impressions: { type: Number, default: 0 },
-        clicks: { type: Number, default: 0 },
-        conversions: { type: Number, default: 0 },
-        ctr: { type: Number, default: 0 },
-        conversionRate: { type: Number, default: 0 }
-      },
-      variantB: {
-        impressions: { type: Number, default: 0 },
-        clicks: { type: Number, default: 0 },
-        conversions: { type: Number, default: 0 },
-        ctr: { type: Number, default: 0 },
-        conversionRate: { type: Number, default: 0 }
-      },
-      winner: String
+      min: [0, 'Days since last contact cannot be negative']
     }
   },
-  notifications: {
-    email: {
-      type: Boolean,
-      default: true
-    },
-    sms: {
-      type: Boolean,
-      default: false
-    }
-  },
-  metrics: {
-    reach: {
+
+  // Campaign goals and KPIs
+  goals: {
+    totalCalls: {
       type: Number,
+      min: [0, 'Total calls goal cannot be negative'],
       default: 0
     },
-    impressions: {
+    successfulCalls: {
       type: Number,
-      default: 0
-    },
-    clicks: {
-      type: Number,
-      default: 0
-    },
-    conversions: {
-      type: Number,
-      default: 0
-    },
-    engagementRate: {
-      type: Number,
+      min: [0, 'Successful calls goal cannot be negative'],
       default: 0
     },
     conversionRate: {
       type: Number,
+      min: [0, 'Conversion rate cannot be negative'],
+      max: [100, 'Conversion rate cannot exceed 100'],
       default: 0
     },
-    ctr: {
+    revenueTarget: {
       type: Number,
-      default: 0
-    },
-    roi: {
-      type: Number,
-      default: 0
-    },
-    cost: {
-      type: Number,
-      default: 0
-    },
-    revenue: {
-      type: Number,
+      min: [0, 'Revenue target cannot be negative'],
       default: 0
     }
   },
-  performance: {
-    dailyStats: [{
-      date: Date,
-      impressions: Number,
-      clicks: Number,
-      conversions: Number,
-      cost: Number
-    }],
-    audienceInsights: {
-      demographics: {
-        ageGroups: Map,
-        locations: Map,
-        interests: [String]
+
+  // Progress tracking
+  progress: {
+    totalCustomers: {
+      type: Number,
+      default: 0,
+      min: [0, 'Total customers cannot be negative']
+    },
+    contactedCustomers: {
+      type: Number,
+      default: 0,
+      min: [0, 'Contacted customers cannot be negative']
+    },
+    convertedCustomers: {
+      type: Number,
+      default: 0,
+      min: [0, 'Converted customers cannot be negative']
+    },
+    totalCalls: {
+      type: Number,
+      default: 0,
+      min: [0, 'Total calls cannot be negative']
+    },
+    successfulCalls: {
+      type: Number,
+      default: 0,
+      min: [0, 'Successful calls cannot be negative']
+    }
+  },
+
+  // Budget and costs
+  budget: {
+    allocated: {
+      type: Number,
+      min: [0, 'Allocated budget cannot be negative'],
+      default: 0
+    },
+    spent: {
+      type: Number,
+      min: [0, 'Spent budget cannot be negative'],
+      default: 0
+    },
+    currency: {
+      type: String,
+      default: 'INR',
+      maxlength: [3, 'Currency code cannot exceed 3 characters']
+    }
+  },
+
+  // Script and messaging
+  callScript: {
+    type: String,
+    maxlength: [2000, 'Call script cannot exceed 2000 characters']
+  },
+
+  objectionHandling: {
+    type: String,
+    maxlength: [1000, 'Objection handling notes cannot exceed 1000 characters']
+  },
+
+  // Communication settings
+  communicationSettings: {
+    maxCallsPerDay: {
+      type: Number,
+      min: [1, 'Maximum calls per day must be at least 1'],
+      default: 50
+    },
+    callingHours: {
+      start: {
+        type: String,
+        match: [/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)']
       },
-      behavior: {
-        engagementTime: Number,
-        bounceRate: Number,
-        returnRate: Number
+      end: {
+        type: String,
+        match: [/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)']
       }
+    },
+    daysOfWeek: [{
+      type: String,
+      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    }],
+    timeZone: {
+      type: String,
+      default: 'Asia/Kolkata'
     }
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+
+  // Results and analytics
+  results: {
+    totalRevenue: {
+      type: Number,
+      min: [0, 'Total revenue cannot be negative'],
+      default: 0
+    },
+    conversionRate: {
+      type: Number,
+      min: [0, 'Conversion rate cannot be negative'],
+      max: [100, 'Conversion rate cannot exceed 100'],
+      default: 0
+    },
+    avgCallDuration: {
+      type: Number,
+      min: [0, 'Average call duration cannot be negative'],
+      default: 0
+    },
+    customerSatisfaction: {
+      type: Number,
+      min: [0, 'Customer satisfaction cannot be negative'],
+      max: [5, 'Customer satisfaction cannot exceed 5'],
+      default: 0
+    }
   },
-  assignedTo: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+
+  // Tags and notes
+  tags: [{
+    type: String,
+    trim: true,
+    maxlength: [30, 'Tag cannot exceed 30 characters']
   }],
-  leads: [{
-    lead: {
+
+  notes: {
+    type: String,
+    maxlength: [1000, 'Notes cannot exceed 1000 characters']
+  },
+
+  // Metadata
+  metadata: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Lead'
+      ref: 'User',
+      required: true
     },
-    status: {
-      type: String,
-      enum: ['targeted', 'contacted', 'responded', 'converted', 'unsubscribed'],
-      default: 'targeted'
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     },
-    variant: String,
-    contactDate: Date,
-    responseDate: Date,
-    notes: String
-  }],
-  tags: [String],
-  settings: {
-    autoOptimize: {
-      type: Boolean,
-      default: false
+    template: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Campaign'
     },
-    frequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly'],
-      default: 'weekly'
-    },
-    maxContacts: Number
+    version: {
+      type: Number,
+      default: 1
+    }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
-campaignSchema.index({ status: 1, startDate: 1, endDate: 1 });
-campaignSchema.index({ createdBy: 1, status: 1 });
-campaignSchema.index({ 'abTesting.enabled': 1 });
+// Indexes for better performance
+campaignSchema.index({ name: 'text', description: 'text' });
+campaignSchema.index({ status: 1 });
+campaignSchema.index({ type: 1 });
+campaignSchema.index({ priority: 1 });
+campaignSchema.index({ startDate: 1 });
+campaignSchema.index({ endDate: 1 });
+campaignSchema.index({ manager: 1 });
+campaignSchema.index({ 'assignedAgents.agent': 1 });
 
-// Virtual for campaign duration
-campaignSchema.virtual('duration').get(function() {
-  if (this.startDate && this.endDate) {
-    return Math.ceil((this.endDate - this.startDate) / (1000 * 60 * 60 * 24));
-  }
-  return 0;
+// Virtual for campaign duration in days
+campaignSchema.virtual('durationDays').get(function() {
+  if (!this.startDate || !this.endDate) return 0;
+  return Math.ceil((this.endDate - this.startDate) / (1000 * 60 * 60 * 24));
 });
 
-// Virtual for campaign progress
-campaignSchema.virtual('progress').get(function() {
-  if (this.startDate && this.endDate) {
-    const now = new Date();
-    const total = this.endDate - this.startDate;
-    const elapsed = now - this.startDate;
-    
-    if (elapsed <= 0) return 0;
-    if (elapsed >= total) return 100;
-    
-    return Math.round((elapsed / total) * 100);
-  }
-  return 0;
+// Virtual for campaign progress percentage
+campaignSchema.virtual('progressPercentage').get(function() {
+  if (this.targetCount === 0) return 0;
+  return Math.round((this.progress.contactedCustomers / this.targetCount) * 100);
 });
 
-// Method to calculate performance metrics
-campaignSchema.methods.calculateMetrics = function() {
-  if (this.performance.dailyStats.length === 0) return;
-  
-  const totalImpressions = this.performance.dailyStats.reduce((sum, stat) => sum + stat.impressions, 0);
-  const totalClicks = this.performance.dailyStats.reduce((sum, stat) => sum + stat.clicks, 0);
-  const totalConversions = this.performance.dailyStats.reduce((sum, stat) => sum + stat.conversions, 0);
-  const totalCost = this.performance.dailyStats.reduce((sum, stat) => sum + stat.cost, 0);
-  
-  this.metrics.impressions = totalImpressions;
-  this.metrics.clicks = totalClicks;
-  this.metrics.conversions = totalConversions;
-  this.metrics.cost = totalCost;
-  
-  if (totalImpressions > 0) {
-    this.metrics.ctr = Math.round((totalClicks / totalImpressions) * 100 * 100) / 100;
-  }
-  
-  if (totalClicks > 0) {
-    this.metrics.engagementRate = Math.round((totalConversions / totalClicks) * 100 * 100) / 100;
-  }
-  
-  if (totalCost > 0 && this.metrics.revenue > 0) {
-    this.metrics.roi = Math.round(((this.metrics.revenue - totalCost) / totalCost) * 100 * 100) / 100;
-  }
+// Virtual for campaign effectiveness
+campaignSchema.virtual('effectiveness').get(function() {
+  if (this.progress.totalCalls === 0) return 0;
+  return Math.round((this.progress.successfulCalls / this.progress.totalCalls) * 100);
+});
+
+// Static method to find active campaigns
+campaignSchema.statics.findActive = function() {
+  return this.find({
+    status: 'active',
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() }
+  });
 };
 
-// Method to update A/B testing results
-campaignSchema.methods.updateABTestResults = function() {
-  if (!this.abTesting.enabled) return;
-  
-  const variantA = this.abTesting.results.variantA;
-  const variantB = this.abTesting.results.variantB;
-  
-  if (variantA.impressions > 0) {
-    variantA.ctr = Math.round((variantA.clicks / variantA.impressions) * 100 * 100) / 100;
-  }
-  if (variantA.clicks > 0) {
-    variantA.conversionRate = Math.round((variantA.conversions / variantA.clicks) * 100 * 100) / 100;
-  }
-  
-  if (variantB.impressions > 0) {
-    variantB.ctr = Math.round((variantB.clicks / variantB.impressions) * 100 * 100) / 100;
-  }
-  if (variantB.clicks > 0) {
-    variantB.conversionRate = Math.round((variantB.conversions / variantB.clicks) * 100 * 100) / 100;
-  }
-  
-  // Determine winner based on conversion rate
-  if (variantA.conversionRate > variantB.conversionRate) {
-    this.abTesting.results.winner = 'A';
-  } else if (variantB.conversionRate > variantA.conversionRate) {
-    this.abTesting.results.winner = 'B';
-  } else {
-    this.abTesting.results.winner = 'Tie';
-  }
+// Static method to find campaigns by manager
+campaignSchema.statics.findByManager = function(managerId) {
+  return this.find({ manager: managerId });
 };
 
-// Pre-save middleware to calculate metrics
-campaignSchema.pre('save', function(next) {
-  this.calculateMetrics();
-  this.updateABTestResults();
-  next();
-});
+// Static method to get campaign statistics
+campaignSchema.statics.getCampaignStats = function() {
+  return this.aggregate([
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+        avgProgress: { $avg: '$progressPercentage' }
+      }
+    }
+  ]);
+};
+
+// Instance method to add agent to campaign
+campaignSchema.methods.addAgent = function(agentId, targetLeads = 0) {
+  const existingAgent = this.assignedAgents.find(
+    assignment => assignment.agent.toString() === agentId.toString()
+  );
+
+  if (!existingAgent) {
+    this.assignedAgents.push({
+      agent: agentId,
+      targetLeads,
+      assignedAt: new Date()
+    });
+    return this.save();
+  }
+
+  return this;
+};
+
+// Instance method to update progress
+campaignSchema.methods.updateProgress = function(callResult) {
+  this.progress.totalCalls += 1;
+
+  if (callResult === 'successful' || callResult === 'converted') {
+    this.progress.successfulCalls += 1;
+  }
+
+  this.progress.contactedCustomers += 1;
+
+  if (callResult === 'converted') {
+    this.progress.convertedCustomers += 1;
+  }
+
+  return this.save();
+};
+
+// Instance method to check if campaign is active
+campaignSchema.methods.isActive = function() {
+  const now = new Date();
+  return (
+    this.status === 'active' &&
+    this.startDate <= now &&
+    this.endDate >= now
+  );
+};
 
 module.exports = mongoose.model('Campaign', campaignSchema);

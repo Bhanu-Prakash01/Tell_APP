@@ -1,9 +1,0 @@
-admin:
-email: admin@admin password: admin
-
-manager:
-email: m1@m1 password: m1
-
-employee;
-email: ep1@ep1 password: ep1
-email: ep2@ep2 password: ep2

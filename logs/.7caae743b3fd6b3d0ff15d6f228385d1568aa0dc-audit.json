@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/home/dragon/telcalling_v1/logs/.7caae743b3fd6b3d0ff15d6f228385d1568aa0dc-audit.json",
+    "files": [
+        {
+            "date": 1760548254306,
+            "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-15.log",
+            "hash": "939c279d8c3b901403d415e8af69a81af2b7495ea5b9958d1974f5efc7d1b1d4"
+        },
+        {
+            "date": 1760553061822,
+            "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-16.log",
+            "hash": "31efb888e94088443f8e94b7391ff3f85aad40dca6b9187ddb918723f42b14be"
+        }
+    ],
+    "hashType": "sha256"
+}

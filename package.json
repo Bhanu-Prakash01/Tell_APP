@@ -1,37 +1,49 @@
 {
-  "name": "t1",
+  "name": "telcalling_v1",
   "version": "1.0.0",
-  "description": "",
+  "description": "Telecalling Web Application with admin dashboard",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
+    "start": "nodemon index.js",
     "dev": "nodemon index.js",
-    "seed": "node test-data.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "telecalling",
+    "admin",
+    "dashboard",
+    "mongodb",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "cloudinary": "^2.7.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
-    "csv-parser": "^3.0.0",
-    "csv-stringify": "^6.6.0",
-    "dotenv": "^17.2.1",
-    "express": "^4.21.2",
-    "express-async-errors": "^3.1.1",
+    "dompurify": "^3.3.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-winston": "^4.2.0",
+    "frappe-charts": "^1.6.2",
+    "helmet": "^7.1.0",
+    "jsdom": "^27.0.0",
     "jsonwebtoken": "^9.0.2",
-    "imapflow": "^1.0.164",
-    "mongoose": "^8.17.1",
-    "morgan": "^1.10.1",
-    "multer": "^2.0.2",
-    "nodemailer": "^6.9.15",
-    "streamifier": "^0.1.1",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "method-override": "^3.0.0",
+    "mongoose": "^8.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.1",
+    "winston": "^3.18.3",
+    "winston-daily-rotate-file": "^5.0.0",
+    "xlsx": "^0.18.5",
+    "xss-clean": "^0.1.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

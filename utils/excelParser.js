@@ -8,7 +8,11 @@ const Lead = require('../models/Lead');
 class ExcelParser {
   constructor() {
     this.supportedFormats = [
-      'text/csv'
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+      'application/vnd.ms-excel.template.macroEnabled.12'
     ];
 
     this.expectedColumns = {
@@ -51,13 +55,18 @@ class ExcelParser {
       throw new Error('No file provided');
     }
 
+    // Check if file has buffer (memory storage) or path (disk storage)
+    if (!file.buffer && !file.path) {
+      throw new Error('Invalid file object - missing buffer or path');
+    }
+
     if (!this.supportedFormats.includes(file.mimetype)) {
-      throw new Error(`Unsupported file format. Supported formats: ${this.supportedFormats.join(', ')}`);
+      throw new Error(`Unsupported file format: ${file.mimetype}. Supported formats: ${this.supportedFormats.join(', ')}`);
     }
 
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      throw new Error('File size exceeds maximum limit of 10MB');
+      throw new Error(`File size (${Math.round(file.size / 1024 / 1024)}MB) exceeds maximum limit of 10MB`);
     }
 
     return true;

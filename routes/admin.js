@@ -4,6 +4,7 @@ const router = express.Router();
 // Import middleware
 const { authenticateToken, requireAdmin, requireAnyRole } = require('../middleware/auth');
 const { excelUpload, handleUploadError } = require('../middleware/fileUpload');
+const { setExcelFileInfo, validateExcelUpload, setupProgressTracking } = require('../middleware/excelValidation');
 
 // Import admin controller
 const adminController = require('../controllers/adminController');
@@ -31,6 +32,9 @@ router.put('/leads/:id', adminController.updateLead);
 
 router.delete('/leads/:id', adminController.deleteLead);
 
+// Bulk operations routes
+router.delete('/leads/bulk-delete', adminController.bulkDeleteLeads);
+
 // Lead assignment routes
 router.get('/employees', adminController.getAllEmployees);
 
@@ -44,18 +48,21 @@ router.get('/lead-assignments', adminController.getAllLeadAssignments);
 router.post('/leads/upload-assign/:employeeId',
   excelUpload.single('excel'),
   handleUploadError,
+  setExcelFileInfo,
   adminController.uploadAndAssignLeads
 );
 
 router.post('/leads/preview',
   excelUpload.single('excel'),
   handleUploadError,
+  setExcelFileInfo,
   adminController.previewExcelFile
 );
 
 router.post('/leads/bulk-upload',
   excelUpload.single('excel'),
   handleUploadError,
+  setExcelFileInfo,
   adminController.bulkUploadLeads
 );
 

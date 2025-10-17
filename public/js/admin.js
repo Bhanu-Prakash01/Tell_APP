@@ -7,6 +7,7 @@ class AdminApp {
         this.token = null;
         this.user = null;
         this.currentPage = this.getCurrentPage();
+        this.selectedLeads = []; // For bulk operations
         console.log('AdminApp initialized for page:', this.currentPage);
         this.init();
     }
@@ -1249,6 +1250,7 @@ class AdminApp {
     async initLeadsPage() {
         this.initLeadsFilters();
         this.initLeadsSearch();
+        this.initBulkOperations();
     }
 
     async loadLeadsData(filters = {}) {
@@ -1297,6 +1299,7 @@ class AdminApp {
 
         tbody.innerHTML = leadsArray.map(lead => `
             <tr>
+                <td><input type="checkbox" class="lead-checkbox" value="${lead._id || lead.id}" onclick="toggleLeadSelection('${lead._id || lead.id}')"></td>
                 <td>${lead.name || 'N/A'}</td>
                 <td>${lead.phone || 'N/A'}</td>
                 <td>${lead.description || 'N/A'}</td>
@@ -1348,6 +1351,181 @@ class AdminApp {
                     this.loadLeadsData({ search: e.target.value });
                 }, 500);
             });
+        }
+    }
+
+    initBulkOperations() {
+        // Initialize selected leads array
+        this.selectedLeads = [];
+
+        // Add bulk operations UI
+        this.addBulkOperationsUI();
+
+        // Set up event listeners for bulk operations
+        this.setupBulkOperationListeners();
+    }
+
+    addBulkOperationsUI() {
+        const leadsTable = document.querySelector('#leadsTable');
+        if (!leadsTable) return;
+
+        // Add header checkbox for select all
+        const thead = leadsTable.querySelector('thead tr');
+        if (thead && !thead.querySelector('.select-all-header')) {
+            const selectAllTh = document.createElement('th');
+            selectAllTh.className = 'select-all-header';
+            selectAllTh.innerHTML = '<input type="checkbox" id="selectAllLeads" onclick="toggleSelectAll()">';
+            thead.insertBefore(selectAllTh, thead.firstChild);
+        }
+
+        // Add bulk operations bar
+        const tableContainer = leadsTable.closest('.table-container') || leadsTable.parentNode;
+        if (!document.querySelector('.bulk-operations-bar')) {
+            const bulkBar = document.createElement('div');
+            bulkBar.className = 'bulk-operations-bar';
+            bulkBar.innerHTML = `
+                <div class="bulk-info">
+                    <span id="selectedCount">0</span> leads selected
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" onclick="adminApp.bulkDeleteLeads()" style="display: none;">
+                        <i>🗑️</i> Delete Selected
+                    </button>
+                    <button class="btn btn-sm btn-secondary" id="clearSelectionBtn" onclick="adminApp.clearSelection()" style="display: none;">
+                        Clear Selection
+                    </button>
+                </div>
+            `;
+            tableContainer.insertBefore(bulkBar, leadsTable);
+        }
+    }
+
+    setupBulkOperationListeners() {
+        // Listen for individual checkbox changes
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('lead-checkbox')) {
+                const leadId = e.target.value;
+                this.toggleLeadSelection(leadId);
+            }
+        });
+    }
+
+    toggleLeadSelection(leadId) {
+        const checkbox = document.querySelector(`.lead-checkbox[value="${leadId}"]`);
+        if (!checkbox) return;
+
+        if (this.selectedLeads.includes(leadId)) {
+            // Deselect lead
+            this.selectedLeads = this.selectedLeads.filter(id => id !== leadId);
+            checkbox.checked = false;
+        } else {
+            // Select lead
+            this.selectedLeads.push(leadId);
+            checkbox.checked = true;
+        }
+
+        this.updateBulkOperationsUI();
+    }
+
+    toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllLeads');
+        if (!selectAllCheckbox) return;
+
+        const allCheckboxes = document.querySelectorAll('.lead-checkbox');
+
+        if (selectAllCheckbox.checked) {
+            // Select all leads
+            this.selectedLeads = [];
+            allCheckboxes.forEach(checkbox => {
+                const leadId = checkbox.value;
+                if (!this.selectedLeads.includes(leadId)) {
+                    this.selectedLeads.push(leadId);
+                    checkbox.checked = true;
+                }
+            });
+        } else {
+            // Deselect all leads
+            this.selectedLeads = [];
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        this.updateBulkOperationsUI();
+    }
+
+    updateBulkOperationsUI() {
+        const selectedCount = document.getElementById('selectedCount');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        if (selectedCount) {
+            selectedCount.textContent = this.selectedLeads.length;
+        }
+
+        // Show/hide bulk operation buttons
+        const shouldShow = this.selectedLeads.length > 0;
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.style.display = shouldShow ? 'inline-block' : 'none';
+        }
+        if (clearSelectionBtn) {
+            clearSelectionBtn.style.display = shouldShow ? 'inline-block' : 'none';
+        }
+    }
+
+    clearSelection() {
+        this.selectedLeads = [];
+        document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        document.getElementById('selectAllLeads').checked = false;
+        this.updateBulkOperationsUI();
+    }
+
+    async bulkDeleteLeads() {
+        if (this.selectedLeads.length === 0) {
+            this.showToast('No leads selected for deletion', 'warning');
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmMessage = `Are you sure you want to delete ${this.selectedLeads.length} lead(s)? This action cannot be undone.`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            this.showLoading();
+
+            const response = await this.apiRequest('/leads/bulk-delete', {
+                method: 'DELETE',
+                body: JSON.stringify({
+                    leadIds: this.selectedLeads
+                })
+            });
+
+            // Clear selection after successful deletion
+            this.clearSelection();
+
+            // Show success message with details
+            const { deletedCount, notFoundCount } = response.data;
+            let message = `Successfully deleted ${deletedCount} lead(s)`;
+
+            if (notFoundCount > 0) {
+                message += ` (${notFoundCount} leads not found)`;
+            }
+
+            this.showToast(message, 'success');
+
+            // Reload leads data
+            await this.loadLeadsData();
+
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            this.showToast('Failed to delete selected leads', 'error');
+        } finally {
+            this.hideLoading();
         }
     }
 
@@ -2022,5 +2200,30 @@ function showModal(modalId) {
 function hideModal(modalId) {
     if (window.adminApp) {
         window.adminApp.hideModal(modalId);
+    }
+}
+
+// Global functions for bulk operations
+function toggleLeadSelection(leadId) {
+    if (window.adminApp) {
+        window.adminApp.toggleLeadSelection(leadId);
+    }
+}
+
+function toggleSelectAll() {
+    if (window.adminApp) {
+        window.adminApp.toggleSelectAll();
+    }
+}
+
+function clearLeadSelection() {
+    if (window.adminApp) {
+        window.adminApp.clearSelection();
+    }
+}
+
+function bulkDeleteLeads() {
+    if (window.adminApp) {
+        window.adminApp.bulkDeleteLeads();
     }
 }

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Lead = require('../models/Lead');
 const excelParser = require('../utils/excelParser');
@@ -874,13 +875,48 @@ const uploadAndAssignLeads = async (req, res) => {
     }));
 
     // Insert leads into database in batches for better performance
-    const insertedLeads = await Lead.insertMany(leadsToInsert);
+    let insertedLeads = [];
+    try {
+      insertedLeads = await Lead.insertMany(leadsToInsert);
+    } catch (insertError) {
+      console.error('Database insertion error:', insertError);
+
+      // Check for specific database errors
+      if (insertError.name === 'ValidationError') {
+        return res.status(400).json({
+          success: false,
+          message: 'Data validation failed during lead insertion',
+          error: insertError.message,
+          data: {
+            summary,
+            errors: parseResult.data.errors,
+            duplicates: parseResult.data.duplicates
+          }
+        });
+      }
+
+      if (insertError.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: 'Duplicate data found during insertion',
+          error: 'Some leads already exist in the database',
+          data: {
+            summary,
+            errors: parseResult.data.errors,
+            duplicates: parseResult.data.duplicates
+          }
+        });
+      }
+
+      throw insertError; // Re-throw if it's not a handled error
+    }
 
     // Generate parsing report
     const report = excelParser.generateReport(parseResult);
 
     // Log the bulk assignment action
-    console.log(`Admin ${req.user.name} uploaded and assigned ${insertedLeads.length} leads to ${employee.name} from ${req.excelFileInfo.originalName}`);
+    const fileName = req.excelFileInfo?.originalName || req.file?.originalname || 'Unknown file';
+    console.log(`Admin ${req.user.name} uploaded and assigned ${insertedLeads.length} leads to ${employee.name} from ${fileName}`);
 
     res.status(200).json({
       success: true,
@@ -888,8 +924,8 @@ const uploadAndAssignLeads = async (req, res) => {
       data: {
         assignedCount: insertedLeads.length,
         employeeName: employee.name,
-        fileInfo: req.excelFileInfo,
-        structureInfo: req.excelStructureInfo,
+        fileInfo: req.excelFileInfo || {},
+        structureInfo: req.excelStructureInfo || {},
         summary,
         report,
         leads: insertedLeads.map(lead => ({
@@ -1131,8 +1167,8 @@ const previewExcelFile = async (req, res) => {
       success: true,
       message: 'Excel file preview generated successfully',
       data: {
-        fileInfo: req.excelFileInfo,
-        structureInfo: req.excelStructureInfo,
+        fileInfo: req.excelFileInfo || {},
+        structureInfo: req.excelStructureInfo || {},
         preview: {
           sampleLeads: leads.slice(0, 5), // Show first 5 leads
           totalAvailable: summary.parsedLeads,
@@ -1203,7 +1239,7 @@ const bulkUploadLeads = async (req, res) => {
     }
 
     // Initialize progress tracking
-    const totalRows = req.excelStructureInfo?.totalRows || 0;
+    const totalRows = req.excelStructureInfo?.totalRows || req.file?.size || 0;
     const progressCallback = req.progressCallback;
     let processedRows = 0;
 
@@ -1316,8 +1352,28 @@ const bulkUploadLeads = async (req, res) => {
 
     for (let i = 0; i < leads.length; i += batchSize) {
       const batch = leads.slice(i, i + batchSize);
-      const batchResult = await Lead.insertMany(batch);
-      insertedLeads.push(...batchResult);
+
+      try {
+        const batchResult = await Lead.insertMany(batch);
+        insertedLeads.push(...batchResult);
+      } catch (batchError) {
+        console.error(`Batch insertion error at batch ${Math.floor(i / batchSize) + 1}:`, batchError);
+
+        // Send error progress if callback exists
+        if (req.progressCallback) {
+          req.progressCallback({
+            stage: 'error',
+            processed: i,
+            total: totalRows,
+            percentage: Math.round((i / totalRows) * 100),
+            message: `Batch insertion failed: ${batchError.message}`,
+            error: batchError.message,
+            completed: true
+          });
+        }
+
+        throw batchError; // Stop processing and throw the error
+      }
 
       // Update progress for each batch
       const currentProcessed = Math.min(i + batchSize, leads.length);
@@ -1356,7 +1412,8 @@ const bulkUploadLeads = async (req, res) => {
     const report = excelParser.generateReport(parseResult);
 
     // Log the bulk upload action
-    console.log(`Admin ${req.user.name} bulk uploaded ${insertedLeads.length} leads from ${req.excelFileInfo.originalName}`);
+    const fileName2 = req.excelFileInfo?.originalName || req.file?.originalname || 'Unknown file';
+    console.log(`Admin ${req.user.name} bulk uploaded ${insertedLeads.length} leads from ${fileName2}`);
 
     // For SSE responses, we need to end the connection properly
     if (progressCallback) {
@@ -1368,8 +1425,8 @@ const bulkUploadLeads = async (req, res) => {
             message: `${insertedLeads.length} leads uploaded successfully`,
             data: {
               uploadedCount: insertedLeads.length,
-              fileInfo: req.excelFileInfo,
-              structureInfo: req.excelStructureInfo,
+              fileInfo: req.excelFileInfo || {},
+              structureInfo: req.excelStructureInfo || {},
               summary,
               report,
               leads: insertedLeads.map(lead => ({
@@ -1390,8 +1447,8 @@ const bulkUploadLeads = async (req, res) => {
         message: `${insertedLeads.length} leads uploaded successfully`,
         data: {
           uploadedCount: insertedLeads.length,
-          fileInfo: req.excelFileInfo,
-          structureInfo: req.excelStructureInfo,
+          fileInfo: req.excelFileInfo || {},
+          structureInfo: req.excelStructureInfo || {},
           summary,
           report,
           leads: insertedLeads.map(lead => ({
@@ -1413,7 +1470,7 @@ const bulkUploadLeads = async (req, res) => {
       req.progressCallback({
         stage: 'error',
         processed: 0,
-        total: req.excelStructureInfo?.totalRows || 0,
+        total: req.excelStructureInfo?.totalRows || req.file?.size || 0,
         percentage: 0,
         message: 'Upload failed',
         error: error.message,
@@ -1589,6 +1646,92 @@ const exportLeads = async (req, res) => {
   }
 };
 
+// Bulk delete leads
+const bulkDeleteLeads = async (req, res) => {
+  try {
+    const { leadIds } = req.body;
+
+    if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lead IDs array is required and cannot be empty'
+      });
+    }
+
+    // Validate that all IDs are valid MongoDB ObjectIds
+    const invalidIds = leadIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lead ID(s) provided',
+        data: {
+          invalidIds,
+          validCount: leadIds.length - invalidIds.length
+        }
+      });
+    }
+
+    // Find leads before deletion for logging
+    const leadsToDelete = await Lead.find({ _id: { $in: leadIds } }, 'name phone assignedTo status');
+    const deletedCount = leadsToDelete.length;
+
+    if (deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No leads found with the provided IDs'
+      });
+    }
+
+    // Perform bulk deletion
+    const deleteResult = await Lead.deleteMany({ _id: { $in: leadIds } });
+
+    if (deleteResult.deletedCount !== deletedCount) {
+      console.warn(`Expected to delete ${deletedCount} leads, but only deleted ${deleteResult.deletedCount}`);
+    }
+
+    // Log the bulk deletion action
+    console.log(`Admin ${req.user.name} bulk deleted ${deleteResult.deletedCount} leads`);
+
+    // Get summary of deleted leads by status and assignment
+    const summary = leadsToDelete.reduce((acc, lead) => {
+      // Count by status
+      acc.byStatus[lead.status] = (acc.byStatus[lead.status] || 0) + 1;
+
+      // Count by assignment
+      const assignedTo = lead.assignedTo || 'Unassigned';
+      acc.byAssignment[assignedTo] = (acc.byAssignment[assignedTo] || 0) + 1;
+
+      return acc;
+    }, { byStatus: {}, byAssignment: {} });
+
+    res.status(200).json({
+      success: true,
+      message: `${deleteResult.deletedCount} leads deleted successfully`,
+      data: {
+        deletedCount: deleteResult.deletedCount,
+        requestedCount: leadIds.length,
+        notFoundCount: leadIds.length - deletedCount,
+        summary,
+        deletedLeads: leadsToDelete.map(lead => ({
+          id: lead._id,
+          name: lead.name,
+          phone: lead.phone,
+          status: lead.status,
+          assignedTo: lead.assignedTo
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in bulkDeleteLeads:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete leads',
+      error: error.message
+    });
+  }
+};
+
 // Change user password
 const changeUserPassword = async (req, res) => {
   try {
@@ -1646,6 +1789,7 @@ module.exports = {
   assignLeads,
   updateLead,
   deleteLead,
+  bulkDeleteLeads,
   getAllEmployees,
   uploadAndAssignLeads,
   getEmployeeAssignments,

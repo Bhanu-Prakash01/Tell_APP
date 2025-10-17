@@ -14,6 +14,11 @@
             "date": 1760553061822,
             "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-16.log",
             "hash": "31efb888e94088443f8e94b7391ff3f85aad40dca6b9187ddb918723f42b14be"
+        },
+        {
+            "date": 1760696228141,
+            "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-17.log",
+            "hash": "9a6c84de9edfc3a0441dde505a54876b004ab5842d4a80f5a714dbb5f3cb1498"
         }
     ],
     "hashType": "sha256"

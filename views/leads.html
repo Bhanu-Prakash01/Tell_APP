@@ -341,10 +341,28 @@
                     </div>
                 </div>
 
+                <!-- Bulk Operations Bar -->
+                <div class="bulk-operations-bar" id="bulkOperationsBar" style="display: none;">
+                    <div class="bulk-info">
+                        <span id="selectedCount">0</span> leads selected
+                    </div>
+                    <div class="bulk-actions">
+                        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" onclick="bulkDeleteLeads()">
+                            🗑️ Delete Selected
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="clearSelectionBtn" onclick="clearLeadSelection()">
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+
                 <div class="table-container">
                     <table class="table" id="leadsTable">
                         <thead>
                             <tr>
+                                <th class="select-all-header">
+                                    <input type="checkbox" id="selectAllLeads" onclick="toggleSelectAll()">
+                                </th>
                                 <th>Name</th>
                                 <th>Phone</th>
                                 <th>Description</th>
@@ -359,7 +377,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="8">
+                                <td colspan="11">
                                     <div class="empty-state">
                                         <div class="loading"></div>
                                         <p>Loading leads...</p>
@@ -541,7 +559,7 @@
                 if (currentPageLeads.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="10">
+                            <td colspan="11">
                                 <div class="empty-state">
                                     <div class="empty-state-icon">📋</div>
                                     <p>No leads found</p>
@@ -554,6 +572,7 @@
 
                 tbody.innerHTML = currentPageLeads.map(lead => `
                     <tr>
+                        <td><input type="checkbox" class="lead-checkbox" value="${lead._id || lead.id}" onclick="toggleLeadSelection('${lead._id || lead.id}')"></td>
                         <td>${lead.name || 'N/A'}</td>
                         <td>${lead.phone || 'N/A'}</td>
                         <td>${lead.description || 'N/A'}</td>

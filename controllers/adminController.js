@@ -88,7 +88,7 @@ const getDashboardStats = async (req, res) => {
 
     const recentLeads = await Lead.find(
       { createdAt: { $gte: sevenDaysAgo } },
-      'name phone status assignedTo callTime createdAt'
+      'name phone status assignedTo callTime callStartTime createdAt'
     ).sort({ createdAt: -1 });
 
     // Get call time statistics
@@ -124,6 +124,7 @@ const getDashboardStats = async (req, res) => {
         phone: lead.phone,
         status: lead.status,
         callTime: lead.callTime,
+        callStartTime: lead.callStartTime,
         assignedTo: lead.assignedTo,
         createdAt: lead.createdAt
       }))
@@ -530,6 +531,8 @@ const getAllLeads = async (req, res) => {
           status: lead.status,
           notes: lead.notes,
           callTime: lead.callTime,
+          callStartTime: lead.callStartTime,
+          followupDateAndTime: lead.followupDateAndTime,
           assignedTo: lead.assignedTo,
           assignedDate: lead.assignedDate,
           createdAt: lead.createdAt,
@@ -589,6 +592,8 @@ const getLeadById = async (req, res) => {
         status: lead.status,
         notes: lead.notes,
         callTime: lead.callTime,
+        callStartTime: lead.callStartTime,
+        followupDateAndTime: lead.followupDateAndTime,
         assignedTo: lead.assignedTo,
         assignedDate: lead.assignedDate,
         createdAt: lead.createdAt,
@@ -719,6 +724,8 @@ const updateLead = async (req, res) => {
         status: lead.status,
         notes: lead.notes,
         callTime: lead.callTime,
+        callStartTime: lead.callStartTime,
+        followupDateAndTime: lead.followupDateAndTime,
         assignedTo: lead.assignedTo,
         assignedDate: lead.assignedDate,
         createdAt: lead.createdAt,
@@ -1051,6 +1058,8 @@ const getAllLeadAssignments = async (req, res) => {
           sector: lead.sector,
           status: lead.status,
           callTime: lead.callTime,
+          callStartTime: lead.callStartTime,
+          followupDateAndTime: lead.followupDateAndTime,
           assignedTo: lead.assignedTo,
           assignedDate: lead.assignedDate,
           createdAt: lead.createdAt,
@@ -1151,6 +1160,7 @@ const getEmployeeAssignments = async (req, res) => {
           sector: lead.sector,
           status: lead.status,
           callTime: lead.callTime,
+          callStartTime: lead.callStartTime,
           assignedDate: lead.assignedDate,
           createdAt: lead.createdAt,
           updatedAt: lead.updatedAt
@@ -1607,6 +1617,8 @@ const exportLeads = async (req, res) => {
       status: 1,
       notes: 1,
       callTime: 1,
+      callStartTime: 1,
+      followupDateAndTime: 1,
       assignedTo: 1,
       assignedDate: 1,
       createdAt: 1,
@@ -1648,6 +1660,8 @@ const exportLeads = async (req, res) => {
               status: lead.status,
               notes: lead.notes,
               callTime: lead.callTime,
+              callStartTime: lead.callStartTime,
+              followupDateAndTime: lead.followupDateAndTime,
               assignedTo: lead.assignedTo,
               assignedDate: lead.assignedDate,
               createdAt: lead.createdAt,
@@ -1662,7 +1676,7 @@ const exportLeads = async (req, res) => {
         // Generate CSV content
         const headers = [
           'Name', 'Phone', 'Email', 'Description', 'Website', 'Location', 'Sector',
-          'Status', 'Notes', 'Call Time', 'Assigned To', 'Assigned Date', 'Created At', 'Updated At'
+          'Status', 'Notes', 'Call Time', 'Call Start Time', 'Followup Date And Time', 'Assigned To', 'Assigned Date', 'Created At', 'Updated At'
         ];
 
         const csvRows = [
@@ -1678,6 +1692,8 @@ const exportLeads = async (req, res) => {
             `"${(lead.status || '').replace(/"/g, '""')}"`,
             `"${(lead.notes || '').replace(/"/g, '""')}"`,
             `"${(lead.callTime || '').replace(/"/g, '""')}"`,
+            `"${lead.callStartTime ? new Date(lead.callStartTime).toLocaleDateString() : ''}"`,
+            `"${lead.followupDateAndTime ? new Date(lead.followupDateAndTime).toLocaleDateString() + ' ' + new Date(lead.followupDateAndTime).toLocaleTimeString() : ''}"`,
             `"${(lead.assignedTo || '').replace(/"/g, '""')}"`,
             `"${lead.assignedDate ? new Date(lead.assignedDate).toLocaleDateString() : ''}"`,
             `"${new Date(lead.createdAt).toLocaleDateString()}"`,
@@ -1736,11 +1752,22 @@ const bulkUpdateLeads = async (req, res) => {
     }
 
     // Remove fields that shouldn't be updated directly
-    const allowedUpdates = ['name', 'phone', 'description', 'website', 'location', 'sector', 'status', 'notes', 'callTime', 'assignedTo'];
+    const allowedUpdates = ['name', 'phone', 'description', 'website', 'location', 'sector', 'status', 'notes', 'callTime', 'callStartTime', 'followupDateAndTime', 'assignedTo'];
     const filteredUpdates = {};
 
     for (const [key, value] of Object.entries(updates)) {
       if (allowedUpdates.includes(key)) {
+        // Validate followup date and time if status is "Followup"
+        if (key === 'status' && value === 'Followup') {
+          const followupDateTime = updates.followupDateAndTime;
+          if (!followupDateTime) {
+            throw new AppError('Followup date and time is required when status is "Followup"', 400);
+          }
+          const followupDate = new Date(followupDateTime);
+          if (isNaN(followupDate.getTime()) || followupDate <= new Date()) {
+            throw new AppError('Followup date and time must be a valid future date', 400);
+          }
+        }
         filteredUpdates[key] = value;
       }
     }
@@ -1957,6 +1984,52 @@ const changeUserPassword = async (req, res) => {
   }
 };
 
+// Trigger followup allocation manually
+const triggerFollowupAllocation = async (req, res) => {
+  try {
+    const followupScheduler = require('../utils/followupScheduler');
+
+    // Trigger manual allocation
+    await followupScheduler.triggerAllocation();
+
+    res.status(200).json({
+      success: true,
+      message: 'Followup allocation triggered successfully'
+    });
+
+  } catch (error) {
+    console.error('Error triggering followup allocation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to trigger followup allocation',
+      error: error.message
+    });
+  }
+};
+
+// Get followup allocation statistics
+const getFollowupStats = async (req, res) => {
+  try {
+    const followupScheduler = require('../utils/followupScheduler');
+
+    const stats = await followupScheduler.getAllocationStats();
+
+    res.status(200).json({
+      success: true,
+      message: 'Followup statistics retrieved successfully',
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Error getting followup stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve followup statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getChartData,
@@ -1981,5 +2054,7 @@ module.exports = {
   bulkUploadLeads,
   getCallTimeStats,
   exportLeads,
-  changeUserPassword
+  changeUserPassword,
+  triggerFollowupAllocation,
+  getFollowupStats
 };

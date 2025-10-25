@@ -29,6 +29,9 @@ const employeeRoutes = require('./routes/employee');
 const { logger, logAuthEvent, logAppEvent, logSecurityEvent } = require('./utils/logger');
 const { auditLogger } = require('./utils/auditLogger');
 
+// Import followup scheduler
+const followupScheduler = require('./utils/followupScheduler');
+
 // Create Express app
 const app = express();
 
@@ -292,6 +295,10 @@ const startServer = async () => {
     // Connect to database first
     await connectDB();
 
+    // Start followup scheduler
+    followupScheduler.start();
+    console.log('📅 Followup scheduler started');
+
     // Start the server
     const server = app.listen(PORT, () => {
       console.log(`
@@ -301,6 +308,7 @@ const startServer = async () => {
 📊 API Base URL: http://localhost:${PORT}/api/v1
 👨‍💼 Admin Dashboard: http://localhost:${PORT}/admin
 📚 API Documentation: http://localhost:${PORT}/api/v1/docs
+📅 Followup Scheduler: Running (checks every 5 minutes)
       `);
     });
 
@@ -310,6 +318,10 @@ const startServer = async () => {
 
       server.close(async () => {
         console.log('✅ HTTP server closed.');
+
+        // Stop followup scheduler
+        followupScheduler.stop();
+        console.log('✅ Followup scheduler stopped.');
 
         // Close database connection
         await mongoose.connection.close();

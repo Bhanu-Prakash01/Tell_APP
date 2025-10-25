@@ -314,6 +314,7 @@
                                 <option value="Hot">Hot</option>
                                 <option value="Pending">Pending</option>
                                 <option value="Completed">Completed</option>
+                                <option value="Followup">Followup</option>
                             </select>
                         </div>
 
@@ -391,6 +392,8 @@
                                 <th>Notes</th>
                                 <th>Status</th>
                                 <th>Call Time</th>
+                                <th>Call Start Time</th>
+                                <th>Followup Date & Time</th>
                                 <th>Assigned To</th>
                                 <th>Created</th>
                                 <th>Actions</th>
@@ -398,7 +401,7 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="11">
+                                <td colspan="13">
                                     <div class="empty-state">
                                         <div class="loading"></div>
                                         <p>Loading leads...</p>
@@ -475,6 +478,7 @@
                             <option value="Hot">Hot</option>
                             <option value="Pending">Pending</option>
                             <option value="Completed">Completed</option>
+                            <option value="Followup">Followup</option>
                         </select>
                     </div>
 
@@ -508,6 +512,30 @@
                         </label>
                         <textarea id="notesField" class="form-control" rows="3" placeholder="Additional notes to append..." disabled></textarea>
                         <small class="text-muted">Notes will be appended to existing notes with timestamp</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateCallTime" onchange="adminApp.toggleField('callTimeField')"> Call Time
+                        </label>
+                        <input type="text" id="callTimeField" class="form-control" placeholder="e.g., 15m 30s or 14:30" disabled>
+                        <small class="text-muted">Call duration in "HH:MM" format or duration like "5m 30s"</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateCallStartTime" onchange="adminApp.toggleField('callStartTimeField')"> Call Start Time
+                        </label>
+                        <input type="datetime-local" id="callStartTimeField" class="form-control" disabled>
+                        <small class="text-muted">When the call started (date and time)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateFollowupDateTime" onchange="adminApp.toggleField('followupDateTimeField')"> Followup Date & Time
+                        </label>
+                        <input type="datetime-local" id="followupDateTimeField" class="form-control" disabled>
+                        <small class="text-muted">When to follow up with the lead (required if status is "Followup")</small>
                     </div>
 
                     <div class="form-group">
@@ -660,7 +688,7 @@
                 if (currentPageLeads.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="11">
+                            <td colspan="13">
                                 <div class="empty-state">
                                     <div class="empty-state-icon">📋</div>
                                     <p>No leads found</p>
@@ -681,6 +709,8 @@
                         <td>${lead.notes || 'N/A'}</td>
                         <td><span class="badge badge-${this.getStatusBadgeClass(lead.status)}">${lead.status || 'New'}</span></td>
                         <td>${lead.callTime ? (typeof window.formatCallTime === 'function' ? window.formatCallTime(lead.callTime) : lead.callTime) : 'Not recorded'}</td>
+                        <td>${lead.callStartTime ? new Date(lead.callStartTime).toLocaleDateString() + ' ' + new Date(lead.callStartTime).toLocaleTimeString() : 'Not recorded'}</td>
+                        <td>${lead.followupDateAndTime ? new Date(lead.followupDateAndTime).toLocaleDateString() + ' ' + new Date(lead.followupDateAndTime).toLocaleTimeString() : 'Not scheduled'}</td>
                         <td>${lead.assignedTo || 'Unassigned'}</td>
                         <td>${new Date(lead.createdAt).toLocaleDateString()}</td>
                         <td>
@@ -870,7 +900,23 @@
                                 <option value="Hot" ${lead.status === 'Hot' ? 'selected' : ''}>Hot</option>
                                 <option value="Pending" ${lead.status === 'Pending' ? 'selected' : ''}>Pending</option>
                                 <option value="Completed" ${lead.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                <option value="Followup" ${lead.status === 'Followup' ? 'selected' : ''}>Followup</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Call Time</label>
+                            <input type="text" class="form-control" value="${lead.callTime || ''}" id="editLeadCallTime" placeholder="e.g., 15m 30s or 14:30">
+                            <small class="text-muted">Call duration in "HH:MM" format or duration like "5m 30s"</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Call Start Time</label>
+                            <input type="datetime-local" class="form-control" value="${lead.callStartTime ? new Date(lead.callStartTime).toISOString().slice(0, 16) : ''}" id="editLeadCallStartTime">
+                            <small class="text-muted">When the call started (date and time)</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Followup Date & Time</label>
+                            <input type="datetime-local" class="form-control" value="${lead.followupDateAndTime ? new Date(lead.followupDateAndTime).toISOString().slice(0, 16) : ''}" id="editLeadFollowupDateTime">
+                            <small class="text-muted">When to follow up with the lead (required if status is "Followup")</small>
                         </div>
                     `;
                 }
@@ -891,6 +937,9 @@
                     phone: document.getElementById('editLeadPhone').value,
                     company: document.getElementById('editLeadCompany').value,
                     status: document.getElementById('editLeadStatus').value,
+                    callTime: document.getElementById('editLeadCallTime').value,
+                    callStartTime: document.getElementById('editLeadCallStartTime').value ? new Date(document.getElementById('editLeadCallStartTime').value).toISOString() : null,
+                    followupDateAndTime: document.getElementById('editLeadFollowupDateTime').value ? new Date(document.getElementById('editLeadFollowupDateTime').value).toISOString() : null,
                 };
 
                 window.adminApp.apiRequest(`/leads/${leadId}`, {

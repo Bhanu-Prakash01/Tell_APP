@@ -1286,7 +1286,7 @@ class AdminApp {
         if (leadsArray.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10">
+                    <td colspan="13">
                         <div class="empty-state">
                             <div class="empty-state-icon">📋</div>
                             <p>No leads found</p>
@@ -1307,6 +1307,8 @@ class AdminApp {
                 <td>${lead.notes || 'N/A'}</td>
                 <td><span class="badge badge-${this.getStatusBadgeClass(lead.status)}">${lead.status || 'New'}</span></td>
                 <td>${lead.callTime ? (typeof window.formatCallTime === 'function' ? window.formatCallTime(lead.callTime) : lead.callTime) : 'Not recorded'}</td>
+                <td>${lead.callStartTime ? new Date(lead.callStartTime).toLocaleDateString() + ' ' + new Date(lead.callStartTime).toLocaleTimeString() : 'Not recorded'}</td>
+                <td>${lead.followupDateAndTime ? new Date(lead.followupDateAndTime).toLocaleDateString() + ' ' + new Date(lead.followupDateAndTime).toLocaleTimeString() : 'Not scheduled'}</td>
                 <td>${lead.assignedTo || 'Unassigned'}</td>
                 <td>${new Date(lead.createdAt).toLocaleDateString()}</td>
                 <td>
@@ -1508,6 +1510,17 @@ class AdminApp {
             this.toggleField(checkbox.id.replace('update', '').toLowerCase() + 'Field');
         });
 
+        // Clear the new call time and call start time fields
+        document.getElementById('callTimeField').value = '';
+        document.getElementById('callStartTimeField').value = '';
+        document.getElementById('followupDateTimeField').value = '';
+
+        // Set up status change handler
+        const statusField = document.getElementById('statusField');
+        if (statusField) {
+            statusField.addEventListener('change', () => this.handleStatusChange());
+        }
+
         // Show modal
         this.showModal('bulkUpdateModal');
     }
@@ -1519,6 +1532,31 @@ class AdminApp {
             field.disabled = !checkbox.checked;
             if (!checkbox.checked) {
                 field.value = '';
+            }
+        }
+    }
+
+    // Handle status change to show/hide followup field
+    handleStatusChange() {
+        const statusField = document.getElementById('statusField');
+        const followupCheckbox = document.getElementById('updateFollowupDateTime');
+        const followupField = document.getElementById('followupDateTimeField');
+
+        if (statusField && followupCheckbox && followupField) {
+            const selectedStatus = statusField.value;
+
+            if (selectedStatus === 'Followup') {
+                // Make followup field required and enabled
+                followupCheckbox.checked = true;
+                followupField.disabled = false;
+                followupField.required = true;
+                followupCheckbox.disabled = true; // Prevent unchecking when status is Followup
+            } else {
+                // Make followup field optional and disabled
+                followupCheckbox.checked = false;
+                followupField.disabled = true;
+                followupField.required = false;
+                followupCheckbox.disabled = false; // Allow checking for other statuses
             }
         }
     }
@@ -1598,6 +1636,38 @@ class AdminApp {
             const notesValue = document.getElementById('notesField').value.trim();
             if (notesValue) {
                 updates.notes = notesValue;
+            }
+        }
+
+        // Call time update
+        if (document.getElementById('updateCallTime').checked) {
+            const callTimeValue = document.getElementById('callTimeField').value.trim();
+            if (callTimeValue) {
+                updates.callTime = callTimeValue;
+            }
+        }
+
+        // Call start time update
+        if (document.getElementById('updateCallStartTime').checked) {
+            const callStartTimeValue = document.getElementById('callStartTimeField').value;
+            if (callStartTimeValue) {
+                updates.callStartTime = new Date(callStartTimeValue).toISOString();
+            }
+        }
+
+        // Followup date and time update
+        if (document.getElementById('updateFollowupDateTime').checked) {
+            const followupDateTimeValue = document.getElementById('followupDateTimeField').value;
+            if (followupDateTimeValue) {
+                updates.followupDateAndTime = new Date(followupDateTimeValue).toISOString();
+            }
+        }
+
+        // If status is "Followup", always include followupDateAndTime if provided
+        if (updates.status === 'Followup') {
+            const followupDateTimeValue = document.getElementById('followupDateTimeField').value;
+            if (followupDateTimeValue) {
+                updates.followupDateAndTime = new Date(followupDateTimeValue).toISOString();
             }
         }
 

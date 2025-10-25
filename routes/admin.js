@@ -77,6 +77,10 @@ router.get('/leads/parsing-report/:uploadId', adminController.getExcelParsingRep
 router.get('/call-time-stats', adminController.getCallTimeStats);
 router.get('/leads/export', adminController.exportLeads);
 
+// Followup management routes
+router.post('/followup/trigger-allocation', adminController.triggerFollowupAllocation);
+router.get('/followup/stats', adminController.getFollowupStats);
+
 // User password change route
 router.put('/users/:userId/password', adminController.changeUserPassword);
 

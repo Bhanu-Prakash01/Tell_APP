@@ -36,9 +36,24 @@ const leadSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["New", "Interested", "Not Interested", "Hot", "Pending", "Completed"],
+    enum: ["New", "Interested", "Not Interested", "Hot", "Pending", "Completed", "Followup"],
     default: 'New',
     trim: true
+  },
+
+  followupDateAndTime: {
+    type: Date,
+    default: null,
+    validate: {
+      validator: function(v) {
+        // If status is "Followup", followupDateAndTime is required and must be in the future
+        if (this.status === 'Followup') {
+          return v && v > new Date();
+        }
+        return true; // Optional for other statuses
+      },
+      message: 'Followup date and time is required and must be in the future when status is "Followup"'
+    }
   },
 
   notes: {
@@ -74,6 +89,11 @@ const leadSchema = new mongoose.Schema({
       },
       message: 'Call time must be in format "HH:MM" or duration like "5m 30s"'
     }
+  },
+
+  callStartTime: {
+    type: Date,
+    default: null
   },
 
   lastUpdatedAt: {
@@ -141,15 +161,21 @@ leadSchema.methods.addNotes = function(notes) {
   return this.save();
 };
 
-// Instance method to update lead with call time
-leadSchema.methods.updateWithCall = function(status, notes, callTime) {
+// Instance method to update lead with call time and start time
+leadSchema.methods.updateWithCall = function(status, notes, callTime, callStartTime, followupDateAndTime) {
   if (status) this.status = status;
   if (notes && notes.trim()) {
     const currentNotes = this.notes || '';
     const timestamp = new Date().toISOString();
-    this.notes = currentNotes + `\n\n[${timestamp}] ${this.assignedTo}: ${notes.trim()}`;
+    let noteText = notes.trim();
+    if (callStartTime) {
+      noteText += ` (Call started at: ${callStartTime.toISOString()})`;
+    }
+    this.notes = currentNotes + `\n\n[${timestamp}] ${this.assignedTo}: ${noteText}`;
   }
   if (callTime) this.callTime = callTime;
+  if (callStartTime) this.callStartTime = callStartTime;
+  if (followupDateAndTime) this.followupDateAndTime = followupDateAndTime;
   this.lastUpdatedAt = new Date();
   return this.save();
 };

@@ -46,7 +46,10 @@ class ExcelParser {
       notes: ['Notes', 'notes', 'Comments', 'Remarks', 'Additional Notes', 'Comment'],
 
       // Description variations
-      description: ['Description', 'description', 'Other Details', 'Details', 'Info', 'Additional Info', 'Lead Description', 'Descriptions', 'descriptions']
+      description: ['Description', 'description', 'Other Details', 'Details', 'Info', 'Additional Info', 'Lead Description', 'Descriptions', 'descriptions'],
+
+      // Followup date and time variations
+      followupDateAndTime: ['Followup Date', 'Followup Time', 'Followup Date & Time', 'Followup Date And Time', 'Follow Up Date', 'Follow Up Time', 'Follow Up Date & Time', 'Follow Up Date And Time', 'followupDateAndTime', 'followup_date', 'followup_time', 'followup_datetime']
     };
   }
 
@@ -187,13 +190,26 @@ class ExcelParser {
           if (skipDuplicates) {
             const existingLead = await Lead.findOne({ phone: leadData.phone });
             if (existingLead) {
-              console.log(`Row ${rowIndex} duplicate found:`, leadData.phone);
-              duplicates.push({
-                row: rowIndex,
-                phone: leadData.phone,
-                existingId: existingLead._id
-              });
-              continue;
+              // If the existing lead is a followup lead, skip it during import
+              if (existingLead.status === 'Followup') {
+                console.log(`Row ${rowIndex} followup lead already exists:`, leadData.phone);
+                duplicates.push({
+                  row: rowIndex,
+                  phone: leadData.phone,
+                  existingId: existingLead._id,
+                  reason: 'Followup lead already exists'
+                });
+                continue;
+              } else {
+                // For non-followup leads, still consider it a duplicate
+                console.log(`Row ${rowIndex} duplicate found:`, leadData.phone);
+                duplicates.push({
+                  row: rowIndex,
+                  phone: leadData.phone,
+                  existingId: existingLead._id
+                });
+                continue;
+              }
             }
           }
 
@@ -354,6 +370,9 @@ class ExcelParser {
           case 'description':
             value = this.cleanDescription(value);
             break;
+          case 'followupDateAndTime':
+            value = this.cleanFollowupDateTime(value);
+            break;
         }
 
         if (value) {
@@ -496,6 +515,36 @@ class ExcelParser {
       .trim()
       .replace(/\s+/g, ' ')
       .substring(0, 1000);
+  }
+
+  /**
+   * Clean and format followup date and time
+   */
+  cleanFollowupDateTime(dateTime) {
+    if (!dateTime) return null;
+
+    try {
+      // Try to parse as Date object first
+      if (dateTime instanceof Date) {
+        return dateTime;
+      }
+
+      // Try to parse as string
+      const parsed = new Date(dateTime.trim());
+      if (isNaN(parsed.getTime())) {
+        throw new Error('Invalid date format');
+      }
+
+      // Ensure it's in the future for followup
+      if (parsed <= new Date()) {
+        throw new Error('Followup date must be in the future');
+      }
+
+      return parsed;
+    } catch (error) {
+      console.warn(`Invalid followup date/time format: ${dateTime}`);
+      return null;
+    }
   }
 
   /**

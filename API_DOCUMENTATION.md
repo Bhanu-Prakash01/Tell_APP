@@ -239,8 +239,10 @@ curl -X GET http://localhost:3000/api/v1/employee/leads/today \
         "name": "Alice Johnson",
         "phone": "+1234567890",
         "status": "New",
+        "callTime": "10m 45s",
+        "callStartTime": "2025-10-25T09:15:00.000Z",
         "assignedTo": "John Doe",
-        "assignedDate": "2024-01-15T08:00:00.000Z"
+        "assignedDate": "2025-10-25T08:00:00.000Z"
       }
     ],
     "summary": {
@@ -262,9 +264,42 @@ curl -X PUT http://localhost:3000/api/v1/employee/leads/update/507f1f77bcf86cd79
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_EMPLOYEE_TOKEN" \
   -d '{
-    "status": "Interested",
-    "notes": "Customer showed interest in our premium plan"
+    "status": "Followup",
+    "notes": "Customer requested callback next week",
+    "callTime": "15m 30s",
+    "callStartTime": "2025-10-25T10:00:00.000Z",
+    "followupDateAndTime": "2025-11-01T14:00:00.000Z"
   }'
+```
+
+**Request Body Fields:**
+- `status` (optional): Lead status - "New", "Interested", "Not Interested", "Hot", "Pending", "Completed", "Followup"
+- `notes` (optional): Additional notes about the call or lead
+- `callTime` (optional): Call duration in "HH:MM" format or duration like "5m 30s"
+- `callStartTime` (optional): Call start time in ISO 8601 format (e.g., "2025-10-25T10:00:00.000Z")
+- `followupDateAndTime` (optional): Followup date and time in ISO 8601 format (required when status is "Followup")
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lead updated successfully",
+  "data": {
+    "lead": {
+      "id": "507f1f77bcf86cd799439013",
+      "name": "Alice Johnson",
+      "phone": "+1234567890",
+      "status": "Interested",
+      "notes": "\n\n[2025-10-25T10:15:00.000Z] John Doe: Customer requested callback next week (Call started at: 2025-10-25T10:00:00.000Z)",
+      "callTime": "15m 30s",
+      "callStartTime": "2025-10-25T10:00:00.000Z",
+      "followupDateAndTime": "2025-11-01T14:00:00.000Z",
+      "assignedTo": "John Doe",
+      "lastUpdatedAt": "2025-10-25T10:15:00.000Z",
+      "updatedAt": "2025-10-25T10:15:00.000Z"
+    }
+  }
+}
 ```
 
 ## Lead Assignment Integration
@@ -285,8 +320,11 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/507f1f77bcf86cd799439013 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{
-    "status": "Interested",
-    "notes": "Customer showed strong interest in premium package",
+    "status": "Followup",
+    "notes": "Customer requested callback next week",
+    "callTime": "20m 15s",
+    "callStartTime": "2025-10-25T09:30:00.000Z",
+    "followupDateAndTime": "2025-11-01T14:00:00.000Z",
     "phone": "+1234567890",
     "email": "updated@example.com"
   }'
@@ -303,16 +341,21 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/507f1f77bcf86cd799439013 \
     "phone": "+1234567890",
     "email": "updated@example.com",
     "status": "Interested",
-    "notes": "Customer showed strong interest in premium package",
+    "notes": "Customer requested callback next week",
+    "callTime": "20m 15s",
+    "callStartTime": "2025-10-25T09:30:00.000Z",
+    "followupDateAndTime": "2025-11-01T14:00:00.000Z",
     "assignedTo": "Jane Smith",
-    "updatedAt": "2024-01-15T14:30:00.000Z"
+    "updatedAt": "2025-10-25T14:30:00.000Z"
   }
 }
 ```
 
 **Allowed Update Fields:**
-- `status`: "New", "Interested", "Not Interested", "Hot"
+- `status`: "New", "Interested", "Not Interested", "Hot", "Pending", "Completed"
 - `notes`: Text up to 1000 characters
+- `callTime`: Call duration in "HH:MM" format or duration like "5m 30s"
+- `callStartTime`: Call start time in ISO 8601 format (e.g., "2025-10-25T09:30:00.000Z")
 - `name`: Lead name
 - `phone`: Phone number
 - `email`: Email address
@@ -362,7 +405,10 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
       "507f1f77bcf86cd799439015"
     ],
     "updates": {
-      "status": "Interested",
+      "status": "Followup",
+      "callTime": "15m 30s",
+      "callStartTime": "2025-10-25T10:00:00.000Z",
+      "followupDateAndTime": "2025-11-01T14:00:00.000Z",
       "sector": "Technology",
       "notes": "Updated via bulk operation"
     }
@@ -370,16 +416,18 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
 ```
 
 **Allowed Update Fields:**
-- `status`: "New", "Interested", "Not Interested", "Hot", "Pending", "Completed"
+- `status`: "New", "Interested", "Not Interested", "Hot", "Pending", "Completed", "Followup"
 - `assignedTo`: Employee name or "Unassigned"
 - `sector`: Business sector (string)
 - `location`: Location/region (string)
 - `notes`: Additional notes (will be appended with timestamp)
+- `callTime`: Call time in "HH:MM" format or duration like "5m 30s"
+- `callStartTime`: Call start time in ISO 8601 format (e.g., "2025-10-25T09:30:00.000Z")
+- `followupDateAndTime`: Followup date and time in ISO 8601 format (required when status is "Followup")
 - `name`: Lead name
 - `phone`: Phone number
 - `description`: Lead description
 - `website`: Website URL
-- `callTime`: Call time in "HH:MM" format or duration like "5m 30s"
 
 **Response:**
 ```json
@@ -392,6 +440,8 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
     "notFoundCount": 0,
     "updates": {
       "status": "Interested",
+      "callTime": "15m 30s",
+      "callStartTime": "2025-10-25T10:00:00.000Z",
       "sector": "Technology",
       "notes": "Updated via bulk operation"
     },
@@ -409,9 +459,12 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
         "id": "507f1f77bcf86cd799439013",
         "name": "Alice Johnson",
         "phone": "+1234567890",
-        "status": "Interested",
+        "status": "Followup",
+        "callTime": "15m 30s",
+        "callStartTime": "2025-10-25T10:00:00.000Z",
+        "followupDateAndTime": "2025-11-01T14:00:00.000Z",
         "assignedTo": "John Doe",
-        "updatedAt": "2024-01-15T14:30:00.000Z"
+        "updatedAt": "2025-10-25T14:30:00.000Z"
       }
     ]
   }
@@ -509,8 +562,8 @@ curl -X GET "http://localhost:3000/api/v1/admin/leads/export?search=john&sector=
 
 **CSV Format:**
 ```csv
-Name,Phone,Email,Description,Website,Location,Sector,Status,Notes,Call Time,Assigned To,Assigned Date,Created At,Updated At
-"John Doe","+1234567890","john@example.com","Tech company","https://example.com","New York","Technology","Interested","Initial contact made","14:30","Jane Smith","2024-01-15","2024-01-10","2024-01-15"
+Name,Phone,Email,Description,Website,Location,Sector,Status,Notes,Call Time,Call Start Time,Followup Date And Time,Assigned To,Assigned Date,Created At,Updated At
+"John Doe","+1234567890","john@example.com","Tech company","https://example.com","New York","Technology","Followup","Initial contact made","14:30","2025-10-25","2025-11-01 14:00","Jane Smith","2024-01-15","2024-01-10","2024-01-15"
 ```
 
 ## File Upload Integration (CSV Import)
@@ -654,6 +707,30 @@ The CSV upload functionality has been enhanced to prevent double uploads:
 
 These fixes ensure that CSV files are processed exactly once per user action, eliminating duplicate entries and maintaining data integrity.
 
+### Call Start Time Tracking Feature
+A new `callStartTime` field has been added to track when calls begin:
+
+- **Employee Lead Updates**: Employees can now include `callStartTime` when updating lead status and notes
+- **Admin Lead Management**: Admins can update `callStartTime` through individual and bulk operations
+- **Data Storage**: Stored as ISO 8601 timestamp and automatically appended to notes for reference
+- **Export Integration**: Included in CSV and JSON exports with proper formatting
+- **Validation**: Accepts valid ISO 8601 date strings (e.g., "2025-10-25T10:00:00.000Z")
+
+**Usage Example:**
+```bash
+curl -X PUT http://localhost:3000/api/v1/employee/leads/update/LEAD_ID \
+  -H "Authorization: Bearer EMPLOYEE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "Completed",
+    "notes": "Call completed successfully",
+    "callTime": "15m 30s",
+    "callStartTime": "2025-10-25T10:00:00.000Z"
+  }'
+```
+
+This feature enhances call tracking and provides better insights into employee performance and call management efficiency.
+
 ## Testing Examples
 
 ### 1. Complete Workflow Test
@@ -778,3 +855,66 @@ curl -X DELETE http://localhost:3000/api/v1/admin/leads/bulk-delete \
 ```
 
 This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features, including the complete bulk operations implementation.
+
+## Followup Management
+
+### 1. Trigger Followup Allocation
+**Endpoint:** `POST /api/v1/admin/followup/trigger-allocation`
+
+Manually trigger the automatic allocation of followup leads to employees:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/admin/followup/trigger-allocation \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Followup allocation triggered successfully"
+}
+```
+
+### 2. Get Followup Statistics
+**Endpoint:** `GET /api/v1/admin/followup/stats`
+
+Get statistics about followup leads allocation:
+
+```bash
+curl -X GET http://localhost:3000/api/v1/admin/followup/stats \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Followup statistics retrieved successfully",
+  "data": {
+    "assigned": 15,
+    "unassigned": 5,
+    "due": 3,
+    "pending": 17
+  }
+}
+```
+
+### Followup Lead Features
+
+#### Status Management
+- **Followup Status**: New status option for leads that need follow-up calls
+- **Mandatory Date/Time**: When status is set to "Followup", a future date and time must be specified
+- **Automatic Allocation**: Leads are automatically assigned to available employees at the scheduled followup time
+
+#### CSV Import Behavior
+- **Duplicate Detection**: If a followup lead already exists in the system, it will be skipped during CSV import
+- **Date Parsing**: Followup date and time can be imported from CSV files with various date formats
+- **Validation**: Imported followup dates must be in the future
+
+#### Automatic Scheduling
+- **Background Process**: Runs every 5 minutes to check for due followup leads
+- **Round-Robin Assignment**: Distributes followup leads among available employees
+- **Graceful Shutdown**: Scheduler stops properly when the application shuts down
+
+This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features, including the complete bulk operations implementation and followup management system.

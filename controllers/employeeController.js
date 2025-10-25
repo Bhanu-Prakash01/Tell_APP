@@ -242,12 +242,12 @@ const getTodayLeads = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Update lead status, notes, and call time
+// @desc    Update lead status, notes, call time, and call start time
 // @route   PUT /api/employee/leads/update/:id
 // @access  Private (Employee only)
 const updateLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, notes, callTime } = req.body;
+  const { status, notes, callTime, callStartTime, followupDateAndTime } = req.body;
   const employee = req.user;
 
   // Find the lead
@@ -262,8 +262,30 @@ const updateLead = asyncHandler(async (req, res) => {
   }
 
   // Validate status if provided
-  if (status && !['New', 'Interested', 'Not Interested', 'Hot', 'Pending', 'Completed'].includes(status)) {
+  if (status && !['New', 'Interested', 'Not Interested', 'Hot', 'Pending', 'Completed', 'Followup'].includes(status)) {
     throw new AppError('Invalid status value', 400);
+  }
+
+  // Validate followup date and time if status is "Followup"
+  if (status === 'Followup') {
+    if (!followupDateAndTime) {
+      throw new AppError('Followup date and time is required when status is "Followup"', 400);
+    }
+    const followupDate = new Date(followupDateAndTime);
+    if (isNaN(followupDate.getTime()) || followupDate <= new Date()) {
+      throw new AppError('Followup date and time must be a valid future date', 400);
+    }
+  }
+
+  // Validate followup date and time if status is "Followup"
+  if (status === 'Followup') {
+    if (!followupDateAndTime) {
+      throw new AppError('Followup date and time is required when status is "Followup"', 400);
+    }
+    const followupDate = new Date(followupDateAndTime);
+    if (isNaN(followupDate.getTime()) || followupDate <= new Date()) {
+      throw new AppError('Followup date and time must be a valid future date', 400);
+    }
   }
 
   // Validate call time format if provided
@@ -275,8 +297,22 @@ const updateLead = asyncHandler(async (req, res) => {
     }
   }
 
+  // Validate call start time if provided
+  if (callStartTime) {
+    const date = new Date(callStartTime);
+    if (isNaN(date.getTime())) {
+      throw new AppError('Invalid call start time', 400);
+    }
+  }
+
   // Update lead with new data
-  await lead.updateWithCall(status, notes, callTime);
+  await lead.updateWithCall(
+    status,
+    notes,
+    callTime,
+    callStartTime ? new Date(callStartTime) : null,
+    followupDateAndTime ? new Date(followupDateAndTime) : null
+  );
 
   res.json({
     success: true,
@@ -289,6 +325,8 @@ const updateLead = asyncHandler(async (req, res) => {
         status: lead.status,
         notes: lead.notes,
         callTime: lead.callTime,
+        callStartTime: lead.callStartTime,
+        followupDateAndTime: lead.followupDateAndTime,
         assignedTo: lead.assignedTo,
         lastUpdatedAt: lead.lastUpdatedAt,
         updatedAt: lead.updatedAt

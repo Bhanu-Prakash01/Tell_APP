@@ -81,38 +81,43 @@ const calculateTotalCallTime = (leads) => {
 // Get call time statistics for dashboard
 const getCallTimeStats = async (Lead) => {
   try {
-    const stats = await Lead.aggregate([
-      {
-        $match: {
-          callTime: { $exists: true, $ne: null, $ne: '' },
-          assignedTo: { $ne: 'Unassigned' }
-        }
-      },
-      {
-        $group: {
-          _id: '$assignedTo',
-          totalLeads: { $sum: 1 },
-          totalCallTimeSeconds: {
-            $sum: {
-              $cond: [
-                { $ne: ['$callTime', null] },
-                { $add: [
-                  { $multiply: [{ $ifNull: [{ $substr: ['$callTime', 0, 1] }, 0] }, 0] }, // This would need proper parsing
-                  0 // Simplified for now
-                ]},
-                0
-              ]
-            }
-          },
-          completedLeads: {
-            $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] }
-          }
-        }
-      },
-      {
-        $sort: { totalLeads: -1 }
+    // Get leads with call time data
+    const leadsWithCallTime = await Lead.find({
+      callTime: { $exists: true, $ne: null, $ne: '' },
+      assignedTo: { $ne: 'Unassigned' }
+    }, 'assignedTo callTime status').lean();
+
+    // Process call time data in JavaScript
+    const statsMap = {};
+
+    leadsWithCallTime.forEach(lead => {
+      const employee = lead.assignedTo;
+      if (!statsMap[employee]) {
+        statsMap[employee] = {
+          totalLeads: 0,
+          totalCallTimeSeconds: 0,
+          completedLeads: 0
+        };
       }
-    ]);
+
+      statsMap[employee].totalLeads++;
+      statsMap[employee].totalCallTimeSeconds += durationToSeconds(lead.callTime);
+
+      if (lead.status === 'Completed') {
+        statsMap[employee].completedLeads++;
+      }
+    });
+
+    // Convert to array format
+    const stats = Object.entries(statsMap).map(([employee, data]) => ({
+      _id: employee,
+      totalLeads: data.totalLeads,
+      totalCallTimeSeconds: data.totalCallTimeSeconds,
+      completedLeads: data.completedLeads
+    }));
+
+    // Sort by total leads
+    stats.sort((a, b) => b.totalLeads - a.totalLeads);
 
     return stats.map(stat => ({
       employee: stat._id,

@@ -468,8 +468,24 @@ const getAllLeads = async (req, res) => {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { website: { $regex: search, $options: 'i' } }
+        { website: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
+    }
+
+    // Add schedule condition to show only available leads when not filtering by assignedTo
+    if (!assignedTo) {
+      const scheduleConditions = [
+        { scheduleDate: { $exists: false } },
+        { scheduleDate: null },
+        { scheduleDate: { $lte: new Date() } }
+      ];
+
+      if (filter.$or) {
+        filter.$or.push(...scheduleConditions);
+      } else {
+        filter.$or = scheduleConditions;
+      }
     }
 
     // Calculate pagination
@@ -507,6 +523,7 @@ const getAllLeads = async (req, res) => {
           id: lead._id,
           name: lead.name,
           phone: lead.phone,
+          description: lead.description,
           website: lead.website,
           location: lead.location,
           sector: lead.sector,
@@ -592,7 +609,7 @@ const getLeadById = async (req, res) => {
 // Assign leads to employees
 const assignLeads = async (req, res) => {
   try {
-    const { leadIds, employeeId } = req.body;
+    const { leadIds, employeeId, scheduleDate } = req.body;
 
     if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
       return res.status(400).json({
@@ -625,12 +642,18 @@ const assignLeads = async (req, res) => {
     }
 
     // Update leads assignment
+    const updateData = {
+      assignedTo: employee.name,
+      assignedDate: new Date()
+    };
+
+    if (scheduleDate) {
+      updateData.scheduleDate = new Date(scheduleDate);
+    }
+
     const result = await Lead.updateMany(
       { _id: { $in: leadIds } },
-      {
-        assignedTo: employee.name,
-        assignedDate: new Date()
-      }
+      updateData
     );
 
     // Log the assignment action
@@ -803,6 +826,7 @@ const getAllEmployees = async (req, res) => {
 const uploadAndAssignLeads = async (req, res) => {
   try {
     const { employeeId } = req.params;
+    const { scheduleDate } = req.body;
 
     if (!req.file) {
       return res.status(400).json({
@@ -874,6 +898,13 @@ const uploadAndAssignLeads = async (req, res) => {
       assignedDate: new Date()
     }));
 
+    // Add schedule date to leads if provided
+    if (scheduleDate) {
+      leadsToInsert.forEach(lead => {
+        lead.scheduleDate = new Date(scheduleDate);
+      });
+    }
+
     // Insert leads into database in batches for better performance
     let insertedLeads = [];
     try {
@@ -932,6 +963,7 @@ const uploadAndAssignLeads = async (req, res) => {
           id: lead._id,
           name: lead.name,
           phone: lead.phone,
+          description: lead.description,
           status: lead.status,
           assignedTo: lead.assignedTo
         }))
@@ -968,13 +1000,22 @@ const getAllLeadAssignments = async (req, res) => {
     }
 
     if (employee) {
-      filter.assignedTo = { $regex: employee, $options: 'i' };
+      filter.assignedTo = employee;
     }
 
     if (startDate || endDate) {
       filter.assignedDate = {};
       if (startDate) filter.assignedDate.$gte = new Date(startDate);
       if (endDate) filter.assignedDate.$lte = new Date(endDate);
+    }
+
+    // Add schedule condition to show only available leads when not filtering by employee
+    if (!employee) {
+      filter.$or = [
+        { scheduleDate: { $exists: false } },
+        { scheduleDate: null },
+        { scheduleDate: { $lte: new Date() } }
+      ];
     }
 
     // Calculate pagination
@@ -1072,6 +1113,8 @@ const getEmployeeAssignments = async (req, res) => {
       if (startDate) filter.assignedDate.$gte = new Date(startDate);
       if (endDate) filter.assignedDate.$lte = new Date(endDate);
     }
+
+    // No schedule condition needed since we're filtering by specific employee
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * (limit ? parseInt(limit) : 0);
@@ -1238,6 +1281,8 @@ const bulkUploadLeads = async (req, res) => {
       });
     }
 
+    const { scheduleDate } = req.body;
+
     // Initialize progress tracking
     const totalRows = req.excelStructureInfo?.totalRows || req.file?.size || 0;
     const progressCallback = req.progressCallback;
@@ -1285,6 +1330,13 @@ const bulkUploadLeads = async (req, res) => {
     }
 
     const { leads, summary, errors, duplicates } = parseResult.data;
+
+    // Add schedule date to leads if provided
+    if (scheduleDate) {
+      leads.forEach(lead => {
+        lead.scheduleDate = new Date(scheduleDate);
+      });
+    }
 
     // Update progress for parsing completion
     processedRows = summary.parsedLeads || 0;
@@ -1433,6 +1485,7 @@ const bulkUploadLeads = async (req, res) => {
                 id: lead._id,
                 name: lead.name,
                 phone: lead.phone,
+                description: lead.description,
                 status: lead.status,
                 assignedTo: lead.assignedTo
               }))
@@ -1526,7 +1579,7 @@ const exportLeads = async (req, res) => {
     }
 
     if (assignedTo) {
-      filter.assignedTo = { $regex: assignedTo, $options: 'i' };
+      filter.assignedTo = assignedTo;
     }
 
     if (sector) {
@@ -1537,7 +1590,8 @@ const exportLeads = async (req, res) => {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { website: { $regex: search, $options: 'i' } }
+        { website: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -1546,6 +1600,7 @@ const exportLeads = async (req, res) => {
       name: 1,
       phone: 1,
       email: 1,
+      description: 1,
       website: 1,
       location: 1,
       sector: 1,
@@ -1586,6 +1641,7 @@ const exportLeads = async (req, res) => {
               name: lead.name,
               phone: lead.phone,
               email: lead.email,
+              description: lead.description,
               website: lead.website,
               location: lead.location,
               sector: lead.sector,
@@ -1605,7 +1661,7 @@ const exportLeads = async (req, res) => {
       default:
         // Generate CSV content
         const headers = [
-          'Name', 'Phone', 'Email', 'Website', 'Location', 'Sector',
+          'Name', 'Phone', 'Email', 'Description', 'Website', 'Location', 'Sector',
           'Status', 'Notes', 'Call Time', 'Assigned To', 'Assigned Date', 'Created At', 'Updated At'
         ];
 
@@ -1615,6 +1671,7 @@ const exportLeads = async (req, res) => {
             `"${(lead.name || '').replace(/"/g, '""')}"`,
             `"${(lead.phone || '').replace(/"/g, '""')}"`,
             `"${(lead.email || '').replace(/"/g, '""')}"`,
+            `"${(lead.description || '').replace(/"/g, '""')}"`,
             `"${(lead.website || '').replace(/"/g, '""')}"`,
             `"${(lead.location || '').replace(/"/g, '""')}"`,
             `"${(lead.sector || '').replace(/"/g, '""')}"`,
@@ -1641,6 +1698,130 @@ const exportLeads = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to export leads',
+      error: error.message
+    });
+  }
+};
+
+// Bulk update leads
+const bulkUpdateLeads = async (req, res) => {
+  try {
+    const { leadIds, updates } = req.body;
+
+    if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lead IDs array is required and cannot be empty'
+      });
+    }
+
+    if (!updates || typeof updates !== 'object' || Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates object is required and cannot be empty'
+      });
+    }
+
+    // Validate that all IDs are valid MongoDB ObjectIds
+    const invalidIds = leadIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lead ID(s) provided',
+        data: {
+          invalidIds,
+          validCount: leadIds.length - invalidIds.length
+        }
+      });
+    }
+
+    // Remove fields that shouldn't be updated directly
+    const allowedUpdates = ['name', 'phone', 'description', 'website', 'location', 'sector', 'status', 'notes', 'callTime', 'assignedTo'];
+    const filteredUpdates = {};
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedUpdates.includes(key)) {
+        filteredUpdates[key] = value;
+      }
+    }
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    // If assignedTo is being updated, also set assignedDate to current date
+    if (filteredUpdates.assignedTo) {
+      filteredUpdates.assignedDate = new Date();
+    }
+
+    // Add lastUpdatedAt timestamp
+    filteredUpdates.lastUpdatedAt = new Date();
+
+    // Perform bulk update
+    const result = await Lead.updateMany(
+      { _id: { $in: leadIds } },
+      { $set: filteredUpdates }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No leads found with the provided IDs or no changes made'
+      });
+    }
+
+    // Get updated leads for response
+    const updatedLeads = await Lead.find({ _id: { $in: leadIds } }, 'name phone status assignedTo updatedAt');
+
+    // Log the bulk update action
+    console.log(`Admin ${req.user.name} bulk updated ${result.modifiedCount} leads`);
+
+    // Get summary of updated leads by status
+    const summary = updatedLeads.reduce((acc, lead) => {
+      acc.byStatus[lead.status] = (acc.byStatus[lead.status] || 0) + 1;
+      const assignedTo = lead.assignedTo || 'Unassigned';
+      acc.byAssignment[assignedTo] = (acc.byAssignment[assignedTo] || 0) + 1;
+      return acc;
+    }, { byStatus: {}, byAssignment: {} });
+
+    res.status(200).json({
+      success: true,
+      message: `${result.modifiedCount} leads updated successfully`,
+      data: {
+        updatedCount: result.modifiedCount,
+        requestedCount: leadIds.length,
+        notFoundCount: leadIds.length - result.modifiedCount,
+        updates: filteredUpdates,
+        summary,
+        updatedLeads: updatedLeads.map(lead => ({
+          id: lead._id,
+          name: lead.name,
+          phone: lead.phone,
+          status: lead.status,
+          assignedTo: lead.assignedTo,
+          updatedAt: lead.updatedAt
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in bulkUpdateLeads:', error);
+
+    // Handle specific database errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Data validation failed during lead update',
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update leads',
       error: error.message
     });
   }
@@ -1789,6 +1970,7 @@ module.exports = {
   assignLeads,
   updateLead,
   deleteLead,
+  bulkUpdateLeads,
   bulkDeleteLeads,
   getAllEmployees,
   uploadAndAssignLeads,

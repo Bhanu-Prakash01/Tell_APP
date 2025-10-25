@@ -56,6 +56,11 @@ const leadSchema = new mongoose.Schema({
     default: null
   },
 
+  scheduleDate: {
+    type: Date,
+    default: null
+  },
+
   callTime: {
     type: String,
     trim: true,

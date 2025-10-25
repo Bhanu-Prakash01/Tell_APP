@@ -42,17 +42,27 @@ const login = asyncHandler(async (req, res) => {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
+  const scheduleCondition = {
+    $or: [
+      { scheduleDate: { $exists: false } },
+      { scheduleDate: null },
+      { scheduleDate: { $lte: new Date() } }
+    ]
+  };
+
   const todayLeadsCount = await Lead.countDocuments({
     assignedTo: employee.name,
-    assignedDate: { $gte: today, $lt: tomorrow }
+    assignedDate: { $gte: today, $lt: tomorrow },
+    ...scheduleCondition
   });
 
   const totalLeadsCount = await Lead.countDocuments({
-    assignedTo: employee.name
+    assignedTo: employee.name,
+    ...scheduleCondition
   });
 
   const statusCounts = await Lead.aggregate([
-    { $match: { assignedTo: employee.name } },
+    { $match: { assignedTo: employee.name, ...scheduleCondition } },
     {
       $group: {
         _id: '$status',
@@ -142,12 +152,21 @@ const getProfile = asyncHandler(async (req, res) => {
   const employee = await User.findById(req.user.id);
 
   // Get lead statistics for the employee
+  const scheduleCondition = {
+    $or: [
+      { scheduleDate: { $exists: false } },
+      { scheduleDate: null },
+      { scheduleDate: { $lte: new Date() } }
+    ]
+  };
+
   const totalLeadsCount = await Lead.countDocuments({
-    assignedTo: employee.name
+    assignedTo: employee.name,
+    ...scheduleCondition
   });
 
   const statusCounts = await Lead.aggregate([
-    { $match: { assignedTo: employee.name } },
+    { $match: { assignedTo: employee.name, ...scheduleCondition } },
     {
       $group: {
         _id: '$status',
@@ -196,7 +215,12 @@ const getTodayLeads = asyncHandler(async (req, res) => {
   // Find leads assigned to this employee for today
   const leads = await Lead.find({
     assignedTo: employee.name,
-    assignedDate: { $gte: today, $lt: tomorrow }
+    assignedDate: { $gte: today, $lt: tomorrow },
+    $or: [
+      { scheduleDate: { $exists: false } },
+      { scheduleDate: null },
+      { scheduleDate: { $lte: new Date() } }
+    ]
   }).sort({ assignedDate: -1 });
 
   // Get lead statistics

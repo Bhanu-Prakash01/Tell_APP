@@ -1,0 +1,23 @@
+2025-10-22 16:11:20 [ERROR]: uncaughtException: write EPIPE
+Error: write EPIPE
+    at afterWriteDispatched (node:internal/stream_base_commons:160:15)
+    at writeGeneric (node:internal/stream_base_commons:151:3)
+    at Socket._writeGeneric (node:net:823:11)
+    at Socket._write (node:net:835:8)
+    at writeOrBuffer (node:internal/streams/writable:390:12)
+    at _write (node:internal/streams/writable:331:10)
+    at Writable.write (node:internal/streams/writable:335:10)
+    at Console.log (/home/dragon/telcalling_v1/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/home/dragon/telcalling_v1/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/home/dragon/telcalling_v1/node_modules/winston-transport/node_modules/readable-stream/lib/_stream_writable.js:390:139) | {"error":{"errno":-32,"code":"EPIPE","syscall":"write"},"exception":true,"date":"Wed Oct 22 2025 16:11:20 GMT+0530 (India Standard Time)","process":{"pid":29728,"uid":1000,"gid":1000,"cwd":"/home/dragon/telcalling_v1","execPath":"/home/dragon/.nvm/versions/node/v18.0.0/bin/node","version":"v18.0.0","argv":["/home/dragon/.nvm/versions/node/v18.0.0/bin/node","/home/dragon/telcalling_v1/index.js"],"memoryUsage":{"rss":102359040,"heapTotal":43720704,"heapUsed":41663544,"external":22325293,"arrayBuffers":21526150}},"os":{"loadavg":[1.65,2.17,2.15],"uptime":4214.69},"trace":[{"column":15,"file":"node:internal/stream_base_commons","function":"afterWriteDispatched","line":160,"method":null,"native":false},{"column":3,"file":"node:internal/stream_base_commons","function":"writeGeneric","line":151,"method":null,"native":false},{"column":11,"file":"node:net","function":"Socket._writeGeneric","line":823,"method":"_writeGeneric","native":false},{"column":8,"file":"node:net","function":"Socket._write","line":835,"method":"_write","native":false},{"column":12,"file":"node:internal/streams/writable","function":"writeOrBuffer","line":390,"method":null,"native":false},{"column":10,"file":"node:internal/streams/writable","function":"_write","line":331,"method":null,"native":false},{"column":10,"file":"node:internal/streams/writable","function":"Writable.write","line":335,"method":"write","native":false},{"column":23,"file":"/home/dragon/telcalling_v1/node_modules/winston/lib/winston/transports/console.js","function":"Console.log","line":87,"method":"log","native":false},{"column":17,"file":"/home/dragon/telcalling_v1/node_modules/winston-transport/modern.js","function":"Console._write","line":103,"method":"_write","native":false},{"column":139,"file":"/home/dragon/telcalling_v1/node_modules/winston-transport/node_modules/readable-stream/lib/_stream_writable.js","function":"doWrite","line":390,"method":null,"native":false}]}
+Error: write EPIPE
+    at afterWriteDispatched (node:internal/stream_base_commons:160:15)
+    at writeGeneric (node:internal/stream_base_commons:151:3)
+    at Socket._writeGeneric (node:net:823:11)
+    at Socket._write (node:net:835:8)
+    at writeOrBuffer (node:internal/streams/writable:390:12)
+    at _write (node:internal/streams/writable:331:10)
+    at Writable.write (node:internal/streams/writable:335:10)
+    at Console.log (/home/dragon/telcalling_v1/node_modules/winston/lib/winston/transports/console.js:87:23)
+    at Console._write (/home/dragon/telcalling_v1/node_modules/winston-transport/modern.js:103:17)
+    at doWrite (/home/dragon/telcalling_v1/node_modules/winston-transport/node_modules/readable-stream/lib/_stream_writable.js:390:139)

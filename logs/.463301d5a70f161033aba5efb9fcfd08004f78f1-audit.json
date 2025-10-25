@@ -54,6 +54,31 @@
             "date": 1760696228138,
             "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-17.log",
             "hash": "f38350681ce7f399a3532f9c65a6018efa1d95426330362393a898ff9007663d"
+        },
+        {
+            "date": 1761029210550,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-21.log",
+            "hash": "fda7e4bd08db33587a7715bb7a70082da191ccb3957753bdc2811518000d2258"
+        },
+        {
+            "date": 1761125702749,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-22.log",
+            "hash": "cddd2903d349bf028c546b83f3a18cf4704ff271afad6feb2ebc2563d5b34aaf"
+        },
+        {
+            "date": 1761193365863,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-23.log",
+            "hash": "7a8d27a3d1099bf5abea12b64069ad739153d47094cf28e5bf3649ea8fbe79a5"
+        },
+        {
+            "date": 1761301305535,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-24.log",
+            "hash": "19ed58b52ff3c3a17bff4824971bddeadc37b7add56cc642baf123f1174bf6ae"
+        },
+        {
+            "date": 1761330816653,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-25.log",
+            "hash": "1892356f1770b516b315961f7eae087a88edffae4edfe4fac88b9a321e0403f8"
         }
     ],
     "hashType": "sha256"

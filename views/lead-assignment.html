@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automatic Lead Assignment - Telecalling Application</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/frappe.css">
     <style>
         .assignment-header {
@@ -432,6 +433,13 @@
                     <input type="file" id="excelFile" class="file-input" accept=".csv">
                 </div>
 
+                <!-- Schedule Date Input -->
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="scheduleDate">Schedule Display Date (Optional)</label>
+                    <input type="date" id="scheduleDate" class="form-control" min="<?php echo date('Y-m-d'); ?>">
+                    <small class="form-text text-muted">Select the date when these leads should be displayed to the employee. If not set, leads will be available immediately.</small>
+                </div>
+
                 <!-- Progress Bar -->
                 <div id="uploadProgressContainer" class="upload-progress-container" style="display: none;">
                     <div class="progress-info">
@@ -502,6 +510,13 @@
             // Load initial data
             if (window.adminApp && window.adminApp.loadLeadAssignmentData) {
                 window.adminApp.loadLeadAssignmentData();
+            }
+        }
+
+        function handleUploadZoneClick() {
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput) {
+                fileInput.click();
             }
         }
 

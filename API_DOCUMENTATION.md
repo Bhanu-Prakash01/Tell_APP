@@ -336,12 +336,181 @@ curl -X POST http://localhost:3000/api/v1/admin/leads/assign \
   }'
 ```
 
-### 3. Get Employee Assignments (Admin)
+### 4. Get Employee Assignments (Admin)
 **Endpoint:** `GET /api/v1/admin/lead-assignments`
 
 ```bash
 curl -X GET "http://localhost:3000/api/v1/admin/lead-assignments?employee=John&page=1&limit=10" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## Bulk Lead Operations (Admin Only)
+
+### 1. Bulk Update Leads
+**Endpoint:** `PUT /api/v1/admin/leads/bulk-update`
+
+Update multiple leads with the same changes:
+
+```bash
+curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "leadIds": [
+      "507f1f77bcf86cd799439013",
+      "507f1f77bcf86cd799439014",
+      "507f1f77bcf86cd799439015"
+    ],
+    "updates": {
+      "status": "Interested",
+      "sector": "Technology",
+      "notes": "Updated via bulk operation"
+    }
+  }'
+```
+
+**Allowed Update Fields:**
+- `status`: "New", "Interested", "Not Interested", "Hot", "Pending", "Completed"
+- `assignedTo`: Employee name or "Unassigned"
+- `sector`: Business sector (string)
+- `location`: Location/region (string)
+- `notes`: Additional notes (will be appended with timestamp)
+- `name`: Lead name
+- `phone`: Phone number
+- `description`: Lead description
+- `website`: Website URL
+- `callTime`: Call time in "HH:MM" format or duration like "5m 30s"
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "3 leads updated successfully",
+  "data": {
+    "updatedCount": 3,
+    "requestedCount": 3,
+    "notFoundCount": 0,
+    "updates": {
+      "status": "Interested",
+      "sector": "Technology",
+      "notes": "Updated via bulk operation"
+    },
+    "summary": {
+      "byStatus": {
+        "Interested": 3
+      },
+      "byAssignment": {
+        "John Doe": 2,
+        "Jane Smith": 1
+      }
+    },
+    "updatedLeads": [
+      {
+        "id": "507f1f77bcf86cd799439013",
+        "name": "Alice Johnson",
+        "phone": "+1234567890",
+        "status": "Interested",
+        "assignedTo": "John Doe",
+        "updatedAt": "2024-01-15T14:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+### 2. Bulk Delete Leads
+**Endpoint:** `DELETE /api/v1/admin/leads/bulk-delete`
+
+Delete multiple leads at once:
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/admin/leads/bulk-delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "leadIds": [
+      "507f1f77bcf86cd799439013",
+      "507f1f77bcf86cd799439014",
+      "507f1f77bcf86cd799439015"
+    ]
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "3 leads deleted successfully",
+  "data": {
+    "deletedCount": 3,
+    "requestedCount": 3,
+    "notFoundCount": 0,
+    "summary": {
+      "byStatus": {
+        "New": 1,
+        "Interested": 2
+      },
+      "byAssignment": {
+        "John Doe": 2,
+        "Unassigned": 1
+      }
+    },
+    "deletedLeads": [
+      {
+        "id": "507f1f77bcf86cd799439013",
+        "name": "Alice Johnson",
+        "phone": "+1234567890",
+        "status": "New",
+        "assignedTo": "Unassigned"
+      }
+    ]
+  }
+}
+```
+
+**Validation:**
+- Lead IDs must be valid MongoDB ObjectIds
+- At least one lead ID is required
+- Only admin users can perform bulk operations
+- Action cannot be undone
+
+### 3. Export Leads Data
+**Endpoint:** `GET /api/v1/admin/leads/export`
+
+Export leads data in CSV or JSON format with optional filtering:
+
+```bash
+# Export all leads as CSV
+curl -X GET "http://localhost:3000/api/v1/admin/leads/export" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -o leads_export.csv
+
+# Export filtered leads as JSON
+curl -X GET "http://localhost:3000/api/v1/admin/leads/export?status=Interested&format=json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -o filtered_leads.json
+
+# Export with search and sector filter
+curl -X GET "http://localhost:3000/api/v1/admin/leads/export?search=john&sector=Technology&format=csv" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -o search_results.csv
+```
+
+**Query Parameters:**
+- `status`: Filter by lead status
+- `assignedTo`: Filter by assigned employee
+- `sector`: Filter by business sector
+- `search`: Search in name, phone, website, or description
+- `format`: Export format - "csv" (default) or "json"
+
+**Response Headers:**
+- `Content-Type`: "text/csv" or "application/json"
+- `Content-Disposition`: "attachment; filename=leads_export_[timestamp].csv"
+
+**CSV Format:**
+```csv
+Name,Phone,Email,Description,Website,Location,Sector,Status,Notes,Call Time,Assigned To,Assigned Date,Created At,Updated At
+"John Doe","+1234567890","john@example.com","Tech company","https://example.com","New York","Technology","Interested","Initial contact made","14:30","Jane Smith","2024-01-15","2024-01-10","2024-01-15"
 ```
 
 ## File Upload Integration (CSV Import)
@@ -515,3 +684,97 @@ curl -X POST http://localhost:3000/api/v1/admin/leads/assign \
 ```
 
 This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features.
+
+## Frontend Implementation
+
+The bulk operations are fully implemented in the admin interface with a complete user experience:
+
+### 1. Lead Selection Interface
+- **Checkbox Selection**: Individual checkboxes for each lead in the table
+- **Select All**: Header checkbox to select/deselect all visible leads
+- **Bulk Operations Bar**: Appears when leads are selected, showing:
+  - Selected count
+  - Bulk Update button (✏️ Update Selected)
+  - Bulk Delete button (🗑️ Delete Selected)
+  - Clear Selection button
+
+### 2. Bulk Update Modal
+**Location**: `views/leads.html` (lines 453-526)
+
+**Features**:
+- **Field Selection**: Checkboxes for each field to update
+- **Dynamic Form**: Fields are enabled/disabled based on selection
+- **Employee Dropdown**: Populated from `/api/v1/admin/employees`
+- **Validation**: Ensures at least one field is selected
+- **Confirmation**: Shows count of leads to be updated
+- **Warning**: Clear indication that action cannot be undone
+
+**Supported Update Fields**:
+- Status (dropdown with predefined options)
+- Assigned To (employee selection)
+- Sector (text input)
+- Location (text input)
+- Notes (textarea with timestamp appending)
+
+### 3. JavaScript Implementation
+**Location**: `public/js/admin.js` (lines 1257-1838)
+
+**Key Functions**:
+- `initBulkOperations()`: Initializes bulk operations UI
+- `addBulkOperationsUI()`: Adds checkboxes and bulk operations bar
+- `toggleLeadSelection()`: Manages individual lead selection
+- `toggleSelectAll()`: Handles select all functionality
+- `bulkDeleteLeads()`: Performs bulk deletion with confirmation
+- `performBulkUpdate()`: Handles bulk update form submission
+
+**API Integration**:
+- Uses `/api/v1/admin/leads/bulk-update` for updates
+- Uses `/api/v1/admin/leads/bulk-delete` for deletions
+- Proper error handling and user feedback
+- Loading states and progress indicators
+
+### 4. User Experience Features
+- **Real-time Selection Count**: Updates as users select/deselect leads
+- **Confirmation Dialogs**: Prevents accidental bulk operations
+- **Success/Error Messages**: Toast notifications for all operations
+- **Loading States**: Visual feedback during API calls
+- **Form Validation**: Client-side validation before submission
+- **Responsive Design**: Works on mobile and desktop
+
+### 5. Route Configuration
+**Location**: `routes/admin.js` (lines 35-37)
+
+```javascript
+// Bulk operations routes (defined before parameterized routes)
+router.put('/leads/bulk-update', adminController.bulkUpdateLeads);
+router.delete('/leads/bulk-delete', adminController.bulkDeleteLeads);
+```
+
+**Important**: Routes are ordered to prevent conflicts with parameterized routes like `/leads/:id`.
+
+## Testing the Implementation
+
+### Manual Testing Steps:
+1. **Login** to admin dashboard (`/admin/login`)
+2. **Navigate** to Leads page (`/admin/leads`)
+3. **Select** multiple leads using checkboxes
+4. **Click** "Update Selected" to test bulk update functionality
+5. **Click** "Delete Selected" to test bulk delete functionality
+6. **Verify** results in the leads table
+
+### API Testing:
+```bash
+# Test bulk update
+curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"leadIds":["ID1","ID2"],"updates":{"status":"Interested"}}'
+
+# Test bulk delete
+curl -X DELETE http://localhost:3000/api/v1/admin/leads/bulk-delete \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"leadIds":["ID1","ID2"]}'
+```
+
+This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features, including the complete bulk operations implementation.

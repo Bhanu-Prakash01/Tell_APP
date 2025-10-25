@@ -17,12 +17,12 @@ class ExcelParser {
 
     this.expectedColumns = {
       primary: ['Name', 'Phone', 'Website', 'Location', 'Sector'],
-      optional: ['Status', 'Notes', 'Assigned To']
+      optional: ['Status', 'Notes', 'Assigned To', 'Description']
     };
 
     this.columnMappings = {
       // Name variations
-      name: ['Name', 'name', 'Lead Name', 'Company Name', 'Company', 'Client Name', 'Contact Name', 'Business Name', 'Organization'],
+      name: ['Name', 'name', 'Lead Name', 'Company Name', 'Company', 'Client Name', 'Contact Name', 'Business Name', 'Organization', 'Title', 'title'],
 
       // Phone variations
       phone: ['Phone', 'phone', 'Phone Number', 'Contact Number', 'Mobile', 'Telephone', 'Tel', 'Phone No', 'Contact'],
@@ -43,7 +43,10 @@ class ExcelParser {
       status: ['Status', 'status', 'Lead Status', 'State', 'Progress', 'Stage'],
 
       // Notes variations
-      notes: ['Notes', 'notes', 'Comments', 'Remarks', 'Description', 'Additional Notes', 'Comment']
+      notes: ['Notes', 'notes', 'Comments', 'Remarks', 'Additional Notes', 'Comment'],
+
+      // Description variations
+      description: ['Description', 'description', 'Other Details', 'Details', 'Info', 'Additional Info', 'Lead Description', 'Descriptions', 'descriptions']
     };
   }
 
@@ -122,7 +125,16 @@ class ExcelParser {
       );
 
       if (missingRequired.length > 0) {
-        throw new Error(`Missing required columns: ${missingRequired.join(', ')}. Expected columns: ${Object.keys(this.columnMappings).join(', ')}. Found columns: ${headers.join(', ')}`);
+        // Try to map 'title' to 'name' if name is missing
+        if (missingRequired.includes('name') && columnMap['title'] !== undefined) {
+          columnMap['name'] = columnMap['title'];
+          missingRequired.splice(missingRequired.indexOf('name'), 1);
+        }
+
+        // If still missing required columns, throw error
+        if (missingRequired.length > 0) {
+          throw new Error(`Missing required columns: ${missingRequired.join(', ')}. Expected columns: ${Object.keys(this.columnMappings).join(', ')}. Found columns: ${headers.join(', ')}`);
+        }
       }
 
       // Log which columns were successfully mapped for debugging
@@ -339,6 +351,9 @@ class ExcelParser {
           case 'notes':
             value = this.cleanNotes(value);
             break;
+          case 'description':
+            value = this.cleanDescription(value);
+            break;
         }
 
         if (value) {
@@ -436,33 +451,48 @@ class ExcelParser {
   }
 
   /**
-   * Clean and format status
-   */
-  cleanStatus(status) {
-    const normalized = status.trim();
-    
-    // Map common variations to standard values
-    const statusMap = {
-      'new': 'New',
-      'interested': 'Interested',
-      'not interested': 'Not Interested',
-      'hot': 'Hot',
-      'cold': 'New',
-      'warm': 'Interested',
-      'prospect': 'New',
-      'lead': 'New',
-      'customer': 'Interested',
-      'client': 'Interested'
-    };
+    * Clean and format status
+    */
+   cleanStatus(status) {
+     const normalized = status.trim();
 
-    return statusMap[normalized.toLowerCase()] || normalized;
-  }
+     // Map common variations to standard values
+     const statusMap = {
+       'new': 'New',
+       'interested': 'Interested',
+       'not interested': 'Not Interested',
+       'hot': 'Hot',
+       'cold': 'New',
+       'warm': 'Interested',
+       'prospect': 'New',
+       'lead': 'New',
+       'customer': 'Interested',
+       'client': 'Interested'
+     };
+
+     // Handle Google Maps status values that contain opening hours
+     if (normalized.toLowerCase().includes('closed') || normalized.toLowerCase().includes('opens')) {
+       return 'New'; // Default to New for businesses with opening hours
+     }
+
+     return statusMap[normalized.toLowerCase()] || 'New'; // Default to New if not recognized
+   }
 
   /**
    * Clean and format notes
    */
   cleanNotes(notes) {
     return notes
+      .trim()
+      .replace(/\s+/g, ' ')
+      .substring(0, 1000);
+  }
+
+  /**
+   * Clean and format description
+   */
+  cleanDescription(description) {
+    return description
       .trim()
       .replace(/\s+/g, ' ')
       .substring(0, 1000);

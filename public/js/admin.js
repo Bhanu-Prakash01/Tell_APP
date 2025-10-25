@@ -1455,7 +1455,9 @@ class AdminApp {
     }
 
     updateBulkOperationsUI() {
+        const bulkOperationsBar = document.getElementById('bulkOperationsBar');
         const selectedCount = document.getElementById('selectedCount');
+        const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
         const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
         const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
@@ -1463,8 +1465,14 @@ class AdminApp {
             selectedCount.textContent = this.selectedLeads.length;
         }
 
-        // Show/hide bulk operation buttons
+        // Show/hide bulk operations bar and buttons
         const shouldShow = this.selectedLeads.length > 0;
+        if (bulkOperationsBar) {
+            bulkOperationsBar.style.display = shouldShow ? 'flex' : 'none';
+        }
+        if (bulkUpdateBtn) {
+            bulkUpdateBtn.style.display = shouldShow ? 'inline-block' : 'none';
+        }
         if (bulkDeleteBtn) {
             bulkDeleteBtn.style.display = shouldShow ? 'inline-block' : 'none';
         }
@@ -1480,6 +1488,161 @@ class AdminApp {
         });
         document.getElementById('selectAllLeads').checked = false;
         this.updateBulkOperationsUI();
+    }
+
+    showBulkUpdateModal() {
+        if (this.selectedLeads.length === 0) {
+            this.showToast('No leads selected for update', 'warning');
+            return;
+        }
+
+        // Update the count in the modal
+        document.getElementById('bulkUpdateCount').textContent = this.selectedLeads.length;
+
+        // Load employees for assignment dropdown
+        this.loadEmployeesForBulkUpdate();
+
+        // Reset form
+        document.getElementById('bulkUpdateForm').reset();
+        document.querySelectorAll('#bulkUpdateForm input[type="checkbox"]').forEach(checkbox => {
+            this.toggleField(checkbox.id.replace('update', '').toLowerCase() + 'Field');
+        });
+
+        // Show modal
+        this.showModal('bulkUpdateModal');
+    }
+
+    toggleField(fieldId) {
+        const checkbox = document.getElementById('update' + fieldId.charAt(0).toUpperCase() + fieldId.slice(1).replace('Field', ''));
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.disabled = !checkbox.checked;
+            if (!checkbox.checked) {
+                field.value = '';
+            }
+        }
+    }
+
+    async loadEmployeesForBulkUpdate() {
+        try {
+            const employeesResponse = await this.apiRequest('/employees');
+            const select = document.getElementById('assignedToField');
+
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+
+            // Handle API response format
+            let employeesArray = [];
+            if (Array.isArray(employeesResponse)) {
+                employeesArray = employeesResponse;
+            } else if (employeesResponse && employeesResponse.data && Array.isArray(employeesResponse.data.employees)) {
+                employeesArray = employeesResponse.data.employees;
+            } else if (employeesResponse && employeesResponse.data && Array.isArray(employeesResponse.data)) {
+                employeesArray = employeesResponse.data;
+            }
+
+            employeesArray.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.name || 'N/A';
+                option.textContent = employee.name || 'N/A';
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading employees for bulk update:', error);
+        }
+    }
+
+    async performBulkUpdate() {
+        if (this.selectedLeads.length === 0) {
+            return;
+        }
+
+        // Collect updates from form
+        const updates = {};
+        const form = document.getElementById('bulkUpdateForm');
+
+        // Status update
+        if (document.getElementById('updateStatus').checked) {
+            const statusValue = document.getElementById('statusField').value;
+            if (statusValue) {
+                updates.status = statusValue;
+            }
+        }
+
+        // Assigned to update
+        if (document.getElementById('updateAssignedTo').checked) {
+            const assignedToValue = document.getElementById('assignedToField').value;
+            updates.assignedTo = assignedToValue || 'Unassigned';
+        }
+
+        // Sector update
+        if (document.getElementById('updateSector').checked) {
+            const sectorValue = document.getElementById('sectorField').value.trim();
+            if (sectorValue) {
+                updates.sector = sectorValue;
+            }
+        }
+
+        // Location update
+        if (document.getElementById('updateLocation').checked) {
+            const locationValue = document.getElementById('locationField').value.trim();
+            if (locationValue) {
+                updates.location = locationValue;
+            }
+        }
+
+        // Notes update
+        if (document.getElementById('updateNotes').checked) {
+            const notesValue = document.getElementById('notesField').value.trim();
+            if (notesValue) {
+                updates.notes = notesValue;
+            }
+        }
+
+        // Validate that at least one field is selected
+        if (Object.keys(updates).length === 0) {
+            this.showToast('Please select at least one field to update', 'warning');
+            return;
+        }
+
+        // Show confirmation
+        const confirmMessage = `Are you sure you want to update ${this.selectedLeads.length} lead(s) with the selected changes?`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            this.showLoading();
+
+            const response = await this.apiRequest('/leads/bulk-update', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    leadIds: this.selectedLeads,
+                    updates: updates
+                })
+            });
+
+            // Clear selection after successful update
+            this.clearSelection();
+
+            // Show success message with details
+            const { updatedCount } = response.data;
+            this.showToast(`Successfully updated ${updatedCount} leads`, 'success');
+
+            // Hide modal
+            this.hideModal('bulkUpdateModal');
+
+            // Reload leads data
+            await this.loadLeadsData();
+
+        } catch (error) {
+            console.error('Bulk update error:', error);
+            this.showToast('Failed to update selected leads', 'error');
+        } finally {
+            this.hideLoading();
+        }
     }
 
     async bulkDeleteLeads() {
@@ -1694,7 +1857,8 @@ class AdminApp {
                         method: 'POST',
                         body: JSON.stringify({
                             leadIds: leadIds,
-                            employeeId: employeeId
+                            employeeId: employeeId,
+                            scheduleDate: document.getElementById('scheduleDate')?.value
                         }),
                     });
 
@@ -1768,11 +1932,17 @@ class AdminApp {
         this.updateSelectedEmployeesIndicator();
     }
 
-    async uploadExcelFile(file) {
+    async uploadExcelFile(file, endpoint = '/leads/bulk-upload') {
         if (!file) return;
 
         const formData = new FormData();
         formData.append('excel', file);
+
+        // Add schedule date if provided
+        const scheduleDate = document.getElementById('scheduleDate')?.value;
+        if (scheduleDate) {
+            formData.append('scheduleDate', scheduleDate);
+        }
 
         const token = this.getStoredToken();
 
@@ -1789,7 +1959,7 @@ class AdminApp {
                 });
             }, 500);
 
-            const response = await fetch(`${this.adminBaseURL}/leads/bulk-upload`, {
+            const response = await fetch(`${this.adminBaseURL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -2225,5 +2395,11 @@ function clearLeadSelection() {
 function bulkDeleteLeads() {
     if (window.adminApp) {
         window.adminApp.bulkDeleteLeads();
+    }
+}
+
+function showBulkUpdateModal() {
+    if (window.adminApp) {
+        window.adminApp.showBulkUpdateModal();
     }
 }

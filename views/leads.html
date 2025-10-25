@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leads Database - Telecalling Application</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/frappe.css">
     <style>
         .leads-header {
@@ -68,6 +69,23 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: var(--frappe-shadow);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .table {
+            min-width: 100%;
+            table-layout: auto;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--frappe-gray-50);
+            z-index: 1;
         }
 
         .table-header {
@@ -347,6 +365,9 @@
                         <span id="selectedCount">0</span> leads selected
                     </div>
                     <div class="bulk-actions">
+                        <button class="btn btn-sm btn-primary" id="bulkUpdateBtn" onclick="adminApp.showBulkUpdateModal()">
+                            ✏️ Update Selected
+                        </button>
                         <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" onclick="bulkDeleteLeads()">
                             🗑️ Delete Selected
                         </button>
@@ -429,6 +450,81 @@
         </div>
     </div>
 
+    <!-- Bulk Update Modal -->
+    <div id="bulkUpdateModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Bulk Update Leads</h3>
+                <button class="modal-close" onclick="hideModal('bulkUpdateModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkUpdateForm">
+                    <div class="form-group">
+                        <label class="form-label">Fields to Update</label>
+                        <p class="text-muted">Select which fields you want to update for the selected leads. Only checked fields will be updated.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateStatus" onchange="adminApp.toggleField('statusField')"> Status
+                        </label>
+                        <select id="statusField" class="form-control" disabled>
+                            <option value="New">New</option>
+                            <option value="Interested">Interested</option>
+                            <option value="Not Interested">Not Interested</option>
+                            <option value="Hot">Hot</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateAssignedTo" onchange="adminApp.toggleField('assignedToField')"> Assigned To
+                        </label>
+                        <select id="assignedToField" class="form-control" disabled>
+                            <option value="">Unassigned</option>
+                            <!-- Employee options will be populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateSector" onchange="adminApp.toggleField('sectorField')"> Sector
+                        </label>
+                        <input type="text" id="sectorField" class="form-control" placeholder="e.g., Technology, Healthcare" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateLocation" onchange="adminApp.toggleField('locationField')"> Location
+                        </label>
+                        <input type="text" id="locationField" class="form-control" placeholder="e.g., New York, London" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="updateNotes" onchange="adminApp.toggleField('notesField')"> Add Notes
+                        </label>
+                        <textarea id="notesField" class="form-control" rows="3" placeholder="Additional notes to append..." disabled></textarea>
+                        <small class="text-muted">Notes will be appended to existing notes with timestamp</small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> This action will update <span id="bulkUpdateCount">0</span> selected leads.
+                            This cannot be undone. Please review your changes carefully.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('bulkUpdateModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="adminApp.performBulkUpdate()">Update Leads</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container"></div>
 
@@ -446,6 +542,11 @@
         function initializeLeadsPage() {
             // Load employees for filter dropdown
             loadEmployeesForFilter();
+
+            // Initialize bulk operations
+            if (window.adminApp && window.adminApp.initBulkOperations) {
+                window.adminApp.initBulkOperations();
+            }
 
             // Initialize leads data
             if (window.adminApp && window.adminApp.loadLeadsData) {
@@ -472,7 +573,7 @@
 
                 employeesArray.forEach(employee => {
                     const option = document.createElement('option');
-                    option.value = employee._id || employee.id;
+                    option.value = employee.name || 'N/A';
                     option.textContent = employee.name || 'N/A';
                     select.appendChild(option);
                 });
@@ -498,7 +599,7 @@
 
             // Create export URL with filters
             const params = new URLSearchParams(filters);
-            window.open(`/api/admin/leads/export?${params}`, '_blank');
+            window.open(`/api/v1/admin/leads/export?${params}`, '_blank');
         }
 
         // Pagination state management
@@ -815,6 +916,12 @@
             if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(callTime)) {
                 return callTime;
             }
+
+        function bulkDeleteLeads() {
+            if (window.adminApp) {
+                window.adminApp.bulkDeleteLeads();
+            }
+        }
 
             // If it's in duration format, convert to readable format
             const hours = callTime.match(/(\d+)h/);

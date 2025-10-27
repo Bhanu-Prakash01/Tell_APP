@@ -436,10 +436,12 @@ class AdminApp {
         const colorSchemes = {
             primary: ['#2490ef', '#13c296', '#f39c12', '#f44336', '#9b59b6', '#e67e22'],
             status: {
-                'New': '#2490ef',
+                'New': '#ffc107',
                 'Hot': '#f39c12',
                 'Interested': '#13c296',
-                'Not Interested': '#f44336'
+                'Not Interested': '#f44336',
+                'Followup': '#2490ef',
+                'Pending': '#9b59b6'
             },
             sector: ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'],
             assignment: ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#95a5a6']
@@ -777,7 +779,7 @@ class AdminApp {
                 const chartData = this.formatChartData(data.data, 'pie');
                 const config = this.getChartConfig('pie', {
                     data: chartData,
-                    colors: ['#2490ef', '#f39c12', '#13c296', '#f44336']
+                    colors: ['#ffc107', '#f39c12', '#13c296', '#f44336', '#2490ef', '#9b59b6']
                 });
 
                 this.charts.statusChart = new frappe.Chart(chartElement, config);
@@ -801,7 +803,7 @@ class AdminApp {
             if (data && data.data && data.data.length > 0) {
                 const chartData = this.formatChartData(data.data, 'pie');
                 this.renderSimpleChart(chartElement, chartData, 'pie');
-                this.renderChartLegend('statusChartLegend', chartData, ['#2490ef', '#f39c12', '#13c296', '#f44336']);
+                this.renderChartLegend('statusChartLegend', chartData, ['#ffc107', '#f39c12', '#13c296', '#f44336', '#2490ef', '#9b59b6']);
             } else {
                 this.renderChartError('statusChart', 'No data available for status chart');
             }
@@ -1030,14 +1032,14 @@ class AdminApp {
 
             html += `
                 <div style="display: flex; align-items: center; margin: 5px 0; width: 100%;">
-                    <div style="width: 12px; height: 12px; background: ${['#2490ef', '#f39c12', '#13c296', '#f44336'][index % 4]}; border-radius: 2px; margin-right: 8px;"></div>
+                    <div style="width: 12px; height: 12px; background: ${['#ffc107', '#f39c12', '#13c296', '#f44336', '#2490ef', '#9b59b6'][index % 6]}; border-radius: 2px; margin-right: 8px;"></div>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px;">
                             <span>${label}</span>
                             <span>${value} (${percentage}%)</span>
                         </div>
                         <div style="width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; margin-top: 2px;">
-                            <div style="width: ${percentage}%; height: 100%; background: ${['#2490ef', '#f39c12', '#13c296', '#f44336'][index % 4]}; border-radius: 4px;"></div>
+                            <div style="width: ${percentage}%; height: 100%; background: ${['#ffc107', '#f39c12', '#13c296', '#f44336', '#2490ef', '#9b59b6'][index % 6]}; border-radius: 4px;"></div>
                         </div>
                     </div>
                 </div>
@@ -1321,11 +1323,12 @@ class AdminApp {
 
     getStatusBadgeClass(status) {
         const statusMap = {
-            'new': 'primary',
+            'new': 'yellow',
             'interested': 'success',
-            'not interested': 'secondary',
+            'not interested': 'danger',
             'hot': 'warning',
-            'pending': 'info',
+            'followup': 'primary',
+            'pending': 'purple',
             'completed': 'success'
         };
         return statusMap[status?.toLowerCase()] || 'primary';

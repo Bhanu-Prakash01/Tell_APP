@@ -1257,16 +1257,18 @@ class AdminApp {
 
     async loadLeadsData(filters = {}) {
         try {
-            // Remove limit to fetch all leads
+            // Use regular leads endpoint with pagination
             const queryParams = new URLSearchParams(filters).toString();
             const leads = await this.apiRequest(`/leads?${queryParams}`);
-            
+
+            // Use regular pagination for all leads
             this.renderLeadsTable(leads);
             this.updatePaginationControls(leads);
         } catch (error) {
             console.error('Error loading leads:', error);
         }
     }
+
 
     renderLeadsTable(leads) {
         const leadsTable = document.querySelector('#leadsTable');

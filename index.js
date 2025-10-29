@@ -22,7 +22,7 @@ const leadAssignmentRoutes = require('./routes/leadAssignment');
 // const campaignRoutes = require('./routes/campaigns');
 // const dashboardRoutes = require('./routes/dashboard');
 const dashboardRoutes = require('./routes/dashboard');
-// const uploadRoutes = require('./routes/uploads');
+const uploadRoutes = require('./routes/uploads');
 const employeeRoutes = require('./routes/employee');
 
 // Import logging utilities for application events
@@ -81,9 +81,6 @@ app.use(cors(corsOptions));
 // Request ID middleware (must be first to track all requests)
 app.use(requestIdMiddleware);
 
-// Security header validation middleware
-app.use(securityHeaderLogger);
-
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -91,6 +88,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Compression middleware
 app.use(compression());
+
+// Security header validation middleware
+app.use(securityHeaderLogger);
 
 // Enhanced logging middleware
 app.use(httpLogger);
@@ -125,6 +125,10 @@ app.get('/admin/user-management', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'user-management.html'));
 });
 
+app.get('/admin/apk-management', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'apk-management.html'));
+});
+
 // Static file serving (before API routes to avoid conflicts)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -142,6 +146,7 @@ app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
 });
 
+
 // Root route - serve main landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
@@ -157,32 +162,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Application event logging middleware
-app.use((req, res, next) => {
-  // Log application startup
-  if (req.path === '/health' && req.method === 'GET') {
-    logAppEvent('Health Check', {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-    });
-  }
-
-  // Log API usage patterns
-  if (req.path.startsWith('/api/')) {
-    const endpoint = `${req.method} ${req.baseUrl}${req.route?.path || req.path}`;
-    logAppEvent('API Usage', {
-      endpoint,
-      userAgent: req.get('User-Agent'),
-      ip: req.ip,
-      requestSize: JSON.stringify(req.body).length,
-    });
-  }
-
-  next();
-});
-
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
@@ -194,10 +173,117 @@ app.use('/api/v1/lead-assignment', leadAssignmentRoutes);
 // app.use('/api/v1/campaigns', campaignRoutes);
 // app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
-// app.use('/api/v1/uploads', uploadRoutes);
+
+// Authenticated upload routes
+app.use('/api/v1/uploads', uploadRoutes);
+app.get('/api/v1/uploads/apk/latest', async (req, res) => {
+  try {
+    const APK = require('./models/APK');
+    const latestAPK = await APK.findOne().sort({ uploadedAt: -1 });
+
+    if (!latestAPK) {
+      return res.status(404).json({
+        success: false,
+        message: 'No APK available'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Latest APK retrieved',
+      data: {
+        version: latestAPK.version,
+        downloadUrl: `/api/v1/uploads/apk/download/${latestAPK.filename}`,
+        size: latestAPK.size,
+        uploadedAt: latestAPK.uploadedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error in getLatestAPK:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve latest APK'
+    });
+  }
+});
+
+app.get('/api/v1/uploads/apk/download/:filename', async (req, res) => {
+  try {
+    const APK = require('./models/APK');
+    const path = require('path');
+    const fs = require('fs');
+
+    const { filename } = req.params;
+    const apk = await APK.findOne({ filename });
+
+    if (!apk) {
+      return res.status(404).json({
+        success: false,
+        message: 'APK not found'
+      });
+    }
+
+    const filePath = path.join(__dirname, apk.path);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'APK file not found on server'
+      });
+    }
+
+    res.setHeader('Content-Type', apk.mimetype);
+    res.setHeader('Content-Disposition', `attachment; filename="${apk.originalName}"`);
+
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error in downloadAPK:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download APK'
+    });
+  }
+});
+
+app.get('/api/v1/uploads/apk/versions', async (req, res) => {
+  try {
+    const APK = require('./models/APK');
+    const apks = await APK.find()
+      .sort({ uploadedAt: -1 })
+      .select('version filename size uploadedAt')
+      .populate('uploadedBy', 'name');
+
+    res.json({
+      success: true,
+      message: 'APK versions retrieved',
+      data: {
+        apks: apks.map(apk => ({
+          version: apk.version,
+          downloadUrl: `/api/v1/uploads/apk/download/${apk.filename}`,
+          size: apk.size,
+          uploadedAt: apk.uploadedAt,
+          uploadedBy: apk.uploadedBy?.name || 'Unknown'
+        })),
+        totalCount: apks.length
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAPKVersions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve APK versions'
+    });
+  }
+});
 
 // Security monitoring middleware
 app.use((err, req, res, next) => {
+  // Skip security monitoring for public APK routes
+  if (req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET') {
+    return next(err);
+  }
+
   // Log security-related errors
   if (err.name === 'UnauthorizedError' || err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     logSecurityEvent('Authentication Error', 'high', {
@@ -232,6 +318,11 @@ app.use((err, req, res, next) => {
 
 // Enhanced error logging middleware
 app.use((err, req, res, next) => {
+  // Skip error logging for public APK routes
+  if (req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET') {
+    return next(err);
+  }
+
   // Log application errors
   logger.error('Unhandled Application Error', {
     error: err.message,

@@ -1,5 +1,10 @@
 // Global error handling middleware
 const errorHandler = (err, req, res, next) => {
+  // Skip error handling for public APK routes
+  if (req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET') {
+    return next(err);
+  }
+
   let error = { ...err };
   error.message = err.message;
 

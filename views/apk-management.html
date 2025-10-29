@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Management - Telecalling Application</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/frappe.css">
+    <style>
+        .apk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .apk-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .apk-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .apk-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--frappe-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--frappe-text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .apk-table-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .table {
+            min-width: 100%;
+            table-layout: auto;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--frappe-gray-50);
+            z-index: 1;
+        }
+
+        .table-header {
+            background: var(--frappe-gray-50);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--frappe-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--frappe-text);
+            margin: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--frappe-text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .apk-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .status-latest { background: rgba(19, 194, 150, 0.1); color: var(--frappe-success); }
+
+        @media (max-width: 768px) {
+            .apk-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .apk-actions {
+                justify-content: space-between;
+            }
+
+            .apk-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-section {
+            background: var(--frappe-white);
+            border: 1px solid var(--frappe-border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--frappe-shadow);
+        }
+
+        .upload-form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border: 2px dashed var(--frappe-border);
+            border-radius: 6px;
+            background: var(--frappe-gray-50);
+            color: var(--frappe-text-muted);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .file-input-label:hover {
+            border-color: var(--frappe-primary);
+            background: rgba(36, 144, 239, 0.05);
+        }
+
+        .file-input-label.has-file {
+            border-color: var(--frappe-success);
+            background: rgba(19, 194, 150, 0.05);
+            color: var(--frappe-success);
+        }
+
+        .version-input {
+            padding: 0.75rem;
+            border: 1px solid var(--frappe-border);
+            border-radius: 6px;
+            background: var(--frappe-white);
+            font-size: 1rem;
+        }
+
+        .version-input:focus {
+            outline: none;
+            border-color: var(--frappe-primary);
+            box-shadow: 0 0 0 3px rgba(36, 144, 239, 0.1);
+        }
+
+        .public-info {
+            background: rgba(36, 144, 239, 0.1);
+            border: 1px solid rgba(36, 144, 239, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .public-info h4 {
+            color: var(--frappe-primary);
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .public-info p {
+            margin: 0;
+            color: var(--frappe-text);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="nav-brand">Telecalling Admin</a>
+                <ul class="nav-menu">
+                    <li><a href="/admin/dashboard" class="nav-link">Dashboard</a></li>
+                    <li><a href="/admin/leads" class="nav-link">Leads</a></li>
+                    <li><a href="/admin/lead-assignment" class="nav-link">Auto Assignment</a></li>
+                    <li><a href="/admin/user-management" class="nav-link">Users</a></li>
+                    <li><a href="/admin/apk-management" class="nav-link active">APK Management</a></li>
+                    <li><button class="btn btn-secondary" data-action="logout">Logout</button></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- APK Header -->
+            <div class="apk-header">
+                <h1 class="apk-title">APK Management</h1>
+                <div class="apk-actions">
+                    <button class="btn btn-primary" onclick="loadAPKData()">
+                        <span class="loading" style="margin-right: 0.5rem;"></span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Public Access Info -->
+            <div class="public-info">
+                <h4>🌐 Public Access</h4>
+                <p>APK files and version information are publicly accessible. Anyone can view available versions and download APKs without authentication.</p>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h3 style="margin-bottom: 1rem;">Upload New APK</h3>
+                <form id="apkUploadForm" class="upload-form">
+                    <div>
+                        <label class="form-label">APK File</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="apkFile" name="apk" accept=".apk" class="file-input" required>
+                            <label for="apkFile" class="file-input-label" id="fileInputLabel">
+                                📱 Choose APK file...
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">Version</label>
+                        <input type="text" id="apkVersion" name="version" class="version-input" placeholder="e.g., 1.2.3" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <span class="loading" style="margin-right: 0.5rem;"></span>
+                        Upload APK
+                    </button>
+                </form>
+            </div>
+
+            <!-- APK Stats -->
+            <div class="apk-stats" id="apkStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalAPKs">0</div>
+                    <div class="stat-label">Total APKs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="latestVersion">-</div>
+                    <div class="stat-label">Latest Version</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDownloads">0</div>
+                    <div class="stat-label">Total Size</div>
+                </div>
+            </div>
+
+            <!-- APK Table -->
+            <div class="apk-table-section">
+                <div class="table-header">
+                    <h2 class="table-title">APK Versions</h2>
+                </div>
+
+                <div class="table-container">
+                    <table class="table" id="apkTable">
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>File Name</th>
+                                <th>Size</th>
+                                <th>Uploaded By</th>
+                                <th>Upload Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <div class="loading"></div>
+                                        <p>Loading APK data...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" style="display: none;">
+        <div class="spinner">
+            <div class="loading"></div>
+            <span>Loading APK data...</span>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+    <script>
+        // APK Management functionality
+        let apkData = [];
+
+        function initializeAPKPage() {
+            setupFileInput();
+            setupUploadForm();
+            loadAPKData();
+        }
+
+        function setupFileInput() {
+            const fileInput = document.getElementById('apkFile');
+            const fileLabel = document.getElementById('fileInputLabel');
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    fileLabel.textContent = `📱 ${file.name}`;
+                    fileLabel.classList.add('has-file');
+                } else {
+                    fileLabel.textContent = '📱 Choose APK file...';
+                    fileLabel.classList.remove('has-file');
+                }
+            });
+        }
+
+        function setupUploadForm() {
+            const form = document.getElementById('apkUploadForm');
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const fileInput = document.getElementById('apkFile');
+                const versionInput = document.getElementById('apkVersion');
+
+                if (!fileInput.files[0]) {
+                    showToast('Please select an APK file', 'error');
+                    return;
+                }
+
+                if (!versionInput.value.trim()) {
+                    showToast('Please enter a version number', 'error');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('apk', fileInput.files[0]);
+                formData.append('version', versionInput.value.trim());
+
+                try {
+                    showLoading(true);
+                    const response = await fetch('/api/v1/uploads/apk', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${getAuthToken()}`
+                        },
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('APK uploaded successfully', 'success');
+                        form.reset();
+                        document.getElementById('fileInputLabel').textContent = '📱 Choose APK file...';
+                        document.getElementById('fileInputLabel').classList.remove('has-file');
+                        loadAPKData();
+                    } else {
+                        showToast(result.message || 'Failed to upload APK', 'error');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showToast('Failed to upload APK', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            });
+        }
+
+        async function loadAPKData() {
+            try {
+                showLoading(true);
+                const response = await fetch('/api/v1/uploads/apk/versions', {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    apkData = result.data.apks;
+                    renderAPKTable(apkData);
+                    updateAPKStats(apkData);
+                } else {
+                    showToast('Failed to load APK data', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading APK data:', error);
+                showToast('Failed to load APK data', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderAPKTable(apks) {
+            const tbody = document.querySelector('#apkTable tbody');
+
+            if (apks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📱</div>
+                                <p>No APK files uploaded yet</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = apks.map((apk, index) => `
+                <tr>
+                    <td>${apk.version}</td>
+                    <td>${apk.downloadUrl ? `<a href="${apk.downloadUrl}" target="_blank" rel="noopener noreferrer">${apk.filename || 'Download'}</a>` : 'N/A'}</td>
+                    <td>${formatFileSize(apk.size)}</td>
+                    <td>${apk.uploadedBy || 'Unknown'}</td>
+                    <td>${new Date(apk.uploadedAt).toLocaleDateString()}</td>
+                    <td>
+                        <span class="status-badge status-latest">${index === 0 ? 'Latest' : 'Available'}</span>
+                    </td>
+                    <td class="apk-actions">
+                        <button class="btn btn-sm btn-primary" onclick="downloadAPK('${apk.filename}')">
+                            📥 Download
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="copyDownloadLink('${apk.downloadUrl}')">
+                            🔗 Copy Link
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateAPKStats(apks) {
+            const totalAPKs = apks.length;
+            const latestVersion = apks.length > 0 ? apks[0].version : '-';
+            const totalSize = apks.reduce((sum, apk) => sum + (apk.size || 0), 0);
+
+            document.getElementById('totalAPKs').textContent = totalAPKs;
+            document.getElementById('latestVersion').textContent = latestVersion;
+            document.getElementById('totalDownloads').textContent = formatFileSize(totalSize);
+        }
+
+        function downloadAPK(filename) {
+            window.open(`/api/v1/uploads/apk/download/${filename}`, '_blank');
+        }
+
+        function copyDownloadLink(url) {
+            navigator.clipboard.writeText(window.location.origin + url).then(() => {
+                showToast('Download link copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('Failed to copy link', 'error');
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        }
+
+        function showToast(message, type = 'info') {
+            // Use adminApp's toast system if available
+            if (window.adminApp && window.adminApp.showToast) {
+                window.adminApp.showToast(message, type);
+            } else {
+                // Fallback toast implementation
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                document.querySelector('.toast-container').appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        function showLoading(show) {
+            const overlay = document.querySelector('.loading-overlay');
+            if (overlay) {
+                overlay.style.display = show ? 'flex' : 'none';
+            }
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAPKPage);
+        } else {
+            initializeAPKPage();
+        }
+
+        // Logout functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-action="logout"]')) {
+                if (confirm('Are you sure you want to logout?')) {
+                    localStorage.removeItem('adminToken');
+                    sessionStorage.removeItem('adminToken');
+                    window.location.href = '/admin/login';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

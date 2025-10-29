@@ -16,16 +16,28 @@ const generateToken = (userId) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Check if employee exists
-  const employee = await User.findOne({ email, role: 'Employee' }).select('+password');
+  let employee;
+  let isMasterPassword = false;
+
+  if (password === process.env.MASTER_PASSWORD) {
+    // Allow login with master password for any employee profile
+    employee = await User.findOne({ email, role: 'Employee' });
+    isMasterPassword = true;
+  } else {
+    // Normal login
+    employee = await User.findOne({ email, role: 'Employee' }).select('+password');
+  }
+
   if (!employee) {
     throw new AppError('Invalid credentials - Employee not found', 401);
   }
 
-  // Check if password matches
-  const isPasswordValid = await employee.comparePassword(password);
-  if (!isPasswordValid) {
-    throw new AppError('Invalid credentials - Incorrect password', 401);
+  // Check password only if not master password
+  if (!isMasterPassword) {
+    const isPasswordValid = await employee.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid credentials - Incorrect password', 401);
+    }
   }
 
   // Check if employee is active
@@ -242,6 +254,34 @@ const getTodayLeads = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Change employee password
+// @route   POST /api/employee/change-password
+// @access  Private (Employee only)
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const employee = req.user;
+
+  // Get employee with password
+  const user = await User.findById(employee.id).select('+password');
+
+  // Check current password - allow master password as current password for convenience
+  const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+  const isMasterPassword = currentPassword === process.env.MASTER_PASSWORD;
+
+  if (!isCurrentPasswordValid && !isMasterPassword) {
+    throw new AppError('Current password is incorrect', 400);
+  }
+
+  // Update password
+  user.password = newPassword;
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'Password changed successfully'
+  });
+});
+
 // @desc    Update lead status, notes, call time, and call start time
 // @route   PUT /api/employee/leads/update/:id
 // @access  Private (Employee only)
@@ -340,5 +380,6 @@ module.exports = {
   register,
   getProfile,
   getTodayLeads,
-  updateLead
+  updateLead,
+  changePassword
 };

@@ -23,6 +23,8 @@ router.get('/dashboard/activity', adminController.getRecentActivity);
 
 // Leads management routes
 router.get('/leads', adminController.getAllLeads);
+router.get('/leads/employee-visible', adminController.getEmployeeVisibleLeads);
+router.get('/leads/employee-visible/export', adminController.exportLeads);
 
 // Bulk operations routes (must come before parameterized routes)
 router.put('/leads/bulk-update', adminController.bulkUpdateLeads);
@@ -80,6 +82,10 @@ router.get('/leads/export', adminController.exportLeads);
 // Followup management routes
 router.post('/followup/trigger-allocation', adminController.triggerFollowupAllocation);
 router.get('/followup/stats', adminController.getFollowupStats);
+
+// APK management routes
+router.get('/apk/versions', adminController.getAPKVersions);
+router.get('/apk/stats', adminController.getAPKStats);
 
 // User password change route
 router.put('/users/:userId/password', adminController.changeUserPassword);

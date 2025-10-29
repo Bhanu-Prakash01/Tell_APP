@@ -268,6 +268,7 @@
                     <li><a href="/admin/leads" class="nav-link active">Leads</a></li>
                     <li><a href="/admin/lead-assignment" class="nav-link">Auto Assignment</a></li>
                     <li><a href="/admin/user-management" class="nav-link">Users</a></li>
+                    <li><a href="/admin/apk-management" class="nav-link">APK Management</a></li>
                     <li><button class="btn btn-secondary" data-action="logout">Logout</button></li>
                 </ul>
             </nav>
@@ -338,6 +339,15 @@
                                 <option value="other">Other</option>
                             </select>
                         </div>
+
+                        <div>
+                            <label class="form-label">
+                                <input type="checkbox" id="employeeVisibleFilter" onchange="toggleEmployeeVisibleFilter()">
+                                Show only employee-visible leads
+                            </label>
+                            <small class="text-muted">Leads assigned to employees and ready for calling today</small>
+                        </div>
+
 
                         <div>
                             <button type="submit" class="btn btn-primary">
@@ -613,6 +623,14 @@
         function clearFilters() {
             document.getElementById('leadsFilters').reset();
             document.getElementById('leadsSearch').value = '';
+            document.getElementById('employeeVisibleFilter').checked = false;
+            if (window.adminApp && window.adminApp.loadLeadsData) {
+                window.adminApp.loadLeadsData();
+            }
+        }
+
+        function toggleEmployeeVisibleFilter() {
+            // Reload leads data when filter is toggled
             if (window.adminApp && window.adminApp.loadLeadsData) {
                 window.adminApp.loadLeadsData();
             }
@@ -625,9 +643,13 @@
             const filters = Object.fromEntries(formData.entries());
             filters.search = document.getElementById('leadsSearch').value;
 
+            // Check if employee-visible filter is active
+            const isEmployeeVisibleFilter = document.getElementById('employeeVisibleFilter')?.checked;
+            const endpoint = isEmployeeVisibleFilter ? '/leads/employee-visible/export' : '/leads/export';
+
             // Create export URL with filters
             const params = new URLSearchParams(filters);
-            window.open(`/api/v1/admin/leads/export?${params}`, '_blank');
+            window.open(`/api/v1/admin${endpoint}?${params}`, '_blank');
         }
 
         // Pagination state management
@@ -642,6 +664,40 @@
         // Override the renderLeadsTable function to include pagination
         function setupLeadsOverrides() {
             if (!window.adminApp) return;
+
+            // Override the loadLeadsData function to use employee-visible endpoint when filter is active
+            const originalLoadLeadsData = window.adminApp.loadLeadsData;
+            window.adminApp.loadLeadsData = function() {
+                const isEmployeeVisibleFilter = document.getElementById('employeeVisibleFilter')?.checked;
+                const endpoint = isEmployeeVisibleFilter ? '/leads/employee-visible' : '/leads';
+
+                // Get current filter values
+                const form = document.getElementById('leadsFilters');
+                const formData = new FormData(form);
+                const filters = Object.fromEntries(formData.entries());
+                filters.search = document.getElementById('leadsSearch').value;
+
+                // Build query string
+                const params = new URLSearchParams();
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value) params.append(key, value);
+                });
+
+                // Add pagination parameters
+                params.append('page', paginationState.currentPage);
+                params.append('limit', paginationState.pageSize);
+
+                const url = `${endpoint}?${params}`;
+
+                this.apiRequest(url)
+                    .then(data => {
+                        this.renderLeadsTable(data);
+                    })
+                    .catch(error => {
+                        console.error('Error loading leads:', error);
+                        this.showToast('Failed to load leads', 'error');
+                    });
+            };
 
             const originalRenderLeadsTable = window.adminApp.renderLeadsTable;
             window.adminApp.renderLeadsTable = function(leads) {

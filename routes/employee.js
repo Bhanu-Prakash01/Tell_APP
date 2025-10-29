@@ -7,7 +7,8 @@ const {
   register,
   getProfile,
   getTodayLeads,
-  updateLead
+  updateLead,
+  changePassword
 } = require('../controllers/employeeController');
 
 // Import middleware
@@ -47,5 +48,6 @@ router.use(requireEmployee); // All routes below require employee role
 router.get('/profile', getProfile);
 router.get('/leads/today', getTodayLeads);
 router.put('/leads/update/:id', updateLead);
+router.post('/change-password', changePassword);
 
 module.exports = router;

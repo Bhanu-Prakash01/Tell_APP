@@ -16,6 +16,11 @@ setInterval(() => {
 
 // HTTP Request Logging Middleware
 const httpLogger = (req, res, next) => {
+  // Skip logging for public APK routes
+  if (req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET') {
+    return next();
+  }
+
   const startTime = Date.now();
 
   // Capture original response methods
@@ -274,8 +279,8 @@ const securityHeaderLogger = (req, res, next) => {
     }
   });
 
-  // Log suspicious requests with missing headers
-  if (missingHeaders.length >= 2) {
+  // Log suspicious requests with missing headers (skip for public APK routes)
+  if (missingHeaders.length >= 2 && !(req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET')) {
     logSecurityEvent('Suspicious Request - Missing Headers', 'low', {
       ip: req.ip,
       missingHeaders,

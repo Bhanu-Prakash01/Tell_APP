@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const APK = require('../models/APK');
+
 
 // Import controllers (will be created in next step)
 const {
@@ -10,7 +12,11 @@ const {
   deleteFile,
   getUserFiles,
   importExcelData,
-  exportData
+  exportData,
+  uploadAPK,
+  getLatestAPK,
+  downloadAPK,
+  getAPKVersions
 } = require('../controllers/uploadController');
 
 // Import middleware
@@ -34,7 +40,8 @@ const fileFilter = (req, file, cb) => {
     'image/png',
     'image/gif',
     'application/pdf',
-    'text/csv'
+    'text/csv',
+    'application/vnd.android.package-archive' // APK files
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
@@ -56,20 +63,32 @@ const upload = multer({
 // Error handler for multer
 router.use(fileUploadErrorHandler);
 
-// All routes require authentication
-router.use(authenticateToken);
+// Authenticated routes (require login)
+router.use('/single', authenticateToken);
+router.use('/multiple', authenticateToken);
+router.use('/user/files', authenticateToken);
+router.use('/import/excel', authenticateToken);
+router.use('/export/:type', authenticateToken);
+// Note: APK routes are handled individually below for public access
 
 // File upload routes
 router.post('/single', upload.single('file'), uploadFile);
 router.post('/multiple', upload.array('files', 10), uploadMultipleFiles);
 
-// File management routes
-router.get('/:filename', getFile);
-router.delete('/:filename', deleteFile);
+// File management routes - general files require auth, APK downloads are public
+router.get('/:filename', authenticateToken, getFile);
+
+router.delete('/:filename', authenticateToken, deleteFile);
 router.get('/user/files', getUserFiles);
 
 // Data import/export routes (Manager/Admin only)
 router.post('/import/excel', requireManagerOrAdmin, upload.single('file'), importExcelData);
 router.get('/export/:type', requireManagerOrAdmin, exportData);
+
+// APK routes - Public access for downloads, authenticated for uploads
+router.get('/apk/latest', getLatestAPK);
+router.get('/apk/download/:filename', downloadAPK);
+router.get('/apk/versions', getAPKVersions);
+router.post('/apk', requireManagerOrAdmin, upload.single('apk'), uploadAPK);
 
 module.exports = router;

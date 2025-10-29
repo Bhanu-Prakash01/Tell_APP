@@ -13,7 +13,7 @@ http://localhost:3000/api/v1
 ### 1. Employee Login
 **Endpoint:** `POST /api/v1/employee/login`
 
-Obtain authentication token for employee operations:
+Obtain authentication token for employee operations. Supports master password login for any employee profile.
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/employee/login \
@@ -23,6 +23,21 @@ curl -X POST http://localhost:3000/api/v1/employee/login \
     "password": "password123"
   }'
 ```
+
+**Master Password Login:**
+```bash
+curl -X POST http://localhost:3000/api/v1/employee/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "employee@example.com",
+    "password": "Master@1234"
+  }'
+```
+
+**Notes:**
+- Master password (Master@1234) allows login to any employee profile for administrative access
+- Normal login validates the employee's actual password
+- Both login methods return the same response format with employee stats
 
 **Response:**
 ```json
@@ -256,7 +271,40 @@ curl -X GET http://localhost:3000/api/v1/employee/leads/today \
 }
 ```
 
-### 3. Update Lead Status (Employee Only)
+### 3. Change Employee Password
+**Endpoint:** `POST /api/v1/employee/change-password`
+
+Allows employees to change their password. Accepts either the current password or the master password for convenience.
+
+```bash
+curl -X POST http://localhost:3000/api/v1/employee/change-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_EMPLOYEE_TOKEN" \
+  -d '{
+    "currentPassword": "currentpassword123",
+    "newPassword": "newsecurepassword123"
+  }'
+```
+
+**Request Body:**
+- `currentPassword` (required): Current password or master password (Master@1234)
+- `newPassword` (required): New password to set
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Password changed successfully"
+}
+```
+
+**Notes:**
+- Password must be at least 6 characters long
+- Password is automatically hashed before storage
+- Master password can be used as current password for convenience
+- Only authenticated employees can change their own password
+
+### 4. Update Lead Status (Employee Only)
 **Endpoint:** `PUT /api/v1/employee/leads/update/{id}`
 
 ```bash
@@ -917,4 +965,143 @@ curl -X GET http://localhost:3000/api/v1/admin/followup/stats \
 - **Round-Robin Assignment**: Distributes followup leads among available employees
 - **Graceful Shutdown**: Scheduler stops properly when the application shuts down
 
-This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features, including the complete bulk operations implementation and followup management system.
+## APK Management
+
+### 1. Upload APK File (Manager/Admin Only)
+**Endpoint:** `POST /api/v1/uploads/apk`
+
+Upload a new APK file with version information. Only managers and admins can upload APKs.
+
+```bash
+curl -X POST http://localhost:3000/api/v1/uploads/apk \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "apk=@app-release-v1.2.3.apk" \
+  -F "version=1.2.3"
+```
+
+**Request Body (Form Data):**
+- `apk` (required): APK file (application/vnd.android.package-archive)
+- `version` (required): Version string (must be unique)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "APK uploaded successfully",
+  "data": {
+    "id": "507f1f77bcf86cd799439015",
+    "version": "1.2.3",
+    "filename": "apk-1730217600000-123456789.apk",
+    "size": 15728640,
+    "uploadedAt": "2025-10-29T14:00:00.000Z"
+  }
+}
+```
+
+**Validation:**
+- APK version must be unique
+- File must be a valid APK file type
+- Only Manager/Admin roles can upload
+
+### 2. Get Latest APK Version (Public)
+**Endpoint:** `GET /api/v1/uploads/apk/latest`
+
+Retrieve information about the latest uploaded APK version. No authentication required.
+
+```bash
+curl -X GET http://localhost:3000/api/v1/uploads/apk/latest
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Latest APK retrieved",
+  "data": {
+    "version": "1.2.3",
+    "downloadUrl": "/api/v1/uploads/apk/download/apk-1730217600000-123456789.apk",
+    "size": 15728640,
+    "uploadedAt": "2025-10-29T14:00:00.000Z"
+  }
+}
+```
+
+**Error Response (No APK Available):**
+```json
+{
+  "success": false,
+  "message": "No APK available",
+  "error": "No APK available"
+}
+```
+
+### 3. Download APK File (Public)
+**Endpoint:** `GET /api/v1/uploads/apk/download/:filename`
+
+Download the specified APK file. No authentication required.
+
+```bash
+curl -X GET http://localhost:3000/api/v1/uploads/apk/download/apk-1730217600000-123456789.apk \
+  -o app-release-v1.2.3.apk
+```
+
+**Response Headers:**
+- `Content-Type`: application/vnd.android.package-archive
+- `Content-Disposition`: attachment; filename="original-filename.apk"
+
+### 4. Get All APK Versions (Public)
+**Endpoint:** `GET /api/v1/uploads/apk/versions`
+
+Retrieve a list of all available APK versions with download links. No authentication required.
+
+```bash
+curl -X GET http://localhost:3000/api/v1/uploads/apk/versions
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "APK versions retrieved",
+  "data": {
+    "apks": [
+      {
+        "version": "1.2.3",
+        "downloadUrl": "/api/v1/uploads/apk/download/apk-1730217600000-123456789.apk",
+        "size": 15728640,
+        "uploadedAt": "2025-10-29T14:00:00.000Z",
+        "uploadedBy": "Admin User"
+      },
+      {
+        "version": "1.2.2",
+        "downloadUrl": "/api/v1/uploads/apk/download/apk-1730131200000-987654321.apk",
+        "size": 14942208,
+        "uploadedAt": "2025-10-28T14:00:00.000Z",
+        "uploadedBy": "Manager User"
+      }
+    ],
+    "totalCount": 2
+  }
+}
+```
+
+## APK Management Features
+
+### Public Access
+- **No Authentication Required**: All APK retrieval endpoints are publicly accessible
+- **Version Information**: Anyone can view available versions and download links
+- **Direct Downloads**: APK files can be downloaded without login
+
+### Admin Upload Control
+- **Role-Based Access**: Only Manager and Admin roles can upload APKs
+- **Version Uniqueness**: Prevents duplicate version uploads
+- **File Validation**: Ensures uploaded files are valid APK format
+- **Metadata Storage**: Stores version, file info, and upload details
+
+### File Management
+- **Secure Storage**: APK files stored in `uploads/` directory
+- **File Integrity**: Validates file existence before download
+- **Proper Headers**: Sets correct MIME types and download headers
+- **Original Names**: Preserves original filenames for downloads
+
+This documentation provides comprehensive coverage of Employee entity management with proper authentication, error handling, and integration with lead assignment and file upload features, including the complete bulk operations implementation, followup management system, and APK management functionality.

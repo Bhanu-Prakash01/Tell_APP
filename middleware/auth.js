@@ -3,6 +3,11 @@ const User = require('../models/User');
 
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
+  // Skip authentication for public APK routes
+  if (req.path.startsWith('/api/v1/uploads/apk/') && req.method === 'GET') {
+    return next();
+  }
+
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN

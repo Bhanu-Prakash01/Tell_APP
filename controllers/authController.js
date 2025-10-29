@@ -88,8 +88,8 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Check if user exists
-  const user = await User.findOne({ email }).select('+password');
+  // Check if user exists (case-insensitive email lookup)
+  const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } }).select('+password');
   if (!user) {
     throw new AppError('Invalid credentials', 401);
   }

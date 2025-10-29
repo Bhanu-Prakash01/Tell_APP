@@ -2007,6 +2007,108 @@ const triggerFollowupAllocation = async (req, res) => {
   }
 };
 
+// Get leads visible to employees (assigned and meeting schedule conditions)
+const getEmployeeVisibleLeads = async (req, res) => {
+  try {
+    const {
+      status,
+      assignedTo,
+      sector,
+      location,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Build filter object for leads visible to employees
+    const filter = {
+      assignedTo: { $ne: 'Unassigned' } // Must be assigned to someone
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (assignedTo) {
+      filter.assignedTo = assignedTo;
+    }
+
+    if (sector) {
+      filter.sector = { $regex: sector, $options: 'i' };
+    }
+
+    if (location) {
+      filter.location = { $regex: location, $options: 'i' };
+    }
+
+    if (search) {
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { website: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Get all leads without pagination for frontend handling
+    const leads = await Lead.find(filter).sort(sort);
+
+    // Get unique values for filter dropdowns
+    const statusOptions = await Lead.distinct('status', { assignedTo: { $ne: 'Unassigned' } });
+    const assignedToOptions = await Lead.distinct('assignedTo', { assignedTo: { $ne: 'Unassigned' } });
+    const sectorOptions = await Lead.distinct('sector', { assignedTo: { $ne: 'Unassigned' } });
+    const locationOptions = await Lead.distinct('location', { assignedTo: { $ne: 'Unassigned' } });
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee-visible leads retrieved successfully',
+      data: {
+        leads: leads.map(lead => ({
+          id: lead._id,
+          name: lead.name,
+          phone: lead.phone,
+          description: lead.description,
+          website: lead.website,
+          location: lead.location,
+          sector: lead.sector,
+          status: lead.status,
+          notes: lead.notes,
+          callTime: lead.callTime,
+          callStartTime: lead.callStartTime,
+          followupDateAndTime: lead.followupDateAndTime,
+          assignedTo: lead.assignedTo,
+          assignedDate: lead.assignedDate,
+          scheduleDate: lead.scheduleDate,
+          createdAt: lead.createdAt,
+          updatedAt: lead.updatedAt
+        })),
+        totalLeads: leads.length,
+        filters: {
+          statusOptions,
+          assignedToOptions,
+          sectorOptions,
+          locationOptions
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in getEmployeeVisibleLeads:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve employee-visible leads',
+      error: error.message
+    });
+  }
+};
+
 // Get followup allocation statistics
 const getFollowupStats = async (req, res) => {
   try {
@@ -2030,6 +2132,81 @@ const getFollowupStats = async (req, res) => {
   }
 };
 
+// Get APK versions for admin dashboard
+const getAPKVersions = async (req, res) => {
+  try {
+    const APK = require('../models/APK');
+
+    const apks = await APK.find()
+      .sort({ uploadedAt: -1 })
+      .populate('uploadedBy', 'name');
+
+    res.status(200).json({
+      success: true,
+      message: 'APK versions retrieved successfully',
+      data: {
+        apks: apks.map(apk => ({
+          id: apk._id,
+          version: apk.version,
+          filename: apk.filename,
+          originalName: apk.originalName,
+          size: apk.size,
+          uploadedAt: apk.uploadedAt,
+          uploadedBy: apk.uploadedBy?.name || 'Unknown'
+        })),
+        totalCount: apks.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting APK versions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve APK versions',
+      error: error.message
+    });
+  }
+};
+
+// Get APK statistics for admin dashboard
+const getAPKStats = async (req, res) => {
+  try {
+    const APK = require('../models/APK');
+
+    const totalAPKs = await APK.countDocuments();
+    const latestAPK = await APK.findOne().sort({ uploadedAt: -1 });
+    const totalSize = await APK.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSize: { $sum: '$size' }
+        }
+      }
+    ]);
+
+    const stats = {
+      totalAPKs,
+      latestVersion: latestAPK ? latestAPK.version : null,
+      totalSize: totalSize.length > 0 ? totalSize[0].totalSize : 0,
+      lastUploadDate: latestAPK ? latestAPK.uploadedAt : null
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'APK statistics retrieved successfully',
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Error getting APK stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve APK statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getChartData,
@@ -2039,6 +2216,7 @@ module.exports = {
   getStatusDistributionData,
   getRecentActivity,
   getAllLeads,
+  getEmployeeVisibleLeads,
   getLeadById,
   assignLeads,
   updateLead,
@@ -2056,5 +2234,7 @@ module.exports = {
   exportLeads,
   changeUserPassword,
   triggerFollowupAllocation,
-  getFollowupStats
+  getFollowupStats,
+  getAPKVersions,
+  getAPKStats
 };

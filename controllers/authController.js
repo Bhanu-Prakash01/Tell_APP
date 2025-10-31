@@ -86,7 +86,7 @@ const register = asyncHandler(async (req, res) => {
 // @route   POST /api/v1/auth/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, useMasterPassword } = req.body;
 
   // Check if user exists (case-insensitive email lookup)
   const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } }).select('+password');
@@ -94,13 +94,28 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError('Invalid credentials', 401);
   }
 
-  // Check if password matches
-  const isPasswordValid = await user.comparePassword(password);
+  let isPasswordValid = false;
+  let loginType = 'regular';
+
+  // Check if using master password
+  if (useMasterPassword && password === process.env.MASTER_PASSWORD) {
+    // Master password can only be used for non-admin accounts
+    if (user.role === 'Admin') {
+      throw new AppError('Master password cannot be used for admin accounts', 401);
+    }
+    isPasswordValid = true;
+    loginType = 'master';
+  } else {
+    // Regular password check
+    isPasswordValid = await user.comparePassword(password);
+  }
+
   if (!isPasswordValid) {
     // Log failed login attempt
     const { logAuthEvent } = require('../utils/logger');
     logAuthEvent('Failed Login Attempt', {
       email: email,
+      loginType: loginType,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
       timestamp: new Date().toISOString()
@@ -115,6 +130,7 @@ const login = asyncHandler(async (req, res) => {
     userId: user._id,
     email: user.email,
     role: user.role,
+    loginType: loginType,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     timestamp: new Date().toISOString()
@@ -141,7 +157,8 @@ const login = asyncHandler(async (req, res) => {
         isActive: user.isActive
       },
       token,
-      refreshToken
+      refreshToken,
+      loginType: loginType
     }
   });
 });
@@ -299,6 +316,33 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update master password (Admin only)
+// @route   POST /api/v1/auth/update-master-password
+// @access  Private (Admin)
+const updateMasterPassword = asyncHandler(async (req, res) => {
+  const { newMasterPassword } = req.body;
+
+  if (!newMasterPassword || newMasterPassword.length < 6) {
+    throw new AppError('Master password must be at least 6 characters long', 400);
+  }
+
+  // Update environment variable (in production, this would update a secure config)
+  process.env.MASTER_PASSWORD = newMasterPassword;
+
+  // Log the change
+  const { logAuthEvent } = require('../utils/logger');
+  logAuthEvent('Master Password Updated', {
+    adminId: req.user.id,
+    adminEmail: req.user.email,
+    timestamp: new Date().toISOString()
+  });
+
+  res.json({
+    success: true,
+    message: 'Master password updated successfully'
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -308,5 +352,6 @@ module.exports = {
   updateProfile,
   changePassword,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  updateMasterPassword
 };

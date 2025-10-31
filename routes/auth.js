@@ -12,7 +12,8 @@ const {
   updateProfile,
   changePassword,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  updateMasterPassword
 } = require('../controllers/authController');
 
 // Import middleware
@@ -97,6 +98,7 @@ router.post('/change-password', authenticateToken, changePassword);
 router.post('/logout', optionalAuth, logout);
 
 // Admin only routes
+router.post('/admin/update-master-password', authenticateToken, requireAdmin, updateMasterPassword);
 router.get('/admin/users', authenticateToken, requireAdmin, (req, res) => {
   // Placeholder for admin user management
   res.json({ success: true, message: 'Admin users endpoint' });

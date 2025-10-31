@@ -54,6 +54,16 @@
             "date": 1761716930756,
             "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-29.log",
             "hash": "3a94ecbc32d304adb75a812245b322c55ea4d5fe1020a26b360abcbf9b81d6dd"
+        },
+        {
+            "date": 1761824402312,
+            "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-30.log",
+            "hash": "b5c627fe85d9e16eb4771c12e01fdd7e32bfd787715c9dc6b509ac2c2a0e7c47"
+        },
+        {
+            "date": 1761920298356,
+            "name": "/home/dragon/telcalling_v1/logs/rejections-2025-10-31.log",
+            "hash": "aa86dd3d7cef512154e85a07948681be47218634de9845074d170d9ba5ded998"
         }
     ],
     "hashType": "sha256"

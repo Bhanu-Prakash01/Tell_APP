@@ -465,7 +465,7 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
 
 **Allowed Update Fields:**
 - `status`: "New", "Interested", "Not Interested", "Hot", "Pending", "Completed", "Followup"
-- `assignedTo`: Employee name or "Unassigned"
+- `assignedTo`: Employee name or "Unassigned" (automatically resets `call_made` to 0 when reassigned)
 - `sector`: Business sector (string)
 - `location`: Location/region (string)
 - `notes`: Additional notes (will be appended with timestamp)
@@ -476,6 +476,7 @@ curl -X PUT http://localhost:3000/api/v1/admin/leads/bulk-update \
 - `phone`: Phone number
 - `description`: Lead description
 - `website`: Website URL
+- `call_made`: Call detection flag (0 = no call made, 1 = call made) - can be manually updated if needed
 
 **Response:**
 ```json
@@ -778,6 +779,58 @@ curl -X PUT http://localhost:3000/api/v1/employee/leads/update/LEAD_ID \
 ```
 
 This feature enhances call tracking and provides better insights into employee performance and call management efficiency.
+
+### Call Detection Logic
+A new `call_made` field has been implemented to track whether a call has been made on a lead:
+
+- **Field Type**: Number with default value of 0
+- **Values**:
+  - `0`: No call has been made
+  - `1`: A call has been made
+- **Automatic Updates**:
+  - **Assignment/Reassignment**: `call_made` is reset to `0` whenever a lead is assigned or reassigned to an employee
+  - **Employee Actions**: `call_made` is set to `1` when an employee:
+    - Changes the lead status
+    - Adds notes to the lead
+    - Updates lead information with call details (status, notes, call time, etc.)
+
+**Database Schema Update:**
+```javascript
+call_made: {
+  type: Number,
+  default: 0
+}
+```
+
+**Usage in API Responses:**
+The `call_made` field is included in all lead-related API responses and can be used for filtering and reporting purposes.
+
+**Example API Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "lead": {
+      "id": "507f1f77bcf86cd799439013",
+      "name": "Alice Johnson",
+      "phone": "+1234567890",
+      "status": "Interested",
+      "call_made": 1,
+      "assignedTo": "John Doe",
+      "lastUpdatedAt": "2025-10-25T10:15:00.000Z"
+    }
+  }
+}
+```
+
+**Note:** The `call_made` field is now included in all lead-related API responses, including:
+- Admin lead listings (`GET /api/v1/admin/leads`)
+- Individual lead details (`GET /api/v1/admin/leads/{id}`)
+- Employee lead updates (`PUT /api/v1/employee/leads/update/{id}`)
+- Bulk operations responses
+- Export data (CSV/JSON)
+
+This feature helps track call completion rates and ensures that leads are properly marked as contacted when employees interact with them.
 
 ## Testing Examples
 

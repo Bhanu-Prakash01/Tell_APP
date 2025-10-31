@@ -89,6 +89,16 @@
             "date": 1761716930753,
             "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-29.log",
             "hash": "931195f927d5edd2c97944e975e6964f3fa5eff50b0c840c83214b1486051753"
+        },
+        {
+            "date": 1761824402305,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-30.log",
+            "hash": "bd37078f1b7e7a9d3ac32589c9aa31dc0f4a1aa92aaf2ea570ba0800950983e6"
+        },
+        {
+            "date": 1761920298351,
+            "name": "/home/dragon/telcalling_v1/logs/exceptions-2025-10-31.log",
+            "hash": "3153868d414c2f4cca14b2c0af319b8539744110624522a8b7191c80eb4a6e7f"
         }
     ],
     "hashType": "sha256"

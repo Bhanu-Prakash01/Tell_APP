@@ -100,6 +100,16 @@
             font-size: 0.875rem;
         }
 
+        .master-password-hint {
+            background: rgba(36, 144, 239, 0.1);
+            border: 1px solid rgba(36, 144, 239, 0.2);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--frappe-primary);
+        }
+
         .alert {
             padding: 1rem;
             border-radius: 8px;
@@ -190,11 +200,14 @@
                         id="password"
                         name="password"
                         class="form-control has-icon"
-                        placeholder="Enter your password"
+                        placeholder="Enter your password or master password"
                         required
                         autocomplete="current-password"
                         minlength="3"
                     >
+                </div>
+                <div class="master-password-hint">
+                    <strong>💡 Master Password:</strong> Use the master password to login to any non-admin account
                 </div>
             </div>
 

@@ -535,6 +535,7 @@ const getAllLeads = async (req, res) => {
           followupDateAndTime: lead.followupDateAndTime,
           assignedTo: lead.assignedTo,
           assignedDate: lead.assignedDate,
+          call_made: lead.call_made,
           createdAt: lead.createdAt,
           updatedAt: lead.updatedAt
         })),
@@ -728,6 +729,7 @@ const updateLead = async (req, res) => {
         followupDateAndTime: lead.followupDateAndTime,
         assignedTo: lead.assignedTo,
         assignedDate: lead.assignedDate,
+        call_made: lead.call_made,
         createdAt: lead.createdAt,
         updatedAt: lead.updatedAt
       }
@@ -972,6 +974,7 @@ const uploadAndAssignLeads = async (req, res) => {
           phone: lead.phone,
           description: lead.description,
           status: lead.status,
+          call_made: lead.call_made,
           assignedTo: lead.assignedTo
         }))
       }
@@ -1062,6 +1065,7 @@ const getAllLeadAssignments = async (req, res) => {
           followupDateAndTime: lead.followupDateAndTime,
           assignedTo: lead.assignedTo,
           assignedDate: lead.assignedDate,
+          call_made: lead.call_made,
           createdAt: lead.createdAt,
           updatedAt: lead.updatedAt
         })),
@@ -1162,6 +1166,7 @@ const getEmployeeAssignments = async (req, res) => {
           callTime: lead.callTime,
           callStartTime: lead.callStartTime,
           assignedDate: lead.assignedDate,
+          call_made: lead.call_made,
           createdAt: lead.createdAt,
           updatedAt: lead.updatedAt
         })),
@@ -1497,6 +1502,7 @@ const bulkUploadLeads = async (req, res) => {
                 phone: lead.phone,
                 description: lead.description,
                 status: lead.status,
+                call_made: lead.call_made,
                 assignedTo: lead.assignedTo
               }))
             }
@@ -1519,6 +1525,7 @@ const bulkUploadLeads = async (req, res) => {
             name: lead.name,
             phone: lead.phone,
             status: lead.status,
+            call_made: lead.call_made,
             assignedTo: lead.assignedTo
           }))
         }
@@ -1621,6 +1628,7 @@ const exportLeads = async (req, res) => {
       followupDateAndTime: 1,
       assignedTo: 1,
       assignedDate: 1,
+      call_made: 1,
       createdAt: 1,
       updatedAt: 1
     }).sort({ createdAt: -1 });
@@ -1664,6 +1672,7 @@ const exportLeads = async (req, res) => {
               followupDateAndTime: lead.followupDateAndTime,
               assignedTo: lead.assignedTo,
               assignedDate: lead.assignedDate,
+              call_made: lead.call_made,
               createdAt: lead.createdAt,
               updatedAt: lead.updatedAt
             }))
@@ -1752,7 +1761,7 @@ const bulkUpdateLeads = async (req, res) => {
     }
 
     // Remove fields that shouldn't be updated directly
-    const allowedUpdates = ['name', 'phone', 'description', 'website', 'location', 'sector', 'status', 'notes', 'callTime', 'callStartTime', 'followupDateAndTime', 'assignedTo'];
+    const allowedUpdates = ['name', 'phone', 'description', 'website', 'location', 'sector', 'status', 'notes', 'callTime', 'callStartTime', 'followupDateAndTime', 'assignedTo', 'call_made'];
     const filteredUpdates = {};
 
     for (const [key, value] of Object.entries(updates)) {
@@ -1779,9 +1788,10 @@ const bulkUpdateLeads = async (req, res) => {
       });
     }
 
-    // If assignedTo is being updated, also set assignedDate to current date
+    // If assignedTo is being updated, also set assignedDate to current date and reset call_made to 0
     if (filteredUpdates.assignedTo) {
       filteredUpdates.assignedDate = new Date();
+      filteredUpdates.call_made = 0;
     }
 
     // Add lastUpdatedAt timestamp
@@ -1828,6 +1838,7 @@ const bulkUpdateLeads = async (req, res) => {
           name: lead.name,
           phone: lead.phone,
           status: lead.status,
+          call_made: lead.call_made,
           assignedTo: lead.assignedTo,
           updatedAt: lead.updatedAt
         }))
@@ -1925,6 +1936,7 @@ const bulkDeleteLeads = async (req, res) => {
           name: lead.name,
           phone: lead.phone,
           status: lead.status,
+          call_made: lead.call_made,
           assignedTo: lead.assignedTo
         }))
       }
@@ -2086,6 +2098,7 @@ const getEmployeeVisibleLeads = async (req, res) => {
           assignedTo: lead.assignedTo,
           assignedDate: lead.assignedDate,
           scheduleDate: lead.scheduleDate,
+          call_made: lead.call_made,
           createdAt: lead.createdAt,
           updatedAt: lead.updatedAt
         })),

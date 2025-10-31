@@ -99,6 +99,11 @@ const leadSchema = new mongoose.Schema({
   lastUpdatedAt: {
     type: Date,
     default: Date.now
+  },
+
+  call_made: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,
@@ -143,6 +148,7 @@ leadSchema.statics.findUnassigned = function() {
 leadSchema.methods.assignTo = function(userName) {
   this.assignedTo = userName;
   this.assignedDate = new Date();
+  this.call_made = 0;
   return this.save();
 };
 
@@ -150,6 +156,7 @@ leadSchema.methods.assignTo = function(userName) {
 leadSchema.methods.updateStatus = function(newStatus) {
   this.status = newStatus;
   this.lastUpdatedAt = new Date();
+  this.call_made = 1;
   return this.save();
 };
 
@@ -158,6 +165,7 @@ leadSchema.methods.addNotes = function(notes) {
   const currentNotes = this.notes || '';
   this.notes = currentNotes + '\n\n' + new Date().toISOString() + ': ' + notes;
   this.lastUpdatedAt = new Date();
+  this.call_made = 1;
   return this.save();
 };
 
@@ -177,6 +185,7 @@ leadSchema.methods.updateWithCall = function(status, notes, callTime, callStartT
   if (callStartTime) this.callStartTime = callStartTime;
   if (followupDateAndTime) this.followupDateAndTime = followupDateAndTime;
   this.lastUpdatedAt = new Date();
+  this.call_made = 1;
   return this.save();
 };
 

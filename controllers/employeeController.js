@@ -368,6 +368,7 @@ const updateLead = asyncHandler(async (req, res) => {
         callStartTime: lead.callStartTime,
         followupDateAndTime: lead.followupDateAndTime,
         assignedTo: lead.assignedTo,
+        call_made: lead.call_made,
         lastUpdatedAt: lead.lastUpdatedAt,
         updatedAt: lead.updatedAt
       }

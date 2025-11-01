@@ -81,6 +81,15 @@ app.use(cors(corsOptions));
 // Request ID middleware (must be first to track all requests)
 app.use(requestIdMiddleware);
 
+// Logging middleware for every request and response
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.originalUrl} from ${req.ip}`);
+  res.on('finish', () => {
+    console.log(`Outgoing response: ${res.statusCode} for ${req.method} ${req.originalUrl}`);
+  });
+  next();
+});
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

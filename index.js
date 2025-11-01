@@ -83,9 +83,11 @@ app.use(requestIdMiddleware);
 
 // Logging middleware for every request and response
 app.use((req, res, next) => {
-  console.log(`Incoming request: ${req.method} ${req.originalUrl} from ${req.ip}`);
+  const startTime = Date.now();
+  console.log(`Incoming request: ${req.method} ${req.originalUrl} from ${req.ip}, query: ${JSON.stringify(req.query)}, params: ${JSON.stringify(req.params)}, body: ${JSON.stringify(req.body)}`);
   res.on('finish', () => {
-    console.log(`Outgoing response: ${res.statusCode} for ${req.method} ${req.originalUrl}`);
+    const duration = Date.now() - startTime;
+    console.log(`Outgoing response: ${res.statusCode} for ${req.method} ${req.originalUrl}, duration: ${duration}ms`);
   });
   next();
 });

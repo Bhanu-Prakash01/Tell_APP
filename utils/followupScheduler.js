@@ -2,10 +2,10 @@ const Lead = require('../models/Lead');
 const User = require('../models/User');
 
 /**
- * Followup Scheduler Utility
- * Handles automatic allocation of followup leads to employees
+ * Lead Scheduler Utility
+ * Handles automatic allocation of followup leads and new leads to employees
  */
-class FollowupScheduler {
+class LeadScheduler {
   constructor() {
     this.checkInterval = 5 * 60 * 1000; // Check every 5 minutes
     this.isRunning = false;
@@ -62,11 +62,20 @@ class FollowupScheduler {
         assignedTo: 'Unassigned'
       });
 
-      if (dueFollowups.length === 0) {
+      // Also find new leads that are unassigned and need automatic assignment
+      const newLeads = await Lead.find({
+        status: 'New',
+        assignedTo: 'Unassigned',
+        createdAt: { $lt: now } // Only leads created before now
+      });
+
+      const allLeadsToAllocate = [...dueFollowups, ...newLeads];
+
+      if (allLeadsToAllocate.length === 0) {
         return;
       }
 
-      console.log(`Found ${dueFollowups.length} followup leads due for allocation`);
+      console.log(`Found ${dueFollowups.length} followup leads and ${newLeads.length} new leads due for allocation`);
 
       // Get available employees
       const availableEmployees = await User.find({
@@ -75,13 +84,13 @@ class FollowupScheduler {
       }).select('name email');
 
       if (availableEmployees.length === 0) {
-        console.log('No available employees for followup allocation');
+        console.log('No available employees for lead allocation');
         return;
       }
 
       // Allocate leads to employees using round-robin
-      for (let i = 0; i < dueFollowups.length; i++) {
-        const lead = dueFollowups[i];
+      for (let i = 0; i < allLeadsToAllocate.length; i++) {
+        const lead = allLeadsToAllocate[i];
         const employeeIndex = i % availableEmployees.length;
         const assignedEmployee = availableEmployees[employeeIndex];
 
@@ -89,22 +98,22 @@ class FollowupScheduler {
           await lead.updateOne({
             assignedTo: assignedEmployee.name,
             assignedDate: new Date(),
-            status: 'Followup', // Keep status as Followup
             lastUpdatedAt: new Date()
+            // Keep original status (Followup or New)
           });
 
-          console.log(`Allocated followup lead ${lead._id} (${lead.name}) to ${assignedEmployee.name}`);
+          console.log(`Allocated ${lead.status} lead ${lead._id} (${lead.name}) to ${assignedEmployee.name}`);
 
           // Log the allocation
-          console.log(`Followup lead allocated: ${lead.name} (${lead.phone}) -> ${assignedEmployee.name} at ${new Date().toISOString()}`);
+          console.log(`${lead.status} lead allocated: ${lead.name} (${lead.phone}) -> ${assignedEmployee.name} at ${new Date().toISOString()}`);
 
         } catch (error) {
-          console.error(`Error allocating followup lead ${lead._id}:`, error);
+          console.error(`Error allocating lead ${lead._id}:`, error);
         }
       }
 
     } catch (error) {
-      console.error('Error in followup allocation check:', error);
+      console.error('Error in lead allocation check:', error);
     }
   }
 
@@ -117,7 +126,7 @@ class FollowupScheduler {
   }
 
   /**
-   * Get followup allocation statistics
+   * Get lead allocation statistics
    */
   async getAllocationStats() {
     try {
@@ -127,12 +136,16 @@ class FollowupScheduler {
       const stats = await Lead.aggregate([
         {
           $match: {
-            status: 'Followup'
+            $or: [
+              { status: 'Followup' },
+              { status: 'New', assignedTo: 'Unassigned' }
+            ]
           }
         },
         {
           $group: {
             _id: {
+              status: '$status',
               assigned: { $ne: ['$assignedTo', 'Unassigned'] },
               due: {
                 $cond: [
@@ -148,33 +161,62 @@ class FollowupScheduler {
       ]);
 
       const result = {
-        assigned: 0,
-        unassigned: 0,
-        due: 0,
-        pending: 0
+        followup: {
+          assigned: 0,
+          unassigned: 0,
+          due: 0,
+          pending: 0
+        },
+        new: {
+          assigned: 0,
+          unassigned: 0
+        },
+        total: {
+          assigned: 0,
+          unassigned: 0
+        }
       };
 
       stats.forEach(stat => {
-        if (stat._id.assigned) {
-          result.assigned += stat.count;
-        } else {
-          result.unassigned += stat.count;
+        const status = stat._id.status;
+        const assigned = stat._id.assigned;
+        const due = stat._id.due;
+
+        if (status === 'Followup') {
+          if (assigned) {
+            result.followup.assigned += stat.count;
+          } else {
+            result.followup.unassigned += stat.count;
+          }
+
+          if (due === 'due') {
+            result.followup.due += stat.count;
+          } else {
+            result.followup.pending += stat.count;
+          }
+        } else if (status === 'New') {
+          if (assigned) {
+            result.new.assigned += stat.count;
+          } else {
+            result.new.unassigned += stat.count;
+          }
         }
 
-        if (stat._id.due === 'due') {
-          result.due += stat.count;
+        // Update totals
+        if (assigned) {
+          result.total.assigned += stat.count;
         } else {
-          result.pending += stat.count;
+          result.total.unassigned += stat.count;
         }
       });
 
       return result;
 
     } catch (error) {
-      console.error('Error getting followup allocation stats:', error);
+      console.error('Error getting lead allocation stats:', error);
       return null;
     }
   }
 }
 
-module.exports = new FollowupScheduler();
+module.exports = new LeadScheduler();

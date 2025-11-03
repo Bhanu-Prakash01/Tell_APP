@@ -48,11 +48,20 @@ const login = asyncHandler(async (req, res) => {
   // Generate token
   const token = generateToken(employee._id);
 
-  // Get lead statistics for the employee
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Get lead statistics for the employee in IST timezone
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+  const istNow = new Date(now.getTime() + istOffset);
+
+  // Set IST today boundaries
+  const todayIST = new Date(istNow);
+  todayIST.setHours(0, 0, 0, 0);
+  const tomorrowIST = new Date(todayIST);
+  tomorrowIST.setDate(tomorrowIST.getDate() + 1);
+
+  // Convert back to UTC for database query
+  const todayUTC = new Date(todayIST.getTime() - istOffset);
+  const tomorrowUTC = new Date(tomorrowIST.getTime() - istOffset);
 
   const scheduleCondition = {
     $or: [
@@ -64,7 +73,7 @@ const login = asyncHandler(async (req, res) => {
 
   const todayLeadsCount = await Lead.countDocuments({
     assignedTo: employee.name,
-    assignedDate: { $gte: today, $lt: tomorrow },
+    assignedDate: { $gte: todayUTC, $lt: tomorrowUTC },
     ...scheduleCondition
   });
 
@@ -218,16 +227,25 @@ const getProfile = asyncHandler(async (req, res) => {
 const getTodayLeads = asyncHandler(async (req, res) => {
   const employee = req.user;
 
-  // Get current date boundaries
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Get current date boundaries in IST (UTC+5:30)
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+  const istNow = new Date(now.getTime() + istOffset);
+
+  // Set IST today boundaries
+  const todayIST = new Date(istNow);
+  todayIST.setHours(0, 0, 0, 0);
+  const tomorrowIST = new Date(todayIST);
+  tomorrowIST.setDate(tomorrowIST.getDate() + 1);
+
+  // Convert back to UTC for database query
+  const todayUTC = new Date(todayIST.getTime() - istOffset);
+  const tomorrowUTC = new Date(tomorrowIST.getTime() - istOffset);
 
   // Find leads assigned to this employee for today
   const leads = await Lead.find({
     assignedTo: employee.name,
-    assignedDate: { $gte: today, $lt: tomorrow },
+    assignedDate: { $gte: todayUTC, $lt: tomorrowUTC },
     $or: [
       { scheduleDate: { $exists: false } },
       { scheduleDate: null },
